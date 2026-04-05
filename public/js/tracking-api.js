@@ -1,4 +1,5 @@
 const DEFAULT_API_URL = "http://192.168.35.101:3000/api/tracking/cj";
+
 function safeString(value) {
     return String(value ?? "").trim();
 }
@@ -60,13 +61,6 @@ export async function callTrackingApi(payload, options = {}) {
             return buildErrorResult(
                 "INVALID_RESPONSE",
                 "서버 응답 형식이 올바르지 않습니다."
-            );
-        }
-
-        if (responseJson.error === true) {
-            return buildErrorResult(
-                safeString(responseJson.code) || "API_ERROR",
-                safeString(responseJson.message) || "조회 중 오류가 발생했습니다."
             );
         }
 

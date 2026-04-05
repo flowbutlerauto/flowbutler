@@ -1,5 +1,4 @@
-const DEFAULT_API_URL = "http://localhost:3000/api/tracking/cj";
-
+const DEFAULT_API_URL = "http://192.168.35.101:3000/api/tracking/cj";
 function safeString(value) {
     return String(value ?? "").trim();
 }

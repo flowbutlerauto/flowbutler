@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FlowButler - 회원가입</title>
+    <link rel="stylesheet" href="./style.css" />
+</head>
+
+<body class="login-body">
+    <main class="login-shell">
+        <div class="login-bg">
+            <div class="login-topbar">
+                <a href="/login.html" class="back-link">‹ Login page</a>
+            </div>
+
+            <div class="brand-wrap">
+                <div class="brand-logo">FLOWBUTLER</div>
+            </div>
+
+            <section class="login-card">
+                <div class="status-badge signup-badge">SIGN UP</div>
+                <h1 class="login-title">Create Account</h1>
+                <p class="login-subtitle">
+                    회원가입 후 관리자 승인 완료 시 서비스를 이용할 수 있어요.
+                </p>
+
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" placeholder="Enter your email" />
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" placeholder="Create password" />
+                </div>
+
+                <div class="auth-note">
+                    가입 시 기본 플랜은 무료(free)로 생성되며, 관리자 승인 전까지는 대시보드에 접근할 수 없어요.
+                </div>
+
+                <div class="auth-actions">
+                    <button id="signup-btn" class="primary-btn">회원가입 요청하기</button>
+                    <button id="move-login-btn" class="secondary-btn">로그인 페이지로 돌아가기</button>
+                </div>
+
+                <div class="auth-helper">
+                    이미 계정이 있으신가요?
+                    <a href="/login.html" class="inline-link">로그인</a>
+                </div>
+
+                <div id="status" class="status-box"></div>
+            </section>
+        </div>
+    </main>
+
+    <script type="module" src="./js/signup.js"></script>
+</body>
+
+</html>

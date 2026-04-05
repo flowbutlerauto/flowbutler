@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FlowButler - 작업 공간</title>
+    <link rel="stylesheet" href="./style.css" />
+</head>
+
+<body class="app-body dashboard-body">
+    <main class="app-shell">
+        <div class="app-bg app-workspace-bg">
+            <section class="workspace-layout">
+                <aside class="sidebar-card">
+                    <div class="sidebar-brand">
+                        <div class="brand-inline">FLOWBUTLER</div>
+                        <p class="sidebar-brand-sub">물류 업무 자동화 워크스페이스</p>
+                    </div>
+
+                    <nav class="sidebar-nav">
+                        <button class="sidebar-nav-item is-active" data-view="home">
+                            <span class="sidebar-nav-title">홈</span>
+                            <span class="sidebar-nav-desc">업무 요약과 빠른 시작</span>
+                        </button>
+
+                        <button class="sidebar-nav-item" data-view="tracking">
+                            <span class="sidebar-nav-title">송장번호 Tracking</span>
+                            <span class="sidebar-nav-desc">엑셀 업로드 / 수기입력 조회</span>
+                        </button>
+
+                        <button class="sidebar-nav-item" data-view="settings">
+                            <span class="sidebar-nav-title">설정</span>
+                            <span class="sidebar-nav-desc">계정 및 서비스 정보 확인</span>
+                        </button>
+                    </nav>
+
+                    <div class="sidebar-userbox">
+                        <div id="dashboard-user-info" class="sidebar-info-line">확인 중...</div>
+                        <div id="dashboard-plan-info" class="sidebar-info-line"></div>
+                        <div id="dashboard-role-info" class="sidebar-info-line"></div>
+                    </div>
+
+                    <div class="sidebar-footer">
+                        <button id="logout-btn" class="ghost-btn sidebar-logout-btn">로그아웃</button>
+                    </div>
+                </aside>
+
+                <section class="workspace-main">
+                    <header class="workspace-header-card">
+                        <div>
+                            <div class="status-badge approved-badge">ACTIVE</div>
+                            <h1 id="view-title" class="workspace-title">홈</h1>
+                            <p id="view-subtitle" class="workspace-subtitle">
+                                FlowButler 작업 공간에 오신 것을 환영합니다.
+                            </p>
+                        </div>
+                    </header>
+
+                    <div id="view-home" class="workspace-view is-visible">
+                        <section class="workspace-card">
+                            <h2 class="section-title">업무 시작</h2>
+                            <p class="workspace-text">
+                                물류 업무에 필요한 자동화 기능을 이 공간에 순차적으로 추가할 예정입니다.
+                                현재는 홈, 송장번호 Tracking, 설정 메뉴 구조가 준비되어 있어요.
+                            </p>
+
+                            <div class="summary-grid">
+                                <div class="summary-card">
+                                    <div class="summary-label">현재 상태</div>
+                                    <div class="summary-value">정상 접속</div>
+                                    <div class="summary-desc">승인된 사용자 전용 작업 공간입니다.</div>
+                                </div>
+
+                                <div class="summary-card">
+                                    <div class="summary-label">Tracking 방식</div>
+                                    <div class="summary-value">2가지</div>
+                                    <div class="summary-desc">엑셀 업로드와 수기입력을 지원하도록 설계했습니다.</div>
+                                </div>
+
+                                <div class="summary-card">
+                                    <div class="summary-label">서비스 단계</div>
+                                    <div class="summary-value">MVP</div>
+                                    <div class="summary-desc">기능 골격부터 순차적으로 확장 중입니다.</div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section class="workspace-card">
+                            <h2 class="section-title">빠른 안내</h2>
+                            <div class="info-block">
+                                왼쪽 메뉴를 눌러 화면을 전환할 수 있어요.
+                                다음 단계에서는 송장번호 조회 결과 테이블, 업로드 결과 목록, 작업 이력 등을 붙이면 됩니다.
+                            </div>
+                        </section>
+                    </div>
+
+                    <div id="view-tracking" class="workspace-view">
+                        <section class="workspace-card">
+                            <div class="section-head">
+                                <div>
+                                    <h2 class="section-title">송장번호 Tracking</h2>
+                                    <p class="workspace-text">
+                                        엑셀 업로드 또는 수기입력 방식으로 송장번호를 조회할 수 있는 화면입니다.
+                                    </p>
+                                </div>
+                                <div class="section-badge">Tracking MVP</div>
+                            </div>
+
+                            <div class="tracking-mode-switch">
+                                <button class="tracking-mode-btn is-active" data-tracking-mode="excel">
+                                    엑셀 업로드
+                                </button>
+                                <button class="tracking-mode-btn" data-tracking-mode="manual">
+                                    수기입력
+                                </button>
+                            </div>
+
+                            <div id="tracking-mode-excel" class="tracking-mode-panel is-visible">
+                                <div class="workspace-subcard">
+                                    <div class="tracking-toolbar">
+                                        <div class="tracking-toolbar-left">
+                                            <label for="tracking-file" class="file-trigger-btn">엑셀 파일 선택</label>
+                                            <input type="file" id="tracking-file" accept=".xlsx,.xls,.csv"
+                                                class="hidden-file-input" />
+                                            <div id="tracking-file-name" class="selected-file-name">
+                                                선택된 파일 없음
+                                            </div>
+                                        </div>
+
+                                        <div class="tracking-toolbar-right">
+                                            <button id="tracking-run-btn" class="primary-btn">Tracking 실행</button>
+                                            <button id="tracking-download-btn" class="secondary-btn">결과 다운로드</button>
+                                        </div>
+                                    </div>
+
+                                    <div class="tracking-table-wrap">
+                                        <div class="tracking-table-scroll">
+                                            <table class="tracking-table">
+                                                <thead>
+                                                    <tr>
+                                                        <th>택배사</th>
+                                                        <th>송장번호</th>
+                                                        <th>배송 진행 상태</th>
+                                                        <th>시간</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="tracking-table-body">
+                                                    <tr class="tracking-empty-row">
+                                                        <td colspan="4">업로드된 파일이 없습니다. 엑셀 파일을 선택해 주세요.</td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div id="tracking-result" class="info-block tracking-result-box">
+                                    아직 실제 Tracking 조회 로직은 연결되지 않았습니다.
+                                </div>
+                            </div>
+
+                            <div id="tracking-mode-manual" class="tracking-mode-panel">
+                                <div class="tracking-panel-grid">
+                                    <div class="workspace-subcard">
+                                        <h3 class="subcard-title">수기입력 조회</h3>
+                                        <p class="subcard-text">
+                                            단건 또는 여러 건의 송장번호를 직접 입력해서 조회할 수 있는 영역입니다.
+                                        </p>
+
+                                        <div class="form-group">
+                                            <label for="courier-name">택배사</label>
+                                            <input type="text" id="courier-name" placeholder="예: CJ대한통운" />
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label for="tracking-number">송장번호</label>
+                                            <textarea id="tracking-number" class="tracking-textarea"
+                                                placeholder="한 줄에 하나씩 입력하세요&#10;예:&#10;123456789012&#10;987654321098"></textarea>
+                                        </div>
+
+                                        <div class="auth-actions tracking-actions">
+                                            <button id="tracking-search-btn" class="primary-btn">조회하기</button>
+                                        </div>
+                                    </div>
+
+                                    <div class="workspace-subcard">
+                                        <h3 class="subcard-title">입력 안내</h3>
+                                        <ul class="guide-list">
+                                            <li>한 줄에 하나씩 입력하는 방식이 가장 관리하기 쉬워요.</li>
+                                            <li>나중에 조회 결과를 표 형태로 바로 보여줄 수 있어요.</li>
+                                            <li>조회 이력 저장 기능도 같은 구조 위에 붙일 수 있어요.</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+
+                    <div id="view-settings" class="workspace-view">
+                        <section class="workspace-card">
+                            <h2 class="section-title">설정</h2>
+                            <p class="workspace-text">
+                                계정 상태, 플랜, 권한, 향후 서비스 환경설정을 관리하는 영역입니다.
+                            </p>
+
+                            <div class="settings-grid">
+                                <div class="settings-item">
+                                    <div class="settings-label">계정 정보</div>
+                                    <div id="settings-user-email" class="settings-value">확인 중...</div>
+                                </div>
+
+                                <div class="settings-item">
+                                    <div class="settings-label">이용 플랜</div>
+                                    <div id="settings-user-plan" class="settings-value">확인 중...</div>
+                                </div>
+
+                                <div class="settings-item">
+                                    <div class="settings-label">권한</div>
+                                    <div id="settings-user-role" class="settings-value">확인 중...</div>
+                                </div>
+                            </div>
+
+                            <div class="info-block">
+                                다음 단계에서는 비밀번호 변경, 알림 설정, 관리자 메뉴 진입 같은 기능을 여기에 연결할 수 있어요.
+                            </div>
+                        </section>
+                    </div>
+                </section>
+            </section>
+        </div>
+    </main>
+
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+    <script type="module" src="./js/dashboard.js"></script>
+</body>
+
+</html>

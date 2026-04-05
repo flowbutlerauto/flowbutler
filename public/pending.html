@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FlowButler - 승인 대기</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+
+<body class="app-body">
+  <main class="app-shell">
+    <div class="app-bg">
+      <div class="page-topbar">
+        <a href="/login.html" class="back-link">‹ Login page</a>
+      </div>
+
+      <div class="brand-wrap">
+        <div class="brand-logo">FLOWBUTLER</div>
+      </div>
+
+      <section class="center-card">
+        <div class="status-badge pending-badge">PENDING</div>
+        <h1 class="page-title">승인 대기 중</h1>
+        <p class="page-subtitle">
+          관리자 승인 후 서비스를 이용할 수 있습니다.
+        </p>
+
+        <div id="pending-message" class="info-block">확인 중...</div>
+
+        <div class="page-actions">
+          <button id="logout-btn" class="secondary-btn">로그아웃</button>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script type="module" src="./js/pending.js"></script>
+</body>
+
+</html>

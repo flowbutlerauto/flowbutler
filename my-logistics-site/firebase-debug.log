@@ -1,0 +1,44 @@
+[debug] [2026-03-19T05:41:56.363Z] ----------------------------------------------------------------------
+[debug] [2026-03-19T05:41:56.368Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\USER\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js init hosting
+[debug] [2026-03-19T05:41:56.368Z] CLI Version:   15.11.0
+[debug] [2026-03-19T05:41:56.368Z] Platform:      win32
+[debug] [2026-03-19T05:41:56.368Z] Node Version:  v24.14.0
+[debug] [2026-03-19T05:41:56.369Z] Time:          Thu Mar 19 2026 14:41:56 GMT+0900 (한국 표준시)
+[debug] [2026-03-19T05:41:56.369Z] ----------------------------------------------------------------------
+[debug] 
+[info] 
+     ######## #### ########  ######## ########     ###     ######  ########
+     ##        ##  ##     ## ##       ##     ##  ##   ##  ##       ##
+     ######    ##  ########  ######   ########  #########  ######  ######
+     ##        ##  ##    ##  ##       ##     ## ##     ##       ## ##
+     ##       #### ##     ## ######## ########  ##     ##  ######  ########
+
+You're about to initialize a Firebase project in this directory:
+
+  C:\Users\USER\Desktop\Flowbutler\my-logistics-site
+
+[info] 
+=== Project Setup
+[info] 
+[info] First, let's associate this project directory with a Firebase project.
+[info] You can create multiple project aliases by running firebase use --add, 
+[info] 
+[debug] [2026-03-19T05:42:04.660Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-03-19T05:42:04.660Z] > authorizing via signed-in user (flowbutler.auto@gmail.com)
+[debug] [2026-03-19T05:42:04.661Z] Checked if tokens are valid: true, expires at: 1773902431448
+[debug] [2026-03-19T05:42:04.662Z] Checked if tokens are valid: true, expires at: 1773902431448
+[debug] [2026-03-19T05:42:04.662Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects pageSize=100
+[debug] [2026-03-19T05:42:05.670Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects 200
+[debug] [2026-03-19T05:42:05.670Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects [omitted]
+[info] 
+=== Hosting Setup
+[debug] [2026-03-19T05:42:09.420Z] Checked if tokens are valid: true, expires at: 1773902431448
+[debug] [2026-03-19T05:42:09.420Z] Checked if tokens are valid: true, expires at: 1773902431448
+[debug] [2026-03-19T05:42:09.420Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/flowbutler [none]
+[debug] [2026-03-19T05:42:10.597Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/flowbutler 200
+[debug] [2026-03-19T05:42:10.597Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/flowbutler {"projectId":"flowbutler","projectNumber":"275549773661","displayName":"FlowButler","name":"projects/flowbutler","resources":{"hostingSite":"flowbutler"},"state":"ACTIVE","etag":"1_a3d00151-6443-449e-b7ee-d0d83224aab1"}
+[info] 
+[info] Your public directory is the folder (relative to your project directory) that
+[info] will contain Hosting assets to be uploaded with firebase deploy. If you
+[info] have a build process for your assets, use your build's output directory.
+[info] 

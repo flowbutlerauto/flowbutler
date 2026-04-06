@@ -9,14 +9,14 @@ const app = express();
 app.use(cors({origin: true}));
 app.use(express.json());
 
-app.get('/health', function (req, res) {
+app.get('/api/health', function (req, res) {
   res.json({
     ok: true,
     message: 'Flowbutler tracking API is running',
   });
 });
 
-app.post('/tracking/cj', async function (req, res) {
+app.post('/api/tracking/cj', async function (req, res) {
   try {
     logger.info('tracking request body', req.body);
 
@@ -46,13 +46,13 @@ app.post('/tracking/cj', async function (req, res) {
     }
 
     const normalizedNumbers = Array.from(new Set(
-        trackingNumbers
-            .map(function (v) {
-              return String(v).replace(/\D/g, '').trim();
-            })
-            .filter(function (v) {
-              return Boolean(v);
-            }),
+      trackingNumbers
+        .map(function (v) {
+          return String(v).replace(/\D/g, '').trim();
+        })
+        .filter(function (v) {
+          return Boolean(v);
+        }),
     ));
 
     const results = await getCjTrackingResults(normalizedNumbers);
@@ -74,10 +74,10 @@ app.post('/tracking/cj', async function (req, res) {
 });
 
 exports.api = onRequest(
-    {
-      region: 'asia-northeast3',
-      timeoutSeconds: 60,
-      memory: '512MiB',
-    },
-    app,
+  {
+    region: 'asia-northeast3',
+    timeoutSeconds: 60,
+    memory: '512MiB',
+  },
+  app,
 );

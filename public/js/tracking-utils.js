@@ -1,33 +1,72 @@
-const SUPPORTED_COURIER = "CJ대한통운";
-const API_COURIER = "CJ";
 const MAX_TRACKING_REQUEST_COUNT = 200;
+
+const COURIER_CONFIG = {
+    CJ: {
+        code: "CJ",
+        displayName: "CJ대한통운",
+        aliases: [
+            "cj",
+            "cj대한통운",
+            "대한통운",
+            "cjlogistics",
+            "cjlog",
+            "씨제이대한통운",
+            "씨제이",
+        ],
+    },
+    LOTTE: {
+        code: "LOTTE",
+        displayName: "롯데택배",
+        aliases: [
+            "롯데",
+            "롯데택배",
+            "롯데글로벌로지스",
+            "lotte",
+            "lotteglogis",
+            "lotteglobal",
+            "lottegloballogistics",
+        ],
+    },
+};
 
 function safeString(value) {
     return String(value ?? "").trim();
 }
 
-export function normalizeCourier(value) {
-    const raw = safeString(value)
+function normalizeText(value) {
+    return safeString(value)
         .toLowerCase()
         .replace(/\s+/g, "");
+}
+
+function getCourierEntries() {
+    return Object.values(COURIER_CONFIG);
+}
+
+export function normalizeCourier(value) {
+    const raw = normalizeText(value);
 
     if (!raw) return "";
 
-    const cjAliases = new Set([
-        "cj",
-        "cj대한통운",
-        "대한통운",
-        "cjlogistics",
-        "cjlog",
-        "씨제이대한통운",
-        "씨제이",
-    ]);
+    for (const courier of getCourierEntries()) {
+        const aliasMatched = courier.aliases.some(
+            (alias) => normalizeText(alias) === raw
+        );
 
-    if (cjAliases.has(raw)) {
-        return SUPPORTED_COURIER;
+        if (aliasMatched) {
+            return courier.displayName;
+        }
     }
 
     return "UNSUPPORTED";
+}
+
+export function getApiCourierCode(normalizedCourier) {
+    const matched = getCourierEntries().find(
+        (courier) => courier.displayName === safeString(normalizedCourier)
+    );
+
+    return matched ? matched.code : "";
 }
 
 export function normalizeTrackingNumber(value) {
@@ -37,12 +76,16 @@ export function normalizeTrackingNumber(value) {
 }
 
 export function normalizeRow(row) {
+    const normalizedCourier = normalizeCourier(row?.courier);
+    const normalizedTrackingNumber = normalizeTrackingNumber(row?.trackingNumber);
+
     return {
         ...row,
         courier: safeString(row?.courier),
         trackingNumber: safeString(row?.trackingNumber),
-        normalizedCourier: normalizeCourier(row?.courier),
-        normalizedTrackingNumber: normalizeTrackingNumber(row?.trackingNumber),
+        normalizedCourier,
+        normalizedTrackingNumber,
+        apiCourierCode: getApiCourierCode(normalizedCourier),
     };
 }
 
@@ -93,7 +136,7 @@ export function validateRow(row) {
             isValid: false,
             status: "지원하지 않는 택배사",
             time: "",
-            message: "현재는 CJ대한통운만 지원합니다.",
+            message: "현재는 CJ대한통운, 롯데택배만 지원합니다.",
             excludedReason: "UNSUPPORTED_COURIER",
         };
     }
@@ -123,52 +166,110 @@ export function buildValidatedRows(rows) {
     );
 }
 
-export function buildTrackingRequest(validatedRows) {
+export function buildTrackingRequests(validatedRows) {
     const validRows = (validatedRows ?? []).filter(
         (row) =>
             row?.isValid === true &&
-            row?.normalizedCourier === SUPPORTED_COURIER &&
-            row?.normalizedTrackingNumber
+            row?.normalizedCourier &&
+            row?.normalizedCourier !== "UNSUPPORTED" &&
+            row?.normalizedTrackingNumber &&
+            row?.apiCourierCode
     );
 
-    const uniqueTrackingNumbers = [...new Set(
-        validRows.map((row) => row.normalizedTrackingNumber)
-    )];
-
-    if (uniqueTrackingNumbers.length === 0) {
+    if (validRows.length === 0) {
         return {
             ok: false,
             reason: "NO_VALID_ROWS",
-            payload: null,
+            requests: [],
             trackingNumbers: [],
         };
     }
 
-    if (uniqueTrackingNumbers.length > MAX_TRACKING_REQUEST_COUNT) {
+    const groupedMap = new Map();
+
+    for (const row of validRows) {
+        const apiCourierCode = row.apiCourierCode;
+
+        if (!groupedMap.has(apiCourierCode)) {
+            groupedMap.set(apiCourierCode, new Set());
+        }
+
+        groupedMap.get(apiCourierCode).add(row.normalizedTrackingNumber);
+    }
+
+    const requests = [...groupedMap.entries()].map(([courier, trackingNumberSet]) => ({
+        courier,
+        trackingNumbers: [...trackingNumberSet],
+    }));
+
+    const totalTrackingNumbers = requests.flatMap(
+        (request) => request.trackingNumbers
+    );
+
+    if (totalTrackingNumbers.length > MAX_TRACKING_REQUEST_COUNT) {
         return {
             ok: false,
             reason: "TOO_MANY_ROWS",
-            payload: null,
-            trackingNumbers: uniqueTrackingNumbers,
+            requests: [],
+            trackingNumbers: totalTrackingNumbers,
         };
     }
 
     return {
         ok: true,
         reason: "",
+        requests,
+        trackingNumbers: totalTrackingNumbers,
+    };
+}
+
+export function buildTrackingRequest(validatedRows) {
+    const multiRequestResult = buildTrackingRequests(validatedRows);
+
+    if (!multiRequestResult.ok) {
+        return {
+            ok: false,
+            reason: multiRequestResult.reason,
+            payload: null,
+            trackingNumbers: multiRequestResult.trackingNumbers,
+        };
+    }
+
+    if (multiRequestResult.requests.length !== 1) {
+        return {
+            ok: false,
+            reason: "MULTI_COURIER_NOT_SUPPORTED",
+            payload: null,
+            trackingNumbers: multiRequestResult.trackingNumbers,
+        };
+    }
+
+    const request = multiRequestResult.requests[0];
+
+    return {
+        ok: true,
+        reason: "",
         payload: {
-            courier: API_COURIER,
-            trackingNumbers: uniqueTrackingNumbers,
+            courier: request.courier,
+            trackingNumbers: request.trackingNumbers,
         },
-        trackingNumbers: uniqueTrackingNumbers,
+        trackingNumbers: request.trackingNumbers,
     };
 }
 
 export function applyTrackingResults(validatedRows, apiResponse) {
     const resultsMap = apiResponse?.results ?? {};
+    const responseCourier = safeString(apiResponse?.courier);
 
     return (validatedRows ?? []).map((row) => {
         if (!row?.isValid) {
+            return row;
+        }
+
+        const rowCourier = safeString(row?.normalizedCourier);
+
+        // 현재 API 응답 택배사와 다른 row는 그대로 둠
+        if (responseCourier && rowCourier && responseCourier !== rowCourier) {
             return row;
         }
 
@@ -200,12 +301,14 @@ export function buildTrackingSummary(rows) {
     const validRows = safeRows.filter((row) => row?.isValid === true).length;
     const excludedRows = safeRows.filter((row) => row?.isValid !== true).length;
 
-    const completedRows = safeRows.filter(
-        (row) => safeString(row?.status) === "배송완료"
+    const completedRows = safeRows.filter((row) =>
+        ["배송완료", "배달 완료", "배달완료"].includes(safeString(row?.status))
     ).length;
 
     const failedRows = safeRows.filter((row) =>
-        ["조회 실패", "조회 결과 없음"].includes(safeString(row?.status))
+        ["조회 실패", "조회 결과 없음", "조회불가", "오류"].includes(
+            safeString(row?.status)
+        )
     ).length;
 
     const needInputRows = safeRows.filter(
@@ -219,7 +322,9 @@ export function buildTrackingSummary(rows) {
     const successRows = safeRows.filter(
         (row) =>
             row?.isValid === true &&
-            !["조회 실패", "조회 결과 없음", ""].includes(safeString(row?.status))
+            !["", "조회 실패", "조회 결과 없음", "조회불가", "오류"].includes(
+                safeString(row?.status)
+            )
     ).length;
 
     return {
@@ -234,7 +339,10 @@ export function buildTrackingSummary(rows) {
     };
 }
 
-export function markValidRowsAsFailed(validatedRows, message = "서버 통신 중 오류가 발생했습니다.") {
+export function markValidRowsAsFailed(
+    validatedRows,
+    message = "서버 통신 중 오류가 발생했습니다."
+) {
     return (validatedRows ?? []).map((row) => {
         if (!row?.isValid) {
             return row;
@@ -249,8 +357,15 @@ export function markValidRowsAsFailed(validatedRows, message = "서버 통신 �
     });
 }
 
-export function getSupportedCourier() {
-    return SUPPORTED_COURIER;
+export function getSupportedCouriers() {
+    return getCourierEntries().map((courier) => courier.displayName);
+}
+
+export function getSupportedCourierOptions() {
+    return getCourierEntries().map((courier) => ({
+        code: courier.code,
+        displayName: courier.displayName,
+    }));
 }
 
 export function getMaxTrackingRequestCount() {

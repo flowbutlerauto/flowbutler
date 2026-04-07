@@ -1,4 +1,4 @@
-const DEFAULT_API_URL = "/api/tracking/cj";
+const DEFAULT_API_URL = "/api/tracking";
 
 function safeString(value) {
     return String(value ?? "").trim();
@@ -23,7 +23,21 @@ function buildErrorResult(errorCode, message) {
 export async function callTrackingApi(payload, options = {}) {
     const apiUrl = options.apiUrl || DEFAULT_API_URL;
 
-    if (!payload || !Array.isArray(payload.trackingNumbers)) {
+    if (!payload || typeof payload !== "object") {
+        return buildErrorResult(
+            "INVALID_PAYLOAD",
+            "요청 데이터가 올바르지 않습니다."
+        );
+    }
+
+    if (!safeString(payload.courier)) {
+        return buildErrorResult(
+            "EMPTY_COURIER",
+            "courier 값이 필요합니다."
+        );
+    }
+
+    if (!Array.isArray(payload.trackingNumbers)) {
         return buildErrorResult(
             "INVALID_PAYLOAD",
             "trackingNumbers 배열이 필요합니다."
@@ -74,7 +88,7 @@ export async function callTrackingApi(payload, options = {}) {
         return {
             ok: true,
             data: {
-                courier: safeString(responseJson.courier) || "CJ대한통운",
+                courier: safeString(responseJson.courier),
                 requestedCount: Number(responseJson.requestedCount ?? 0),
                 resultCount: Number(responseJson.resultCount ?? 0),
                 results: responseJson.results,

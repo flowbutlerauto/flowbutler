@@ -5,7 +5,7 @@ import { parseTrackingFile } from "./tracking-file.js";
 
 import {
     applyTrackingResults,
-    buildTrackingRequest,
+    buildTrackingRequests,
     buildTrackingSummary,
     buildValidatedRows,
     markValidRowsAsFailed,
@@ -62,16 +62,16 @@ const trackingTableBody = document.getElementById("tracking-table-body");
 const viewMeta = {
     home: {
         title: "홈",
-        subtitle: "FlowButler 작업 공간에 오신 것을 환영합니다."
+        subtitle: "FlowButler 작업 공간에 오신 것을 환영합니다.",
     },
     tracking: {
         title: "송장번호 Tracking",
-        subtitle: "엑셀 업로드와 수기입력 방식으로 Tracking 업무를 처리할 수 있습니다."
+        subtitle: "엑셀 업로드와 수기입력 방식으로 Tracking 업무를 처리할 수 있습니다.",
     },
     settings: {
         title: "설정",
-        subtitle: "계정, 플랜, 권한과 같은 기본 정보를 확인할 수 있습니다."
-    }
+        subtitle: "계정, 플랜, 권한과 같은 기본 정보를 확인할 수 있습니다.",
+    },
 };
 
 let trackingRows = [];
@@ -81,6 +81,11 @@ let lastTrackingSummary = null;
 function setTrackingResult(message) {
     if (!trackingResultEl) return;
     trackingResultEl.textContent = message ?? "";
+}
+
+function setManualTrackingResult(message) {
+    if (!manualTrackingResultEl) return;
+    manualTrackingResultEl.textContent = message ?? "";
 }
 
 function showView(viewName) {
@@ -133,13 +138,14 @@ function downloadCsv(rows) {
                 `"${String(row.courier ?? "").replaceAll('"', '""')}"`,
                 `"${String(row.trackingNumber ?? "").replaceAll('"', '""')}"`,
                 `"${String(row.status ?? "").replaceAll('"', '""')}"`,
-                `"${String(row.time ?? "").replaceAll('"', '""')}"`
+                `"${String(row.message ?? "").replaceAll('"', '""')}"`,
+                `"${String(row.time ?? "").replaceAll('"', '""')}"`,
             ].join(",")
-        )
+        ),
     ];
 
     const blob = new Blob(["\uFEFF" + lines.join("\n")], {
-        type: "text/csv;charset=utf-8;"
+        type: "text/csv;charset=utf-8;",
     });
 
     const url = URL.createObjectURL(blob);
@@ -153,8 +159,104 @@ function downloadCsv(rows) {
 }
 
 function applyRowsToScreen(rows) {
-    trackingRows = rows;
+    trackingRows = rows ?? [];
     renderTrackingTable(trackingRows, trackingTableBody);
+}
+
+function applyRowsToManualScreen(rows) {
+    renderTrackingTable(rows ?? [], manualTrackingTableBody);
+}
+
+function setManualSummary(summary = null) {
+    if (manualSummaryTotalEl) {
+        manualSummaryTotalEl.textContent = String(summary?.totalRows ?? 0);
+    }
+    if (manualSummarySuccessEl) {
+        manualSummarySuccessEl.textContent = String(summary?.successRows ?? 0);
+    }
+    if (manualSummaryCompleteEl) {
+        manualSummaryCompleteEl.textContent = String(summary?.completedRows ?? 0);
+    }
+    if (manualSummaryFailedEl) {
+        manualSummaryFailedEl.textContent = String(summary?.failedRows ?? 0);
+    }
+}
+
+function updateManualCountInfo() {
+    if (!manualCountInfoEl || !trackingNumberInput) return;
+
+    const count = trackingNumberInput.value
+        .split("\n")
+        .map((value) => value.trim())
+        .filter(Boolean).length;
+
+    manualCountInfoEl.textContent = `입력 ${count}건`;
+}
+
+function clearManualResultScreen() {
+    setEmptyTrackingTable(manualTrackingTableBody);
+    setManualSummary(null);
+    setManualTrackingResult("아직 수기입력 조회를 실행하지 않았습니다.");
+}
+
+function buildTrackingSummaryText(summary) {
+    return (
+        `총 ${summary.totalRows}건 처리\n` +
+        `조회 성공: ${summary.successRows}건\n` +
+        `배송완료: ${summary.completedRows}건\n` +
+        `조회 실패/결과 없음: ${summary.failedRows}건\n` +
+        `입력 필요: ${summary.needInputRows}건\n` +
+        `지원하지 않는 택배사: ${summary.unsupportedCourierRows}건`
+    );
+}
+
+function buildManualTrackingSummaryText(summary) {
+    return (
+        `총 ${summary.totalRows}건 처리\n` +
+        `조회 성공: ${summary.successRows}건\n` +
+        `배송완료: ${summary.completedRows}건\n` +
+        `조회 실패/결과 없음: ${summary.failedRows}건`
+    );
+}
+
+async function executeTrackingRequests(validatedRows) {
+    const requestBuildResult = buildTrackingRequests(validatedRows);
+
+    if (!requestBuildResult.ok) {
+        return {
+            ok: false,
+            reason: requestBuildResult.reason,
+            rows: validatedRows,
+        };
+    }
+
+    let mergedRows = [...validatedRows];
+
+    for (const payload of requestBuildResult.requests) {
+        const apiResult = await callTrackingApi(payload);
+
+        if (!apiResult.ok) {
+            mergedRows = markValidRowsAsFailed(
+                mergedRows,
+                apiResult.message || "서버 통신 중 오류가 발생했습니다."
+            );
+
+            return {
+                ok: false,
+                reason: "API_ERROR",
+                message: apiResult.message || "서버 통신 중 오류가 발생했습니다.",
+                rows: mergedRows,
+            };
+        }
+
+        mergedRows = applyTrackingResults(mergedRows, apiResult.data);
+    }
+
+    return {
+        ok: true,
+        reason: "",
+        rows: mergedRows,
+    };
 }
 
 async function setFileSelectedState(file) {
@@ -215,53 +317,39 @@ async function handleTrackingRun() {
 
     applyRowsToScreen(validatedRows);
 
-    const requestBuildResult = buildTrackingRequest(validatedRows);
+    const requestBuildResult = buildTrackingRequests(validatedRows);
 
     if (!requestBuildResult.ok) {
         if (requestBuildResult.reason === "NO_VALID_ROWS") {
-            setTrackingResult("조회 가능한 CJ대한통운 송장번호가 없습니다.");
+            setTrackingResult("조회 가능한 송장번호가 없습니다.");
         } else if (requestBuildResult.reason === "TOO_MANY_ROWS") {
             setTrackingResult("한 번에 최대 200건까지 조회할 수 있습니다.");
         } else {
             setTrackingResult("조회 요청을 생성할 수 없습니다.");
         }
-
-        trackingExecuted = false;
-        updateDownloadButtonState();
         return;
     }
 
     setTrackingResult("Tracking 조회 중입니다...");
 
-    const apiResult = await callTrackingApi(requestBuildResult.payload);
+    const executionResult = await executeTrackingRequests(validatedRows);
 
-    if (!apiResult.ok) {
-        const failedRows = markValidRowsAsFailed(
-            validatedRows,
-            apiResult.message || "서버 통신 중 오류가 발생했습니다."
-        );
+    applyRowsToScreen(executionResult.rows);
 
-        applyRowsToScreen(failedRows);
+    if (!executionResult.ok) {
         trackingExecuted = false;
         updateDownloadButtonState();
-        setTrackingResult(apiResult.message || "서버 통신 중 오류가 발생했습니다.");
+
+        setTrackingResult(
+            executionResult.message || "서버 통신 중 오류가 발생했습니다."
+        );
         return;
     }
 
-    const mergedRows = applyTrackingResults(validatedRows, apiResult.data);
-    applyRowsToScreen(mergedRows);
-
-    const summary = buildTrackingSummary(mergedRows);
+    const summary = buildTrackingSummary(executionResult.rows);
     lastTrackingSummary = summary;
 
-    setTrackingResult(
-        `총 ${summary.totalRows}건 처리\n` +
-        `조회 성공: ${summary.successRows}건\n` +
-        `배송완료: ${summary.completedRows}건\n` +
-        `조회 실패/결과 없음: ${summary.failedRows}건\n` +
-        `입력 필요: ${summary.needInputRows}건\n` +
-        `지원하지 않는 택배사: ${summary.unsupportedCourierRows}건`
-    );
+    setTrackingResult(buildTrackingSummaryText(summary));
 
     trackingExecuted = true;
     updateDownloadButtonState();
@@ -310,11 +398,11 @@ async function handleManualTrackingSearch() {
     const validatedRows = buildValidatedRows(manualRows);
     applyRowsToManualScreen(validatedRows);
 
-    const requestBuildResult = buildTrackingRequest(validatedRows);
+    const requestBuildResult = buildTrackingRequests(validatedRows);
 
     if (!requestBuildResult.ok) {
         if (requestBuildResult.reason === "NO_VALID_ROWS") {
-            setManualTrackingResult("조회 가능한 CJ대한통운 송장번호가 없습니다.");
+            setManualTrackingResult("조회 가능한 송장번호가 없습니다.");
         } else if (requestBuildResult.reason === "TOO_MANY_ROWS") {
             setManualTrackingResult("한 번에 최대 200건까지 조회할 수 있습니다.");
         } else {
@@ -328,33 +416,21 @@ async function handleManualTrackingSearch() {
 
     setManualTrackingResult("수기입력 Tracking 조회 중입니다...");
 
-    const apiResult = await callTrackingApi(requestBuildResult.payload);
+    const executionResult = await executeTrackingRequests(validatedRows);
 
-    if (!apiResult.ok) {
-        const failedRows = markValidRowsAsFailed(
-            validatedRows,
-            apiResult.message || "서버 통신 중 오류가 발생했습니다."
+    applyRowsToManualScreen(executionResult.rows);
+
+    const summary = buildTrackingSummary(executionResult.rows);
+    setManualSummary(summary);
+
+    if (!executionResult.ok) {
+        setManualTrackingResult(
+            executionResult.message || "서버 통신 중 오류가 발생했습니다."
         );
-
-        applyRowsToManualScreen(failedRows);
-        const summary = buildTrackingSummary(failedRows);
-        setManualSummary(summary);
-        setManualTrackingResult(apiResult.message || "서버 통신 중 오류가 발생했습니다.");
         return;
     }
 
-    const mergedRows = applyTrackingResults(validatedRows, apiResult.data);
-    applyRowsToManualScreen(mergedRows);
-
-    const summary = buildTrackingSummary(mergedRows);
-    setManualSummary(summary);
-
-    setManualTrackingResult(
-        `총 ${summary.totalRows}건 처리\n` +
-        `조회 성공: ${summary.successRows}건\n` +
-        `배송완료: ${summary.completedRows}건\n` +
-        `조회 실패/결과 없음: ${summary.failedRows}건`
-    );
+    setManualTrackingResult(buildManualTrackingSummaryText(summary));
 }
 
 async function loadApprovedUser(user) {
@@ -389,8 +465,6 @@ async function loadApprovedUser(user) {
 }
 
 function bindEvents() {
-
-
     trackingNumberInput?.addEventListener("input", updateManualCountInfo);
 
     manualClearBtn?.addEventListener("click", () => {
@@ -398,7 +472,6 @@ function bindEvents() {
         updateManualCountInfo();
         clearManualResultScreen();
     });
-
 
     logoutBtn?.addEventListener("click", async () => {
         try {
@@ -459,47 +532,6 @@ function initializeDashboard() {
     showTrackingMode("excel");
     initializeTrackingUi();
     bindEvents();
-}
-
-function setManualTrackingResult(message) {
-    if (!manualTrackingResultEl) return;
-    manualTrackingResultEl.textContent = message ?? "";
-}
-
-function setManualSummary(summary = null) {
-    if (manualSummaryTotalEl) {
-        manualSummaryTotalEl.textContent = String(summary?.totalRows ?? 0);
-    }
-    if (manualSummarySuccessEl) {
-        manualSummarySuccessEl.textContent = String(summary?.successRows ?? 0);
-    }
-    if (manualSummaryCompleteEl) {
-        manualSummaryCompleteEl.textContent = String(summary?.completedRows ?? 0);
-    }
-    if (manualSummaryFailedEl) {
-        manualSummaryFailedEl.textContent = String(summary?.failedRows ?? 0);
-    }
-}
-
-function updateManualCountInfo() {
-    if (!manualCountInfoEl || !trackingNumberInput) return;
-
-    const count = trackingNumberInput.value
-        .split("\n")
-        .map((value) => value.trim())
-        .filter(Boolean).length;
-
-    manualCountInfoEl.textContent = `입력 ${count}건`;
-}
-
-function clearManualResultScreen() {
-    setEmptyTrackingTable(manualTrackingTableBody);
-    setManualSummary(null);
-    setManualTrackingResult("아직 수기입력 조회를 실행하지 않았습니다.");
-}
-
-function applyRowsToManualScreen(rows) {
-    renderTrackingTable(rows, manualTrackingTableBody);
 }
 
 onAuthStateChanged(auth, async (user) => {

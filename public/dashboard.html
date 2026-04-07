@@ -141,13 +141,14 @@
                                                     <tr>
                                                         <th>택배사</th>
                                                         <th>송장번호</th>
+                                                        <th>단계</th>
                                                         <th>배송 진행 상태</th>
                                                         <th>시간</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody id="tracking-table-body">
                                                     <tr class="tracking-empty-row">
-                                                        <td colspan="4">업로드된 파일이 없습니다. 엑셀 파일을 선택해 주세요.</td>
+                                                        <td colspan="5">업로드된 파일이 없습니다. 엑셀 파일을 선택해 주세요.</td>
                                                     </tr>
                                                 </tbody>
                                             </table>
@@ -161,36 +162,84 @@
                             </div>
 
                             <div id="tracking-mode-manual" class="tracking-mode-panel">
-                                <div class="tracking-panel-grid">
-                                    <div class="workspace-subcard">
-                                        <h3 class="subcard-title">수기입력 조회</h3>
-                                        <p class="subcard-text">
-                                            단건 또는 여러 건의 송장번호를 직접 입력해서 조회할 수 있는 영역입니다.
-                                        </p>
+                                <div class="tracking-panel-grid manual-panel-grid">
+                                    <div class="workspace-subcard manual-entry-card">
+                                        <div class="manual-card-head">
+                                            <div>
+                                                <h3 class="subcard-title">수기입력 조회</h3>
+                                                <p class="subcard-text">
+                                                    송장번호를 한 줄에 하나씩 입력한 뒤 바로 조회할 수 있습니다.
+                                                </p>
+                                            </div>
+                                            <div class="manual-card-badge">MANUAL</div>
+                                        </div>
 
                                         <div class="form-group">
                                             <label for="courier-name">택배사</label>
-                                            <input type="text" id="courier-name" placeholder="예: CJ대한통운" />
+                                            <select id="courier-name">
+                                                <option value="CJ대한통운" selected>CJ대한통운</option>
+                                            </select>
                                         </div>
 
                                         <div class="form-group">
                                             <label for="tracking-number">송장번호</label>
-                                            <textarea id="tracking-number" class="tracking-textarea"
-                                                placeholder="한 줄에 하나씩 입력하세요&#10;예:&#10;123456789012&#10;987654321098"></textarea>
+                                            <textarea id="tracking-number"
+                                                class="tracking-textarea manual-tracking-textarea"
+                                                placeholder="한 줄에 하나씩 입력하세요&#10;&#10;예시&#10;123456789012&#10;987654321098"></textarea>
                                         </div>
 
-                                        <div class="auth-actions tracking-actions">
-                                            <button id="tracking-search-btn" class="primary-btn">조회하기</button>
+                                        <div class="manual-meta-row">
+                                            <div class="manual-helper-text">
+                                            </div>
+                                            <div id="manual-count-info" class="manual-count-info">입력 0건</div>
+                                        </div>
+
+                                        <div class="manual-action-row">
+                                            <button id="tracking-search-btn" class="primary-btn"
+                                                type="button">조회하기</button>
+                                            <button id="tracking-manual-clear-btn" class="secondary-btn"
+                                                type="button">입력 지우기</button>
                                         </div>
                                     </div>
 
-                                    <div class="workspace-subcard">
+                                    <div class="workspace-subcard manual-guide-card">
                                         <h3 class="subcard-title">입력 안내</h3>
-                                        <ul class="guide-list">
-                                            <li>한 줄에 하나씩 입력하는 방식이 가장 관리하기 쉬워요.</li>
-                                            <li>나중에 조회 결과를 표 형태로 바로 보여줄 수 있어요.</li>
-                                            <li>조회 이력 저장 기능도 같은 구조 위에 붙일 수 있어요.</li>
+                                        <ul class="guide-list manual-guide-list">
+                                            <li>한 줄에 하나씩 입력하면 가장 정확하게 처리됩니다.</li>
+                                            <li>현재는 <strong>CJ대한통운</strong>만 지원합니다.</li>
+                                            <li>공백, 하이픈은 자동으로 정리됩니다.</li>
+                                            <li>최대 <strong>200건</strong>까지 조회할 수 있습니다.</li>
+                                            <li>조회 결과는 아래 영역에서 바로 확인할 수 있습니다.</li>
+                                            <li>송장번호를 붙여넣은 뒤 바로 조회할 수 있도록반복 입력 작업에 맞춰 단순하고 빠른 흐름으로 구성했습니다.</li>
                                         </ul>
+                                    </div>
+                                </div>
+
+                                <div class="workspace-subcard manual-result-card">
+
+                                    <div class="tracking-table-wrap manual-table-wrap">
+                                        <div class="tracking-table-scroll">
+                                            <table class="tracking-table">
+                                                <thead>
+                                                    <tr>
+                                                        <th>택배사</th>
+                                                        <th>송장번호</th>
+                                                        <th>배송 진행 상태</th>
+                                                        <th>시간</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="manual-tracking-table-body">
+                                                    <tr class="tracking-empty-row">
+                                                        <td colspan="4">송장번호를 입력하고 조회하기를 누르면 결과가 여기에 표시됩니다.</td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+
+                                    <div id="manual-tracking-result"
+                                        class="info-block tracking-result-box manual-result-box">
+                                        아직 수기입력 조회를 실행하지 않았습니다.
                                     </div>
                                 </div>
                             </div>

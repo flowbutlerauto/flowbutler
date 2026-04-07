@@ -2,9 +2,9 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 
 const CJ_TRACKING_PAGE_URL =
-    'https://www.cjlogistics.com/ko/tool/parcel/tracking';
+  'https://www.cjlogistics.com/ko/tool/parcel/tracking';
 const CJ_TRACKING_DETAIL_URL =
-    'https://www.cjlogistics.com/ko/tool/parcel/tracking-detail';
+  'https://www.cjlogistics.com/ko/tool/parcel/tracking-detail';
 
 function extractCsrfToken(html) {
   const $ = cheerio.load(html);
@@ -57,25 +57,22 @@ function pickBestTrackingItem(resultList) {
 function mapStatus(item) {
   const rawStatusCode = item && item.crgSt ? String(item.crgSt) : '';
 
-  const statusText =
-        (item && item.crgStNm) ||
-        (item && item.statusNm) ||
-        (item && item.statNm) ||
-        (item && item.crgNm) ||
-        (item && item.progNm) ||
-        '상태확인';
-
-  if (rawStatusCode === '91') {
-    return {
-      status: '배송완료',
-      message: '배송완료',
-      rawStatusCode: rawStatusCode,
-    };
-  }
-
   return {
-    status: statusText,
-    message: statusText,
+    status:
+      (item && item.scanNm) ||
+      (item && item.crgStNm) ||
+      (item && item.statusNm) ||
+      (item && item.statNm) ||
+      (item && item.progNm) ||
+      '상태확인',
+    message:
+      (item && item.crgNm) ||
+      (item && item.scanNm) ||
+      (item && item.crgStNm) ||
+      (item && item.statusNm) ||
+      (item && item.statNm) ||
+      (item && item.progNm) ||
+      '상태확인',
     rawStatusCode: rawStatusCode,
   };
 }
@@ -84,9 +81,9 @@ async function fetchCsrfAndCookies() {
   const response = await axios.get(CJ_TRACKING_PAGE_URL, {
     headers: {
       'User-Agent':
-                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36',
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36',
       'Accept':
-                'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+        'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
       'Referer': 'https://www.cjlogistics.com/',
     },
     timeout: 15000,
@@ -115,21 +112,21 @@ async function fetchSingleTracking(trackingNumber) {
     formData.append('paramInvcNo', trackingNumber);
 
     const response = await axios.post(
-        CJ_TRACKING_DETAIL_URL,
-        formData.toString(),
-        {
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-            'User-Agent':
-                        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36',
-            'Accept': 'application/json, text/plain, */*',
-            'Origin': 'https://www.cjlogistics.com',
-            'Referer': CJ_TRACKING_PAGE_URL,
-            'Cookie': cookieHeader,
-            'X-Requested-With': 'XMLHttpRequest',
-          },
-          timeout: 15000,
+      CJ_TRACKING_DETAIL_URL,
+      formData.toString(),
+      {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36',
+          'Accept': 'application/json, text/plain, */*',
+          'Origin': 'https://www.cjlogistics.com',
+          'Referer': CJ_TRACKING_PAGE_URL,
+          'Cookie': cookieHeader,
+          'X-Requested-With': 'XMLHttpRequest',
         },
+        timeout: 15000,
+      },
     );
 
     const data = response.data || {};
@@ -178,10 +175,10 @@ async function fetchSingleTracking(trackingNumber) {
 
 async function getCjTrackingResults(trackingNumbers) {
   const entries = await Promise.all(
-      trackingNumbers.map(async function (trackingNumber) {
-        const result = await fetchSingleTracking(trackingNumber);
-        return [trackingNumber, result];
-      }),
+    trackingNumbers.map(async function (trackingNumber) {
+      const result = await fetchSingleTracking(trackingNumber);
+      return [trackingNumber, result];
+    }),
   );
 
   return Object.fromEntries(entries);

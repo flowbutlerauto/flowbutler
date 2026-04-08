@@ -5,6 +5,8 @@ const cors = require('cors');
 
 const { getCjTrackingResults } = require('./cj-tracking');
 const { getLotteTrackingResults } = require('./lotte-tracking');
+const { getDoobalHeroTrackingResults } = require('./doobalhero-tracking');
+const { getEpostTrackingResults } = require('./epost-tracking');
 
 const app = express();
 
@@ -28,6 +30,14 @@ function normalizeCourierCode(value) {
 
   if (['LOTTE', '롯데택배', '롯데글로벌로지스'].includes(raw)) {
     return 'LOTTE';
+  }
+
+  if (['DOOBALHERO', '두발히어로', '체인로지스'].includes(raw)) {
+    return 'DOOBALHERO';
+  }
+
+  if (['EPOST', '우체국', '우체국택배', '우편', 'POST'].includes(raw)) {
+    return 'EPOST';
   }
 
   return 'UNSUPPORTED';
@@ -56,6 +66,14 @@ function getCourierDisplayName(courierCode) {
 
   if (courierCode === 'LOTTE') {
     return '롯데택배';
+  }
+
+  if (courierCode === 'DOOBALHERO') {
+    return '두발히어로';
+  }
+
+  if (courierCode === 'EPOST') {
+    return '우체국택배';
   }
 
   return '';
@@ -88,7 +106,7 @@ app.post('/api/tracking', async function (req, res) {
     if (normalizedCourier === 'UNSUPPORTED') {
       return res.status(400).json({
         code: 'UNSUPPORTED_COURIER',
-        message: '지원하지 않는 택배사입니다. 현재는 CJ대한통운, 롯데택배만 지원합니다.',
+        message: '지원하지 않는 택배사입니다. 현재는 CJ대한통운, 롯데택배, 두발히어로, 우체국택배만 지원합니다.',
         receivedCourier: courier,
       });
     }
@@ -109,10 +127,10 @@ app.post('/api/tracking', async function (req, res) {
       });
     }
 
-    if (normalizedNumbers.length > 200) {
+    if (normalizedNumbers.length > 500) {
       return res.status(400).json({
         code: 'TOO_MANY_TRACKING_NUMBERS',
-        message: '한 번에 최대 200건까지만 조회할 수 있습니다.',
+        message: '한 번에 최대 500건까지만 조회할 수 있습니다.',
       });
     }
 
@@ -122,7 +140,12 @@ app.post('/api/tracking', async function (req, res) {
       results = await getCjTrackingResults(normalizedNumbers);
     } else if (normalizedCourier === 'LOTTE') {
       results = await getLotteTrackingResults(normalizedNumbers);
+    } else if (normalizedCourier === 'DOOBALHERO') {
+      results = await getDoobalHeroTrackingResults(normalizedNumbers);
+    } else if (normalizedCourier === 'EPOST') {
+      results = await getEpostTrackingResults(normalizedNumbers);
     }
+
 
     return res.json({
       courier: getCourierDisplayName(normalizedCourier),

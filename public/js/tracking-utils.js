@@ -1,4 +1,4 @@
-const MAX_TRACKING_REQUEST_COUNT = 200;
+const MAX_TRACKING_REQUEST_COUNT = 500;
 
 const COURIER_CONFIG = {
     CJ: {
@@ -25,6 +25,29 @@ const COURIER_CONFIG = {
             "lotteglogis",
             "lotteglobal",
             "lottegloballogistics",
+        ],
+    },
+
+    DOOBALHERO: {
+        code: "DOOBALHERO",
+        displayName: "두발히어로",
+        aliases: [
+            "두발히어로",
+            "두발 히어로",
+            "doobalhero",
+            "체인로지스",
+        ],
+    },
+
+    EPOST: {
+        code: "EPOST",
+        displayName: "우체국택배",
+        aliases: [
+            "우체국",
+            "우체국택배",
+            "우편",
+            "epost",
+            "post",
         ],
     },
 };
@@ -136,7 +159,7 @@ export function validateRow(row) {
             isValid: false,
             status: "지원하지 않는 택배사",
             time: "",
-            message: "현재는 CJ대한통운, 롯데택배만 지원합니다.",
+            message: "현재는 CJ대한통운, 롯데택배, 두발히어로, 우체국택배만 지원합니다.",
             excludedReason: "UNSUPPORTED_COURIER",
         };
     }

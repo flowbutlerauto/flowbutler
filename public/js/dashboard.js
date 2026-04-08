@@ -50,6 +50,12 @@ const trackingModePanels = document.querySelectorAll(".tracking-mode-panel");
 
 const trackingSearchBtn = document.getElementById("tracking-search-btn");
 const trackingResultEl = document.getElementById("tracking-result");
+const trackingResultTextEl = document.getElementById("tracking-result-text");
+const trackingProgressMessageEl = document.getElementById("tracking-progress-message");
+const trackingProgressDetailEl = document.getElementById("tracking-progress-detail");
+const trackingProgressPercentEl = document.getElementById("tracking-progress-percent");
+const trackingProgressWrapEl = document.getElementById("tracking-progress-wrap");
+const trackingProgressBarEl = document.getElementById("tracking-progress-bar");
 const trackingNumberInput = document.getElementById("tracking-number");
 const courierNameInput = document.getElementById("courier-name");
 
@@ -78,9 +84,63 @@ let trackingRows = [];
 let trackingExecuted = false;
 let lastTrackingSummary = null;
 
+function clampProgress(value) {
+    return Math.max(0, Math.min(100, Number(value) || 0));
+}
+
 function setTrackingResult(message) {
-    if (!trackingResultEl) return;
-    trackingResultEl.textContent = message ?? "";
+    const safeMessage = message ?? "";
+
+    if (trackingResultTextEl) {
+        trackingResultTextEl.textContent = safeMessage;
+        return;
+    }
+
+    if (trackingResultEl) {
+        trackingResultEl.textContent = safeMessage;
+    }
+}
+
+function setTrackingProgress({
+    message = "",
+    detail = "",
+    value = 0,
+    active = false,
+    visible = true,
+} = {}) {
+    const percent = clampProgress(value);
+
+    if (trackingProgressMessageEl) {
+        trackingProgressMessageEl.textContent = message;
+    }
+
+    if (trackingProgressDetailEl) {
+        trackingProgressDetailEl.textContent = detail;
+    }
+
+    if (trackingProgressPercentEl) {
+        trackingProgressPercentEl.textContent = `${percent}%`;
+    }
+
+    if (trackingProgressBarEl) {
+        trackingProgressBarEl.style.width = `${percent}%`;
+    }
+
+    if (trackingProgressWrapEl) {
+        trackingProgressWrapEl.classList.toggle("is-hidden", !visible);
+        trackingProgressWrapEl.classList.toggle("is-active", visible && active);
+        trackingProgressWrapEl.setAttribute("aria-hidden", visible ? "false" : "true");
+    }
+}
+
+function resetTrackingProgress() {
+    setTrackingProgress({
+        message: "준비됨",
+        detail: "엑셀 파일을 업로드하고 Tracking 실행을 눌러주세요.",
+        value: 0,
+        active: false,
+        visible: false,
+    });
 }
 
 function setManualTrackingResult(message) {
@@ -219,7 +279,7 @@ function buildManualTrackingSummaryText(summary) {
     );
 }
 
-async function executeTrackingRequests(validatedRows) {
+async function executeTrackingRequests(validatedRows, onProgress = () => { }) {
     const requestBuildResult = buildTrackingRequests(validatedRows);
 
     if (!requestBuildResult.ok) {
@@ -230,9 +290,31 @@ async function executeTrackingRequests(validatedRows) {
         };
     }
 
+    const requests = requestBuildResult.requests;
+    const totalRequests = requests.length;
+
     let mergedRows = [...validatedRows];
 
-    for (const payload of requestBuildResult.requests) {
+    onProgress({
+        message: "조회 요청을 준비하는 중입니다...",
+        detail: `택배사 기준 ${totalRequests}개 요청을 생성했습니다.`,
+        value: 12,
+        active: true,
+        visible: true,
+    });
+
+    for (let index = 0; index < totalRequests; index += 1) {
+        const payload = requests[index];
+        const startValue = 18 + Math.round((index / totalRequests) * 62);
+
+        onProgress({
+            message: `${payload.courier} 조회 중...`,
+            detail: `요청 ${index + 1} / ${totalRequests}`,
+            value: startValue,
+            active: true,
+            visible: true,
+        });
+
         const apiResult = await callTrackingApi(payload);
 
         if (!apiResult.ok) {
@@ -240,6 +322,14 @@ async function executeTrackingRequests(validatedRows) {
                 mergedRows,
                 apiResult.message || "서버 통신 중 오류가 발생했습니다."
             );
+
+            onProgress({
+                message: "조회 중 오류가 발생했습니다.",
+                detail: apiResult.message || "서버 통신 중 오류가 발생했습니다.",
+                value: 100,
+                active: false,
+                visible: true,
+            });
 
             return {
                 ok: false,
@@ -250,7 +340,25 @@ async function executeTrackingRequests(validatedRows) {
         }
 
         mergedRows = applyTrackingResults(mergedRows, apiResult.data);
+
+        const endValue = 18 + Math.round(((index + 1) / totalRequests) * 62);
+
+        onProgress({
+            message: `${payload.courier} 조회 완료`,
+            detail: `요청 ${index + 1} / ${totalRequests}`,
+            value: endValue,
+            active: true,
+            visible: true,
+        });
     }
+
+    onProgress({
+        message: "결과를 정리하는 중입니다...",
+        detail: "요약 정보를 생성하고 있습니다.",
+        value: 92,
+        active: true,
+        visible: true,
+    });
 
     return {
         ok: true,
@@ -268,6 +376,7 @@ async function setFileSelectedState(file) {
         lastTrackingSummary = null;
         setEmptyTrackingTable(trackingTableBody);
         updateDownloadButtonState();
+        resetTrackingProgress();
         setTrackingResult("업로드된 파일이 없습니다.");
         return;
     }
@@ -278,6 +387,14 @@ async function setFileSelectedState(file) {
         updateDownloadButtonState();
 
         setTrackingResult("엑셀 파일을 읽는 중입니다...");
+
+        setTrackingProgress({
+            message: "파일을 읽는 중입니다...",
+            detail: "업로드한 엑셀 파일을 분석하고 있습니다.",
+            value: 20,
+            active: true,
+            visible: true,
+        });
 
         const parsedRows = await parseTrackingFile(file);
 
@@ -292,6 +409,14 @@ async function setFileSelectedState(file) {
 
         applyRowsToScreen(parsedRows);
 
+        setTrackingProgress({
+            message: "파일 준비 완료",
+            detail: `총 ${parsedRows.length}건을 불러왔습니다.`,
+            value: 100,
+            active: false,
+            visible: true,
+        });
+
         setTrackingResult(
             `파일을 불러왔습니다.\n\n파일명: ${file.name}\n총 ${parsedRows.length}건을 읽었습니다.\n이제 Tracking 실행을 눌러 조회를 진행해주세요.`
         );
@@ -303,6 +428,14 @@ async function setFileSelectedState(file) {
         lastTrackingSummary = null;
         setEmptyTrackingTable(trackingTableBody);
         updateDownloadButtonState();
+
+        setTrackingProgress({
+            message: "파일 읽기 실패",
+            detail: error.message || "파일을 읽는 중 오류가 발생했습니다.",
+            value: 100,
+            active: false,
+            visible: true,
+        });
 
         setTrackingResult(`파일을 읽는 중 오류가 발생했습니다.\n${error.message}`);
     }
@@ -317,22 +450,41 @@ async function handleTrackingRun() {
 
     applyRowsToScreen(validatedRows);
 
+    setTrackingProgress({
+        message: "입력값을 확인하는 중입니다...",
+        detail: `총 ${validatedRows.length}건을 검증하고 있습니다.`,
+        value: 8,
+        active: true,
+        visible: true,
+    });
+
     const requestBuildResult = buildTrackingRequests(validatedRows);
 
     if (!requestBuildResult.ok) {
         if (requestBuildResult.reason === "NO_VALID_ROWS") {
             setTrackingResult("조회 가능한 송장번호가 없습니다.");
         } else if (requestBuildResult.reason === "TOO_MANY_ROWS") {
-            setTrackingResult("한 번에 최대 200건까지 조회할 수 있습니다.");
+            setTrackingResult("한 번에 최대 500건까지 조회할 수 있습니다.");
         } else {
             setTrackingResult("조회 요청을 생성할 수 없습니다.");
         }
+
+        setTrackingProgress({
+            message: "조회 준비 실패",
+            detail: "입력값을 확인한 뒤 다시 시도해주세요.",
+            value: 100,
+            active: false,
+            visible: true,
+        });
         return;
     }
 
-    setTrackingResult("Tracking 조회 중입니다...");
+    setTrackingResult("외부 택배사 시스템 응답을 기다리는 중입니다.");
 
-    const executionResult = await executeTrackingRequests(validatedRows);
+    const executionResult = await executeTrackingRequests(
+        validatedRows,
+        setTrackingProgress
+    );
 
     applyRowsToScreen(executionResult.rows);
 
@@ -348,6 +500,14 @@ async function handleTrackingRun() {
 
     const summary = buildTrackingSummary(executionResult.rows);
     lastTrackingSummary = summary;
+
+    setTrackingProgress({
+        message: "조회 완료",
+        detail: `총 ${summary.totalRows}건 처리를 마쳤습니다.`,
+        value: 100,
+        active: false,
+        visible: true,
+    });
 
     setTrackingResult(buildTrackingSummaryText(summary));
 
@@ -521,7 +681,8 @@ function initializeTrackingUi() {
     setEmptyTrackingTable(trackingTableBody);
     updateSelectedFileName(null, trackingFileNameEl);
     updateDownloadButtonState();
-    setTrackingResult("엑셀 파일을 업로드하고 Tracking 실행을 눌러주세요.");
+    resetTrackingProgress();
+    setTrackingResult("");
 
     clearManualResultScreen();
     updateManualCountInfo();

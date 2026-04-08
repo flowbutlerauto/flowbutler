@@ -129,8 +129,18 @@
                                         </div>
 
                                         <div class="tracking-toolbar-right">
-                                            <button id="tracking-run-btn" class="primary-btn">Tracking 실행</button>
-                                            <button id="tracking-download-btn" class="secondary-btn">결과 다운로드</button>
+                                            <div class="tracking-link-buttons">
+                                                <a href="https://www.notion.so/Tracking-33c6c38edd4b808abd0ac1508a46a291" target="_blank" rel="noopener noreferrer" class="secondary-btn tracking-link-btn">
+                                                    매뉴얼 보기
+                                                </a>
+                                                <a href="./assets/tracking-template.xlsx" download class="secondary-btn tracking-link-btn">
+                                                    엑셀 양식 다운로드
+                                                </a>
+                                            </div>
+                                            <div class="tracking-action-buttons">
+                                                <button id="tracking-run-btn" class="primary-btn">Tracking 실행</button>
+                                                <button id="tracking-download-btn" class="secondary-btn">결과 다운로드</button>
+                                            </div>
                                         </div>
                                     </div>
 
@@ -154,10 +164,26 @@
                                             </table>
                                         </div>
                                     </div>
-                                </div>
 
-                                <div id="tracking-result" class="info-block tracking-result-box">
-                                    아직 실제 Tracking 조회 로직은 연결되지 않았습니다.
+                                    <div id="tracking-result" class="info-block tracking-result-box tracking-status-card">
+                                        <div class="tracking-progress-head">
+                                            <div class="tracking-progress-copy">
+                                                <div id="tracking-progress-message" class="tracking-progress-message">
+                                                    준비됨
+                                                </div>
+                                                <div id="tracking-progress-detail" class="tracking-progress-detail">
+                                                    엑셀 파일을 업로드하고 Tracking 실행을 눌러주세요.
+                                                </div>
+                                            </div>
+                                            <div id="tracking-progress-percent" class="tracking-progress-percent">0%</div>
+                                        </div>
+
+                                        <div id="tracking-progress-wrap" class="tracking-progress-wrap is-hidden" aria-hidden="true">
+                                            <div id="tracking-progress-bar" class="tracking-progress-bar"></div>
+                                        </div>
+
+                                        <div id="tracking-result-text" class="tracking-result-text"></div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -178,6 +204,9 @@
                                             <label for="courier-name">택배사</label>
                                             <select id="courier-name">
                                                 <option value="CJ대한통운" selected>CJ대한통운</option>
+                                                <option value="롯데택배" selected>롯데택배</option>
+                                                <option value="두발히어로" selected>두발히어로</option>
+                                                <option value="우체국택배" selected>우체국택배</option>
                                             </select>
                                         </div>
 
@@ -216,7 +245,6 @@
                                 </div>
 
                                 <div class="workspace-subcard manual-result-card">
-
                                     <div class="tracking-table-wrap manual-table-wrap">
                                         <div class="tracking-table-scroll">
                                             <table class="tracking-table">

@@ -1,5 +1,6 @@
 {
   "projects": {
-    "default": "flowbutler"
+    "default": "flowbutler",
+    "dev": "flowbutler-dev"
   }
 }

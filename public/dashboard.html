@@ -19,17 +19,32 @@
                     </div>
 
                     <nav class="sidebar-nav">
-                        <button class="sidebar-nav-item is-active" data-view="home">
+                        <button class="sidebar-nav-item is-active" data-view="home" type="button">
                             <span class="sidebar-nav-title">홈</span>
                             <span class="sidebar-nav-desc">업무 요약과 빠른 시작</span>
                         </button>
 
-                        <button class="sidebar-nav-item" data-view="tracking">
-                            <span class="sidebar-nav-title">송장번호 Tracking</span>
-                            <span class="sidebar-nav-desc">엑셀 업로드 / 수기입력 조회</span>
-                        </button>
+                        <div class="sidebar-nav-group" data-nav-group="tools">
+                            <button class="sidebar-nav-group-toggle" type="button" aria-expanded="false"
+                                aria-controls="sidebar-tools-menu">
+                                <span class="sidebar-nav-title">도구</span>
+                                <span class="sidebar-nav-group-arrow">▾</span>
+                            </button>
 
-                        <button class="sidebar-nav-item" data-view="settings">
+                            <div id="sidebar-tools-menu" class="sidebar-subnav" hidden>
+                                <button class="sidebar-subnav-item" data-view="tracking" type="button">
+                                    <span class="sidebar-nav-title">송장번호 Tracking</span>
+                                    <span class="sidebar-nav-desc">엑셀 업로드 / 수기입력 조회</span>
+                                </button>
+
+                                <button class="sidebar-subnav-item" data-view="label" type="button">
+                                    <span class="sidebar-nav-title">라벨 생성</span>
+                                    <span class="sidebar-nav-desc">텍스트 박스 기반 라벨 편집</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <button class="sidebar-nav-item" data-view="settings" type="button">
                             <span class="sidebar-nav-title">설정</span>
                             <span class="sidebar-nav-desc">계정 및 서비스 정보 확인</span>
                         </button>
@@ -130,16 +145,20 @@
 
                                         <div class="tracking-toolbar-right">
                                             <div class="tracking-link-buttons">
-                                                <a href="https://www.notion.so/Tracking-33c6c38edd4b808abd0ac1508a46a291" target="_blank" rel="noopener noreferrer" class="secondary-btn tracking-link-btn">
+                                                <a href="https://www.notion.so/Tracking-33c6c38edd4b808abd0ac1508a46a291"
+                                                    target="_blank" rel="noopener noreferrer"
+                                                    class="secondary-btn tracking-link-btn">
                                                     매뉴얼 보기
                                                 </a>
-                                                <a href="./assets/tracking-template.xlsx" download class="secondary-btn tracking-link-btn">
+                                                <a href="./assets/tracking-template.xlsx" download
+                                                    class="secondary-btn tracking-link-btn">
                                                     엑셀 양식 다운로드
                                                 </a>
                                             </div>
                                             <div class="tracking-action-buttons">
                                                 <button id="tracking-run-btn" class="primary-btn">Tracking 실행</button>
-                                                <button id="tracking-download-btn" class="secondary-btn">결과 다운로드</button>
+                                                <button id="tracking-download-btn" class="secondary-btn">결과
+                                                    다운로드</button>
                                             </div>
                                         </div>
                                     </div>
@@ -165,7 +184,8 @@
                                         </div>
                                     </div>
 
-                                    <div id="tracking-result" class="info-block tracking-result-box tracking-status-card">
+                                    <div id="tracking-result"
+                                        class="info-block tracking-result-box tracking-status-card">
                                         <div class="tracking-progress-head">
                                             <div class="tracking-progress-copy">
                                                 <div id="tracking-progress-message" class="tracking-progress-message">
@@ -175,10 +195,12 @@
                                                     엑셀 파일을 업로드하고 Tracking 실행을 눌러주세요.
                                                 </div>
                                             </div>
-                                            <div id="tracking-progress-percent" class="tracking-progress-percent">0%</div>
+                                            <div id="tracking-progress-percent" class="tracking-progress-percent">0%
+                                            </div>
                                         </div>
 
-                                        <div id="tracking-progress-wrap" class="tracking-progress-wrap is-hidden" aria-hidden="true">
+                                        <div id="tracking-progress-wrap" class="tracking-progress-wrap is-hidden"
+                                            aria-hidden="true">
                                             <div id="tracking-progress-bar" class="tracking-progress-bar"></div>
                                         </div>
 
@@ -204,9 +226,9 @@
                                             <label for="courier-name">택배사</label>
                                             <select id="courier-name">
                                                 <option value="CJ대한통운" selected>CJ대한통운</option>
-                                                <option value="롯데택배" selected>롯데택배</option>
-                                                <option value="두발히어로" selected>두발히어로</option>
-                                                <option value="우체국택배" selected>우체국택배</option>
+                                                <option value="롯데택배">롯데택배</option>
+                                                <option value="두발히어로">두발히어로</option>
+                                                <option value="우체국택배">우체국택배</option>
                                             </select>
                                         </div>
 
@@ -268,6 +290,160 @@
                                     <div id="manual-tracking-result"
                                         class="info-block tracking-result-box manual-result-box">
                                         아직 수기입력 조회를 실행하지 않았습니다.
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+
+                    <div id="view-label" class="workspace-view">
+                        <section class="workspace-card">
+                            <div class="section-head">
+                                <div>
+                                    <h2 class="section-title">라벨 생성</h2>
+                                    <p class="workspace-text">
+                                        빈 라벨 위에 텍스트 박스를 배치하고 엑셀 헤더와 연결할 수 있는 편집 화면입니다.
+                                    </p>
+                                </div>
+                                <div class="section-badge">LABEL BUILDER</div>
+                            </div>
+
+                            <div class="label-builder-layout label-builder-layout-compact">
+                                <div class="label-builder-canvas-card workspace-subcard">
+                                    <div class="label-panel-head">
+                                        <div>
+                                            <h3 class="subcard-title">라벨 캔버스</h3>
+                                            <p class="subcard-text">
+                                                텍스트 박스를 추가한 뒤 위치와 크기를 조절할 영역입니다.
+                                            </p>
+                                        </div>
+                                        <div class="label-canvas-meta">100mm × 150mm</div>
+                                    </div>
+
+                                    <div class="label-canvas-stage">
+                                        <div id="label-canvas" class="label-canvas label-canvas-compact">
+                                            <div class="label-canvas-placeholder">
+                                                텍스트 박스를 추가하면 이 영역에 표시됩니다.
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="label-builder-side label-builder-side-compact">
+                                    <div class="workspace-subcard label-tool-card">
+                                        <div class="label-panel-head">
+                                            <div>
+                                                <h3 class="subcard-title">도구</h3>
+                                                <p class="subcard-text">
+                                                    라벨 크기와 박스 생성을 설정합니다.
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div class="label-tool-grid">
+                                            <div class="form-group">
+                                                <label for="label-width">라벨 너비(mm)</label>
+                                                <input type="number" id="label-width" value="100" min="20" max="300" />
+                                            </div>
+
+                                            <div class="form-group">
+                                                <label for="label-height">라벨 높이(mm)</label>
+                                                <input type="number" id="label-height" value="150" min="20" max="300" />
+                                            </div>
+                                        </div>
+
+                                        <div class="label-tool-actions">
+                                            <button id="label-apply-size-btn" class="secondary-btn" type="button">크기
+                                                적용</button>
+                                            <button id="label-add-text-btn" class="primary-btn" type="button">텍스트 박스
+                                                추가</button>
+                                        </div>
+                                    </div>
+
+                                    <div class="workspace-subcard label-properties-card">
+                                        <div class="label-panel-head">
+                                            <div>
+                                                <h3 class="subcard-title">선택 요소 속성</h3>
+                                                <p class="subcard-text">
+                                                    현재 선택된 텍스트 박스의 값을 수정합니다.
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div class="label-properties-empty">
+                                            아직 선택된 텍스트 박스가 없습니다.
+                                        </div>
+
+                                        <div class="label-properties-form is-collapsed">
+                                            <div class="form-group">
+                                                <label for="label-box-header">헤더명</label>
+                                                <input type="text" id="label-box-header" placeholder="예: 상품명" />
+                                            </div>
+
+                                            <div class="form-group">
+                                                <label for="label-box-sample">샘플 텍스트</label>
+                                                <input type="text" id="label-box-sample" placeholder="예: 샘플 상품명" />
+                                            </div>
+
+                                            <div class="label-tool-grid label-tool-grid-compact">
+                                                <div class="form-group">
+                                                    <label for="label-box-x">X</label>
+                                                    <input type="number" id="label-box-x" value="0" />
+                                                </div>
+
+                                                <div class="form-group">
+                                                    <label for="label-box-y">Y</label>
+                                                    <input type="number" id="label-box-y" value="0" />
+                                                </div>
+
+                                                <div class="form-group">
+                                                    <label for="label-box-width">너비</label>
+                                                    <input type="number" id="label-box-width" value="40" />
+                                                </div>
+
+                                                <div class="form-group">
+                                                    <label for="label-box-height">높이</label>
+                                                    <input type="number" id="label-box-height" value="12" />
+                                                </div>
+                                            </div>
+
+                                            <div class="form-group">
+                                                <label for="label-box-font-size">글자 크기</label>
+                                                <input type="number" id="label-box-font-size" value="10" min="6"
+                                                    max="72" />
+                                            </div>
+
+                                            <div class="form-group">
+                                                <label for="label-box-align">정렬</label>
+                                                <select id="label-box-align">
+                                                    <option value="left" selected>왼쪽</option>
+                                                    <option value="center">가운데</option>
+                                                    <option value="right">오른쪽</option>
+                                                </select>
+                                            </div>
+
+                                            <div class="label-tool-actions">
+                                                <button id="label-update-box-btn" class="secondary-btn" type="button">속성
+                                                    적용</button>
+                                                <button id="label-delete-box-btn" class="secondary-btn" type="button">선택
+                                                    박스 삭제</button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="workspace-subcard label-box-list-card label-box-list-card-inline">
+                                        <div class="label-panel-head">
+                                            <div>
+                                                <h3 class="subcard-title">텍스트 박스 목록</h3>
+                                                <p class="subcard-text">
+                                                    생성된 박스를 선택하고 관리할 수 있습니다.
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div id="label-box-list" class="label-box-list label-box-list-compact">
+                                            <div class="label-box-list-empty">아직 생성된 텍스트 박스가 없습니다.</div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>

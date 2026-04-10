@@ -2,6 +2,7 @@ import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/
 import { doc, getDoc } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
 import { auth, db } from "./firebase-config.js";
 import { parseTrackingFile } from "./tracking-file.js";
+import { initializeLabelEditor } from "./label-editor.js";
 
 import {
     applyTrackingResults,
@@ -39,8 +40,14 @@ const settingsUserPlanEl = document.getElementById("settings-user-plan");
 const settingsUserRoleEl = document.getElementById("settings-user-role");
 
 const logoutBtn = document.getElementById("logout-btn");
-const navButtons = document.querySelectorAll(".sidebar-nav-item");
+const navButtons = document.querySelectorAll(".sidebar-nav-item, .sidebar-subnav-item");
+const topLevelNavButtons = document.querySelectorAll(".sidebar-nav-item");
+const subNavButtons = document.querySelectorAll(".sidebar-subnav-item");
 const views = document.querySelectorAll(".workspace-view");
+
+const toolGroupEl = document.querySelector('[data-nav-group="tools"]');
+const toolGroupToggleEl = document.querySelector(".sidebar-nav-group-toggle");
+const toolSubnavEl = document.getElementById("sidebar-tools-menu");
 
 const viewTitleEl = document.getElementById("view-title");
 const viewSubtitleEl = document.getElementById("view-subtitle");
@@ -73,6 +80,10 @@ const viewMeta = {
     tracking: {
         title: "송장번호 Tracking",
         subtitle: "엑셀 업로드와 수기입력 방식으로 Tracking 업무를 처리할 수 있습니다.",
+    },
+    label: {
+        title: "라벨 생성",
+        subtitle: "텍스트 박스를 배치하고 엑셀 헤더와 연결할 수 있는 라벨 편집 화면입니다.",
     },
     settings: {
         title: "설정",
@@ -148,14 +159,38 @@ function setManualTrackingResult(message) {
     manualTrackingResultEl.textContent = message ?? "";
 }
 
+
+function setToolGroupOpenState(isOpen) {
+    if (!toolGroupEl || !toolGroupToggleEl || !toolSubnavEl) return;
+
+    toolGroupEl.classList.toggle("is-open", isOpen);
+    toolGroupToggleEl.setAttribute("aria-expanded", String(isOpen));
+    toolSubnavEl.hidden = !isOpen;
+}
+
+function isToolView(viewName) {
+    return viewName === "tracking" || viewName === "label";
+}
+
+
 function showView(viewName) {
-    navButtons.forEach((button) => {
+    topLevelNavButtons.forEach((button) => {
+        const isHome = viewName === "home" && button.dataset.view === "home";
+        const isSettings = viewName === "settings" && button.dataset.view === "settings";
+        button.classList.toggle("is-active", isHome || isSettings);
+    });
+
+    subNavButtons.forEach((button) => {
         button.classList.toggle("is-active", button.dataset.view === viewName);
     });
 
     views.forEach((view) => {
         view.classList.toggle("is-visible", view.id === `view-${viewName}`);
     });
+
+    if (isToolView(viewName)) {
+        setToolGroupOpenState(true);
+    }
 
     const meta = viewMeta[viewName];
     if (meta) {
@@ -564,7 +599,7 @@ async function handleManualTrackingSearch() {
         if (requestBuildResult.reason === "NO_VALID_ROWS") {
             setManualTrackingResult("조회 가능한 송장번호가 없습니다.");
         } else if (requestBuildResult.reason === "TOO_MANY_ROWS") {
-            setManualTrackingResult("한 번에 최대 200건까지 조회할 수 있습니다.");
+            setManualTrackingResult("한 번에 최대 500건까지 조회할 수 있습니다.");
         } else {
             setManualTrackingResult("조회 요청을 생성할 수 없습니다.");
         }
@@ -643,9 +678,15 @@ function bindEvents() {
         }
     });
 
+    toolGroupToggleEl?.addEventListener("click", () => {
+        const isOpen = toolGroupEl?.classList.contains("is-open");
+        setToolGroupOpenState(!isOpen);
+    });
+
     navButtons.forEach((button) => {
         button.addEventListener("click", () => {
             const viewName = button.dataset.view;
+            if (!viewName) return;
             showView(viewName);
         });
     });
@@ -689,9 +730,11 @@ function initializeTrackingUi() {
 }
 
 function initializeDashboard() {
+    setToolGroupOpenState(false);
     showView("home");
     showTrackingMode("excel");
     initializeTrackingUi();
+    initializeLabelEditor();
     bindEvents();
 }
 

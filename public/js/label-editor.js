@@ -1,4 +1,5 @@
 const MM_TO_PX = 3.78;
+const DRAG_CLICK_THRESHOLD_PX = 3;
 
 const state = {
     label: {
@@ -8,6 +9,14 @@ const state = {
     boxes: [],
     selectedBoxId: null,
     nextBoxNumber: 1,
+    drag: {
+        boxId: null,
+        startMouseX: 0,
+        startMouseY: 0,
+        originBoxX: 0,
+        originBoxY: 0,
+        moved: false,
+    },
 };
 
 const elements = {
@@ -41,6 +50,11 @@ const elements = {
 
 function mmToPx(mm) {
     return Math.round((Number(mm) || 0) * MM_TO_PX);
+}
+
+function pxToMm(px) {
+    const raw = (Number(px) || 0) / MM_TO_PX;
+    return Math.round(raw * 10) / 10;
 }
 
 function clamp(value, min, max) {
@@ -134,8 +148,8 @@ function renderLabelCanvas() {
             ? `${box.name} · 헤더: ${box.headerName}`
             : box.name;
 
-        boxEl.addEventListener("click", () => {
-            setSelectedBox(box.id);
+        boxEl.addEventListener("mousedown", (event) => {
+            handleBoxMouseDown(event, box.id);
         });
 
         elements.canvas.appendChild(boxEl);
@@ -267,6 +281,66 @@ function handleDeleteSelectedBox() {
     setSelectedBox(state.boxes[0].id);
 }
 
+function handleBoxMouseDown(event, boxId) {
+    if (event.button !== 0) return;
+    event.preventDefault();
+
+    const box = state.boxes.find((item) => item.id === boxId);
+    if (!box) return;
+
+    state.drag.boxId = boxId;
+    state.drag.startMouseX = event.clientX;
+    state.drag.startMouseY = event.clientY;
+    state.drag.originBoxX = box.x;
+    state.drag.originBoxY = box.y;
+    state.drag.moved = false;
+}
+
+function handleCanvasMouseMove(event) {
+    if (!state.drag.boxId) return;
+    const selectedBox = state.boxes.find((box) => box.id === state.drag.boxId);
+    if (!selectedBox) return;
+
+    const deltaPxX = event.clientX - state.drag.startMouseX;
+    const deltaPxY = event.clientY - state.drag.startMouseY;
+
+    if (Math.abs(deltaPxX) > DRAG_CLICK_THRESHOLD_PX || Math.abs(deltaPxY) > DRAG_CLICK_THRESHOLD_PX) {
+        state.drag.moved = true;
+    }
+
+    const deltaMmX = pxToMm(deltaPxX);
+    const deltaMmY = pxToMm(deltaPxY);
+
+    const nextX = clamp(
+        state.drag.originBoxX + deltaMmX,
+        0,
+        Math.max(0, state.label.widthMm - selectedBox.width),
+    );
+    const nextY = clamp(
+        state.drag.originBoxY + deltaMmY,
+        0,
+        Math.max(0, state.label.heightMm - selectedBox.height),
+    );
+
+    selectedBox.x = nextX;
+    selectedBox.y = nextY;
+
+    state.selectedBoxId = selectedBox.id;
+    renderLabelCanvas();
+    renderLabelBoxList();
+    syncPropertiesPanel();
+}
+
+function handleCanvasMouseUp() {
+    if (!state.drag.boxId) return;
+
+    if (!state.drag.moved) {
+        setSelectedBox(state.drag.boxId);
+    }
+
+    state.drag.boxId = null;
+}
+
 function escapeHtml(value) {
     return String(value)
         .replaceAll("&", "&amp;")
@@ -281,6 +355,8 @@ function bindEvents() {
     elements.applySizeBtn?.addEventListener("click", handleApplyLabelSize);
     elements.updateBoxBtn?.addEventListener("click", handleUpdateSelectedBox);
     elements.deleteBoxBtn?.addEventListener("click", handleDeleteSelectedBox);
+    elements.canvas?.addEventListener("mousemove", handleCanvasMouseMove);
+    document.addEventListener("mouseup", handleCanvasMouseUp);
 }
 
 function initializeLabelEditor() {

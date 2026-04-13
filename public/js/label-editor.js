@@ -20,6 +20,8 @@ const state = {
     nextBoxNumber: 1,
     userId: null,
     templates: [],
+    templatesLoaded: false,
+    templatesLoadPromise: null,
     drag: {
         boxId: null,
         startMouseX: 0,
@@ -110,12 +112,28 @@ function getLabelSnapshot() {
     };
 }
 
+function cloneBox(box = {}) {
+    return {
+        id: String(box.id || `box_${Date.now()}`),
+        name: String(box.name || "텍스트 박스"),
+        type: "text",
+        headerName: String(box.headerName || ""),
+        sampleText: String(box.sampleText || ""),
+        x: Number(box.x) || 0,
+        y: Number(box.y) || 0,
+        width: Number(box.width) || 40,
+        height: Number(box.height) || 12,
+        fontSize: Number(box.fontSize) || 10,
+        textAlign: box.textAlign === "center" || box.textAlign === "right" ? box.textAlign : "left",
+    };
+}
+
 function applyLabelSnapshot(snapshot) {
     if (!snapshot) return;
 
     state.label.widthMm = clamp(Number(snapshot.label?.widthMm || 100), 20, 300);
     state.label.heightMm = clamp(Number(snapshot.label?.heightMm || 150), 20, 300);
-    state.boxes = Array.isArray(snapshot.boxes) ? snapshot.boxes : [];
+    state.boxes = Array.isArray(snapshot.boxes) ? snapshot.boxes.map((box) => cloneBox(box)) : [];
     state.nextBoxNumber = clamp(Number(snapshot.nextBoxNumber || state.boxes.length + 1), 1, 9999);
     state.selectedBoxId = state.boxes[0]?.id ?? null;
 
@@ -157,21 +175,41 @@ function renderTemplateOptions(preferredTemplateId = "") {
 }
 
 async function loadTemplates() {
-    if (!state.userId) return;
+    if (!state.userId) {
+        state.templatesLoaded = true;
+        return true;
+    }
 
     try {
         const templateDocRef = getTemplateDocRef();
-        if (!templateDocRef) return;
+        if (!templateDocRef) return false;
 
         const templateDocSnap = await getDoc(templateDocRef);
         const templates = templateDocSnap.data()?.templates;
         state.templates = sortTemplates(Array.isArray(templates) ? templates : []);
+        state.templatesLoaded = true;
         renderTemplateOptions();
         setTemplateStatus("저장된 라벨 양식을 불러왔습니다.", "info");
+        return true;
     } catch (error) {
         console.error(error);
         setTemplateStatus("양식 목록을 불러오지 못했습니다.", "error");
+        return false;
     }
+}
+
+async function ensureTemplatesLoaded() {
+    if (state.templatesLoaded) return true;
+    if (!state.templatesLoadPromise) {
+        state.templatesLoadPromise = loadTemplates();
+    }
+
+    const loaded = await state.templatesLoadPromise;
+    if (!loaded) {
+        setTemplateStatus("양식을 불러온 뒤 다시 시도해주세요.", "error");
+        return false;
+    }
+    return true;
 }
 
 async function persistTemplates() {
@@ -422,6 +460,9 @@ async function handleSaveTemplate() {
         return;
     }
 
+    const ready = await ensureTemplatesLoaded();
+    if (!ready) return;
+
     const name = elements.templateNameInput?.value.trim() || "";
     if (!name) {
         setTemplateStatus("양식 이름을 입력해주세요.", "error");
@@ -478,6 +519,9 @@ function handleLoadTemplate() {
 }
 
 async function handleDeleteTemplate() {
+    const ready = await ensureTemplatesLoaded();
+    if (!ready) return;
+
     const template = getSelectedTemplate();
     if (!template) {
         setTemplateStatus("삭제할 양식을 선택해주세요.", "error");
@@ -583,7 +627,8 @@ function initializeLabelEditor(options = {}) {
     renderTemplateOptions();
     syncPropertiesPanel();
     bindEvents();
-    loadTemplates();
+    state.templatesLoaded = false;
+    state.templatesLoadPromise = loadTemplates();
 }
 
 export { initializeLabelEditor };

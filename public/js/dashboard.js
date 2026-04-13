@@ -734,7 +734,6 @@ function initializeDashboard() {
     showView("home");
     showTrackingMode("excel");
     initializeTrackingUi();
-    initializeLabelEditor();
     bindEvents();
 }
 
@@ -746,6 +745,7 @@ onAuthStateChanged(auth, async (user) => {
 
     try {
         await loadApprovedUser(user);
+        initializeLabelEditor({ userId: user.uid });
     } catch (error) {
         console.error(error);
         dashboardUserInfoEl.textContent = "사용자 상태 확인 중 오류가 발생했습니다.";

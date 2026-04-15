@@ -82,7 +82,7 @@ const viewMeta = {
         subtitle: "엑셀 업로드와 수기입력 방식으로 Tracking 업무를 처리할 수 있습니다.",
     },
     label: {
-        title: "라벨 생성",
+        title: "라벨 양식 설정",
         subtitle: "텍스트 박스를 배치하고 엑셀 헤더와 연결할 수 있는 라벨 편집 화면입니다.",
     },
     settings: {

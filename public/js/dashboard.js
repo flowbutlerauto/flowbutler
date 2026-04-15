@@ -77,7 +77,6 @@ const trackingTableBody = document.getElementById("tracking-table-body");
 
 const skuFileInput = document.getElementById("sku-file");
 const skuFileNameEl = document.getElementById("sku-file-name");
-const skuValidateBtn = document.getElementById("sku-validate-btn");
 const skuHeaderConfigBtn = document.getElementById("sku-header-config-btn");
 const skuResultEl = document.getElementById("sku-result");
 const skuTableHead = document.getElementById("sku-table-head");
@@ -199,6 +198,23 @@ function isToolView(viewName) {
 function setSkuResult(message) {
     if (!skuResultEl) return;
     skuResultEl.textContent = message ?? "";
+}
+
+function buildSkuUploadErrorMessage(validationRows) {
+    const invalidRows = (validationRows ?? []).filter((row) => !row.isValid);
+    if (!invalidRows.length) return "";
+
+    const previewLines = invalidRows
+        .slice(0, 5)
+        .map((row) => `- ${row.rowId}행: ${(row.errors ?? []).join(", ")}`)
+        .join("\n");
+
+    const remainingCount = invalidRows.length - Math.min(invalidRows.length, 5);
+    const remainingLine = remainingCount > 0
+        ? `\n외 ${remainingCount}건의 오류가 더 있습니다.`
+        : "";
+
+    return `SKU 업로드에 실패했습니다.\n오류를 수정한 뒤 다시 업로드해주세요.\n\n${previewLines}${remainingLine}`;
 }
 
 function setSkuEmptyTable(message) {
@@ -354,7 +370,7 @@ function handleApplySkuHeaders() {
         const { total, valid, invalid } = validationResult.summary;
         setSkuResult(`총 ${total}건 중 정상 ${valid}건, 오류 ${invalid}건`);
     } else {
-        setSkuEmptyTable("SKU 파일을 선택하고 검증 실행을 눌러주세요.");
+        setSkuEmptyTable("SKU 파일을 선택하면 자동으로 검증합니다.");
     }
 
     closeSkuHeaderModal();
@@ -689,36 +705,37 @@ async function setSkuFileSelectedState(file) {
     if (!file) {
         skuRows = [];
         updateSelectedFileName(null, skuFileNameEl);
-        setSkuEmptyTable("SKU 파일을 선택하고 검증 실행을 눌러주세요.");
+        setSkuEmptyTable("SKU 파일을 선택하면 자동으로 검증합니다.");
         setSkuResult("선택된 파일이 없습니다.");
         return;
     }
 
-    updateSelectedFileName(file, skuFileNameEl);
-
     try {
-        skuRows = await parseSkuFile(file);
-        setSkuResult(`파일 로드 완료: ${skuRows.length}행`);
+        const parsedRows = await parseSkuFile(file);
+        const validationResult = validateSkuRows(parsedRows);
+        const { total, valid, invalid } = validationResult.summary;
+
+        if (invalid > 0) {
+            skuRows = [];
+            updateSelectedFileName(null, skuFileNameEl);
+            setSkuEmptyTable("오류가 있는 파일은 업로드되지 않습니다. 파일을 수정한 뒤 다시 시도해주세요.");
+            setSkuResult(`업로드 실패: 총 ${total}건 중 오류 ${invalid}건`);
+            window.alert(buildSkuUploadErrorMessage(validationResult.rows));
+            return;
+        }
+
+        skuRows = parsedRows;
+        updateSelectedFileName(file, skuFileNameEl);
+        renderSkuTable(validationResult.rows);
+        setSkuResult(`업로드 완료: 총 ${total}건 (정상 ${valid}건)`);
     } catch (error) {
         console.error(error);
         skuRows = [];
+        updateSelectedFileName(null, skuFileNameEl);
         setSkuEmptyTable("파일을 불러오지 못했습니다.");
         setSkuResult(error.message || "파일 처리 중 오류가 발생했습니다.");
+        window.alert("SKU 파일을 업로드할 수 없습니다.\n파일 형식과 내용을 확인해주세요.");
     }
-}
-
-function handleSkuValidate() {
-    if (!skuRows.length) {
-        setSkuEmptyTable("검증할 SKU 데이터가 없습니다.");
-        setSkuResult("먼저 SKU 파일을 업로드해주세요.");
-        return;
-    }
-
-    const validationResult = validateSkuRows(skuRows);
-    renderSkuTable(validationResult.rows);
-
-    const { total, valid, invalid } = validationResult.summary;
-    setSkuResult(`총 ${total}건 중 정상 ${valid}건, 오류 ${invalid}건`);
 }
 
 async function handleTrackingRun() {
@@ -965,7 +982,6 @@ function bindEvents() {
     trackingRunBtn?.addEventListener("click", handleTrackingRun);
     trackingDownloadBtn?.addEventListener("click", handleTrackingDownload);
     trackingSearchBtn?.addEventListener("click", handleManualTrackingSearch);
-    skuValidateBtn?.addEventListener("click", handleSkuValidate);
     skuHeaderConfigBtn?.addEventListener("click", openSkuHeaderModal);
     skuHeaderApplyBtn?.addEventListener("click", handleApplySkuHeaders);
     skuHeaderCancelBtn?.addEventListener("click", closeSkuHeaderModal);
@@ -994,8 +1010,8 @@ function initializeSkuUi() {
     selectedSkuHeaderKeys = getDefaultSkuHeaderKeys();
     renderSkuTableHead();
     updateSelectedFileName(null, skuFileNameEl);
-    setSkuEmptyTable("SKU 파일을 선택하고 검증 실행을 눌러주세요.");
-    setSkuResult("업로드한 SKU 파일을 검증하면 결과가 여기에 표시됩니다.");
+    setSkuEmptyTable("SKU 파일을 선택하면 자동으로 검증합니다.");
+    setSkuResult("업로드 시 자동 검증되며, 오류가 있으면 업로드되지 않습니다.");
     closeSkuHeaderModal();
 }
 

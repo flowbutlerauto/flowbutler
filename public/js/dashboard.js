@@ -3,6 +3,8 @@ import { doc, getDoc } from "https://www.gstatic.com/firebasejs/12.10.0/firebase
 import { auth, db } from "./firebase-config.js";
 import { parseTrackingFile } from "./tracking-file.js";
 import { initializeLabelEditor } from "./label-editor.js";
+import { parseSkuFile } from "./sku-file.js";
+import { validateSkuRows } from "./sku-utils.js";
 
 import {
     applyTrackingResults,
@@ -72,6 +74,12 @@ const trackingRunBtn = document.getElementById("tracking-run-btn");
 const trackingDownloadBtn = document.getElementById("tracking-download-btn");
 const trackingTableBody = document.getElementById("tracking-table-body");
 
+const skuFileInput = document.getElementById("sku-file");
+const skuFileNameEl = document.getElementById("sku-file-name");
+const skuValidateBtn = document.getElementById("sku-validate-btn");
+const skuResultEl = document.getElementById("sku-result");
+const skuTableBody = document.getElementById("sku-table-body");
+
 const viewMeta = {
     home: {
         title: "홈",
@@ -82,8 +90,12 @@ const viewMeta = {
         subtitle: "엑셀 업로드와 수기입력 방식으로 Tracking 업무를 처리할 수 있습니다.",
     },
     label: {
-        title: "라벨 생성",
+        title: "라벨 양식 설정",
         subtitle: "텍스트 박스를 배치하고 엑셀 헤더와 연결할 수 있는 라벨 편집 화면입니다.",
+    },
+    sku: {
+        title: "SKU 관리",
+        subtitle: "SKU 파일 업로드와 필수값/형식 검증을 수행할 수 있습니다.",
     },
     settings: {
         title: "설정",
@@ -94,6 +106,7 @@ const viewMeta = {
 let trackingRows = [];
 let trackingExecuted = false;
 let lastTrackingSummary = null;
+let skuRows = [];
 
 function clampProgress(value) {
     return Math.max(0, Math.min(100, Number(value) || 0));
@@ -169,7 +182,56 @@ function setToolGroupOpenState(isOpen) {
 }
 
 function isToolView(viewName) {
-    return viewName === "tracking" || viewName === "label";
+    return viewName === "tracking" || viewName === "label" || viewName === "sku";
+}
+
+function setSkuResult(message) {
+    if (!skuResultEl) return;
+    skuResultEl.textContent = message ?? "";
+}
+
+function setSkuEmptyTable(message) {
+    if (!skuTableBody) return;
+    skuTableBody.innerHTML = `
+    <tr class="tracking-empty-row">
+      <td colspan="5">${message}</td>
+    </tr>
+  `;
+}
+
+function renderSkuTable(rows) {
+    if (!skuTableBody) return;
+
+    if (!rows.length) {
+        setSkuEmptyTable("검증 가능한 데이터가 없습니다.");
+        return;
+    }
+
+    skuTableBody.innerHTML = rows.map((row) => {
+        const status = row.isValid ? "정상" : "오류";
+        const errorText = row.isValid
+            ? "-"
+            : (row.errors ?? []).join("; ");
+
+        return `
+      <tr>
+        <td>${row.rowId}</td>
+        <td>${escapeHtml(row.adminProductCode ?? "")}</td>
+        <td>${escapeHtml(row.productName ?? "")}</td>
+        <td>${status}</td>
+        <td>${escapeHtml(errorText)}</td>
+      </tr>
+    `;
+    }).join("");
+}
+
+function escapeHtml(value) {
+    return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;");
 }
 
 
@@ -476,6 +538,42 @@ async function setFileSelectedState(file) {
     }
 }
 
+async function setSkuFileSelectedState(file) {
+    if (!file) {
+        skuRows = [];
+        updateSelectedFileName(null, skuFileNameEl);
+        setSkuEmptyTable("SKU 파일을 선택하고 검증 실행을 눌러주세요.");
+        setSkuResult("선택된 파일이 없습니다.");
+        return;
+    }
+
+    updateSelectedFileName(file, skuFileNameEl);
+
+    try {
+        skuRows = await parseSkuFile(file);
+        setSkuResult(`파일 로드 완료: ${skuRows.length}행`);
+    } catch (error) {
+        console.error(error);
+        skuRows = [];
+        setSkuEmptyTable("파일을 불러오지 못했습니다.");
+        setSkuResult(error.message || "파일 처리 중 오류가 발생했습니다.");
+    }
+}
+
+function handleSkuValidate() {
+    if (!skuRows.length) {
+        setSkuEmptyTable("검증할 SKU 데이터가 없습니다.");
+        setSkuResult("먼저 SKU 파일을 업로드해주세요.");
+        return;
+    }
+
+    const validationResult = validateSkuRows(skuRows);
+    renderSkuTable(validationResult.rows);
+
+    const { total, valid, invalid } = validationResult.summary;
+    setSkuResult(`총 ${total}건 중 정상 ${valid}건, 오류 ${invalid}건`);
+}
+
 async function handleTrackingRun() {
     trackingExecuted = false;
     updateDownloadButtonState();
@@ -701,6 +799,10 @@ function bindEvents() {
         const file = trackingFileInput.files?.[0];
         await setFileSelectedState(file);
     });
+    skuFileInput?.addEventListener("change", async () => {
+        const file = skuFileInput.files?.[0];
+        await setSkuFileSelectedState(file);
+    });
 
     trackingTableBody?.addEventListener("input", (event) => {
         const target = event.target;
@@ -716,6 +818,7 @@ function bindEvents() {
     trackingRunBtn?.addEventListener("click", handleTrackingRun);
     trackingDownloadBtn?.addEventListener("click", handleTrackingDownload);
     trackingSearchBtn?.addEventListener("click", handleManualTrackingSearch);
+    skuValidateBtn?.addEventListener("click", handleSkuValidate);
 }
 
 function initializeTrackingUi() {
@@ -729,12 +832,18 @@ function initializeTrackingUi() {
     updateManualCountInfo();
 }
 
+function initializeSkuUi() {
+    updateSelectedFileName(null, skuFileNameEl);
+    setSkuEmptyTable("SKU 파일을 선택하고 검증 실행을 눌러주세요.");
+    setSkuResult("업로드한 SKU 파일을 검증하면 결과가 여기에 표시됩니다.");
+}
+
 function initializeDashboard() {
     setToolGroupOpenState(false);
     showView("home");
     showTrackingMode("excel");
     initializeTrackingUi();
-    initializeLabelEditor();
+    initializeSkuUi();
     bindEvents();
 }
 
@@ -746,6 +855,7 @@ onAuthStateChanged(auth, async (user) => {
 
     try {
         await loadApprovedUser(user);
+        initializeLabelEditor({ userId: user.uid });
     } catch (error) {
         console.error(error);
         dashboardUserInfoEl.textContent = "사용자 상태 확인 중 오류가 발생했습니다.";

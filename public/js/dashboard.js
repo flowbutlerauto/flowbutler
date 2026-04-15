@@ -5,6 +5,7 @@ import { parseTrackingFile } from "./tracking-file.js";
 import { initializeLabelEditor } from "./label-editor.js";
 import { parseSkuFile } from "./sku-file.js";
 import { validateSkuRows } from "./sku-utils.js";
+import { SKU_FIELDS, SKU_REQUIRED_KEYS } from "./sku-schema.js";
 
 import {
     applyTrackingResults,
@@ -77,8 +78,18 @@ const trackingTableBody = document.getElementById("tracking-table-body");
 const skuFileInput = document.getElementById("sku-file");
 const skuFileNameEl = document.getElementById("sku-file-name");
 const skuValidateBtn = document.getElementById("sku-validate-btn");
+const skuHeaderConfigBtn = document.getElementById("sku-header-config-btn");
+const skuHeaderConfigBtnTop = document.getElementById("sku-header-config-btn-top");
 const skuResultEl = document.getElementById("sku-result");
+const skuTableHead = document.getElementById("sku-table-head");
 const skuTableBody = document.getElementById("sku-table-body");
+const skuHeaderModal = document.getElementById("sku-header-modal");
+const skuHeaderCheckboxList = document.getElementById("sku-header-checkbox-list");
+const skuHeaderApplyBtn = document.getElementById("sku-header-apply-btn");
+const skuHeaderCancelBtn = document.getElementById("sku-header-cancel-btn");
+const skuHeaderSelectAllBtn = document.getElementById("sku-header-select-all-btn");
+const skuHeaderRequiredBtn = document.getElementById("sku-header-required-btn");
+const skuHeaderResetBtn = document.getElementById("sku-header-reset-btn");
 
 const viewMeta = {
     home: {
@@ -107,6 +118,7 @@ let trackingRows = [];
 let trackingExecuted = false;
 let lastTrackingSummary = null;
 let skuRows = [];
+let selectedSkuHeaderKeys = [];
 
 function clampProgress(value) {
     return Math.max(0, Math.min(100, Number(value) || 0));
@@ -194,7 +206,64 @@ function setSkuEmptyTable(message) {
     if (!skuTableBody) return;
     skuTableBody.innerHTML = `
     <tr class="tracking-empty-row">
-      <td colspan="5">${message}</td>
+      <td colspan="${getSkuTableColumnCount()}">${message}</td>
+    </tr>
+  `;
+}
+
+function getSkuTableColumnCount() {
+    return 1 + selectedSkuHeaderKeys.length + 2;
+}
+
+function getFieldByKey(key) {
+    return SKU_FIELDS.find((field) => field.key === key) ?? null;
+}
+
+function getDefaultSkuHeaderKeys() {
+    return ensureSkuHeaderSelection(["adminProductCode", "productName", "brand", "category"]);
+}
+
+function ensureSkuHeaderSelection(keys) {
+    const uniqueKeys = [...new Set(keys)];
+    const availableKeySet = new Set(SKU_FIELDS.map((field) => field.key));
+    const requiredKeySet = new Set(SKU_REQUIRED_KEYS);
+
+    const filtered = uniqueKeys.filter((key) => availableKeySet.has(key));
+    const merged = [...new Set([...filtered, ...SKU_REQUIRED_KEYS])];
+
+    if (!merged.length) {
+        return [...SKU_REQUIRED_KEYS];
+    }
+
+    return merged.sort((a, b) => {
+        const fieldIndexA = SKU_FIELDS.findIndex((field) => field.key === a);
+        const fieldIndexB = SKU_FIELDS.findIndex((field) => field.key === b);
+
+        const isRequiredA = requiredKeySet.has(a);
+        const isRequiredB = requiredKeySet.has(b);
+
+        if (isRequiredA && !isRequiredB) return -1;
+        if (!isRequiredA && isRequiredB) return 1;
+        return fieldIndexA - fieldIndexB;
+    });
+}
+
+function renderSkuTableHead() {
+    if (!skuTableHead) return;
+
+    const headerHtml = selectedSkuHeaderKeys
+        .map((key) => {
+            const field = getFieldByKey(key);
+            return `<th>${escapeHtml(field?.label ?? key)}</th>`;
+        })
+        .join("");
+
+    skuTableHead.innerHTML = `
+    <tr>
+      <th>행</th>
+      ${headerHtml}
+      <th>상태</th>
+      <th>오류</th>
     </tr>
   `;
 }
@@ -212,17 +281,96 @@ function renderSkuTable(rows) {
         const errorText = row.isValid
             ? "-"
             : (row.errors ?? []).join("; ");
+        const columnHtml = selectedSkuHeaderKeys
+            .map((key) => `<td>${escapeHtml(row[key] ?? "")}</td>`)
+            .join("");
 
         return `
       <tr>
         <td>${row.rowId}</td>
-        <td>${escapeHtml(row.adminProductCode ?? "")}</td>
-        <td>${escapeHtml(row.productName ?? "")}</td>
+        ${columnHtml}
         <td>${status}</td>
         <td>${escapeHtml(errorText)}</td>
       </tr>
     `;
     }).join("");
+}
+
+function renderSkuHeaderCheckboxes() {
+    if (!skuHeaderCheckboxList) return;
+
+    const requiredKeySet = new Set(SKU_REQUIRED_KEYS);
+
+    skuHeaderCheckboxList.innerHTML = SKU_FIELDS.map((field) => {
+        const checked = selectedSkuHeaderKeys.includes(field.key);
+        const disabled = requiredKeySet.has(field.key);
+        const requiredBadge = disabled ? " (필수)" : "";
+
+        return `
+      <label class="sku-header-checkbox-item">
+        <input type="checkbox" data-sku-header-key="${field.key}" ${checked ? "checked" : ""} ${disabled ? "disabled" : ""} />
+        <span>${escapeHtml(field.label)}${requiredBadge}</span>
+      </label>
+    `;
+    }).join("");
+}
+
+function setSkuHeaderCheckboxSelection(keys) {
+    if (!skuHeaderCheckboxList) return;
+
+    const selectedKeySet = new Set(ensureSkuHeaderSelection(keys));
+    const checkboxes = skuHeaderCheckboxList.querySelectorAll('input[data-sku-header-key]');
+    checkboxes.forEach((checkbox) => {
+        const key = checkbox.getAttribute("data-sku-header-key") || "";
+        checkbox.checked = selectedKeySet.has(key);
+    });
+}
+
+function openSkuHeaderModal() {
+    if (!skuHeaderModal) return;
+    renderSkuHeaderCheckboxes();
+    skuHeaderModal.classList.remove("is-hidden");
+    skuHeaderModal.setAttribute("aria-hidden", "false");
+}
+
+function closeSkuHeaderModal() {
+    if (!skuHeaderModal) return;
+    skuHeaderModal.classList.add("is-hidden");
+    skuHeaderModal.setAttribute("aria-hidden", "true");
+}
+
+function handleApplySkuHeaders() {
+    if (!skuHeaderCheckboxList) return;
+
+    const checkedKeys = [...skuHeaderCheckboxList.querySelectorAll('input[data-sku-header-key]:checked')]
+        .map((node) => node.getAttribute("data-sku-header-key") || "")
+        .filter(Boolean);
+
+    selectedSkuHeaderKeys = ensureSkuHeaderSelection(checkedKeys);
+    renderSkuTableHead();
+
+    if (skuRows.length) {
+        const validationResult = validateSkuRows(skuRows);
+        renderSkuTable(validationResult.rows);
+        const { total, valid, invalid } = validationResult.summary;
+        setSkuResult(`총 ${total}건 중 정상 ${valid}건, 오류 ${invalid}건`);
+    } else {
+        setSkuEmptyTable("SKU 파일을 선택하고 검증 실행을 눌러주세요.");
+    }
+
+    closeSkuHeaderModal();
+}
+
+function handleSelectAllSkuHeaders() {
+    setSkuHeaderCheckboxSelection(SKU_FIELDS.map((field) => field.key));
+}
+
+function handleSelectRequiredSkuHeaders() {
+    setSkuHeaderCheckboxSelection(SKU_REQUIRED_KEYS);
+}
+
+function handleResetSkuHeaders() {
+    setSkuHeaderCheckboxSelection(getDefaultSkuHeaderKeys());
 }
 
 function escapeHtml(value) {
@@ -819,6 +967,18 @@ function bindEvents() {
     trackingDownloadBtn?.addEventListener("click", handleTrackingDownload);
     trackingSearchBtn?.addEventListener("click", handleManualTrackingSearch);
     skuValidateBtn?.addEventListener("click", handleSkuValidate);
+    skuHeaderConfigBtn?.addEventListener("click", openSkuHeaderModal);
+    skuHeaderConfigBtnTop?.addEventListener("click", openSkuHeaderModal);
+    skuHeaderApplyBtn?.addEventListener("click", handleApplySkuHeaders);
+    skuHeaderCancelBtn?.addEventListener("click", closeSkuHeaderModal);
+    skuHeaderSelectAllBtn?.addEventListener("click", handleSelectAllSkuHeaders);
+    skuHeaderRequiredBtn?.addEventListener("click", handleSelectRequiredSkuHeaders);
+    skuHeaderResetBtn?.addEventListener("click", handleResetSkuHeaders);
+    skuHeaderModal?.addEventListener("click", (event) => {
+        if (event.target === skuHeaderModal) {
+            closeSkuHeaderModal();
+        }
+    });
 }
 
 function initializeTrackingUi() {
@@ -833,9 +993,12 @@ function initializeTrackingUi() {
 }
 
 function initializeSkuUi() {
+    selectedSkuHeaderKeys = getDefaultSkuHeaderKeys();
+    renderSkuTableHead();
     updateSelectedFileName(null, skuFileNameEl);
     setSkuEmptyTable("SKU 파일을 선택하고 검증 실행을 눌러주세요.");
     setSkuResult("업로드한 SKU 파일을 검증하면 결과가 여기에 표시됩니다.");
+    closeSkuHeaderModal();
 }
 
 function initializeDashboard() {
@@ -843,6 +1006,7 @@ function initializeDashboard() {
     showView("home");
     showTrackingMode("excel");
     initializeTrackingUi();
+    initializeSkuUi();
     bindEvents();
 }
 

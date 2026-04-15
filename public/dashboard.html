@@ -488,7 +488,11 @@
                                         SKU 마스터 파일을 업로드하고 필수값/형식 오류를 빠르게 점검할 수 있는 화면입니다.
                                     </p>
                                 </div>
-                                <div class="section-badge">SKU MVP</div>
+                                <div class="tracking-action-buttons">
+                                    <button id="sku-header-config-btn-top" class="secondary-btn" type="button">표시 헤더
+                                        설정</button>
+                                    <div class="section-badge">SKU MVP</div>
+                                </div>
                             </div>
 
                             <div class="workspace-subcard">
@@ -501,6 +505,8 @@
                                     </div>
                                     <div class="tracking-toolbar-right">
                                         <div class="tracking-action-buttons">
+                                            <button id="sku-header-config-btn" class="secondary-btn"
+                                                type="button">표시 헤더 설정</button>
                                             <button id="sku-validate-btn" class="primary-btn" type="button">검증
                                                 실행</button>
                                         </div>
@@ -514,21 +520,35 @@
                                 <div class="tracking-table-wrap">
                                     <div class="tracking-table-scroll">
                                         <table class="tracking-table">
-                                            <thead>
-                                                <tr>
-                                                    <th>행</th>
-                                                    <th>어드민 상품코드</th>
-                                                    <th>상품명</th>
-                                                    <th>상태</th>
-                                                    <th>오류</th>
-                                                </tr>
-                                            </thead>
+                                            <thead id="sku-table-head"></thead>
                                             <tbody id="sku-table-body">
                                                 <tr class="tracking-empty-row">
                                                     <td colspan="5">SKU 파일을 선택하고 검증 실행을 눌러주세요.</td>
                                                 </tr>
                                             </tbody>
                                         </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="sku-header-modal" class="sku-header-modal is-hidden" aria-hidden="true">
+                                <div class="sku-header-modal-card">
+                                    <h3 class="subcard-title">SKU 표시 헤더 설정</h3>
+                                    <p class="subcard-text">표시할 컬럼을 선택한 뒤 적용 버튼을 눌러주세요.</p>
+                                    <div id="sku-header-checkbox-list" class="sku-header-checkbox-list"></div>
+                                    <div class="label-tool-actions">
+                                        <button id="sku-header-select-all-btn" class="secondary-btn" type="button">전체
+                                            선택</button>
+                                        <button id="sku-header-required-btn" class="secondary-btn" type="button">필수만
+                                            선택</button>
+                                        <button id="sku-header-reset-btn" class="secondary-btn" type="button">기본값
+                                            복원</button>
+                                    </div>
+                                    <div class="label-tool-actions">
+                                        <button id="sku-header-cancel-btn" class="secondary-btn"
+                                            type="button">취소</button>
+                                        <button id="sku-header-apply-btn" class="primary-btn"
+                                            type="button">적용</button>
                                     </div>
                                 </div>
                             </div>

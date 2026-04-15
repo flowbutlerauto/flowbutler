@@ -1782,6 +1782,52 @@ a {
   line-height: 1.4;
 }
 
+.sku-header-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1200;
+  padding: 20px;
+}
+
+.sku-header-modal.is-hidden {
+  display: none;
+}
+
+.sku-header-modal-card {
+  width: min(640px, 100%);
+  max-height: 80vh;
+  overflow: hidden;
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.2);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sku-header-checkbox-list {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 12px;
+  max-height: 44vh;
+  overflow: auto;
+  display: grid;
+  gap: 8px;
+}
+
+.sku-header-checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #334155;
+}
+
 @media (max-width: 640px) {
   .menu-grid {
     grid-template-columns: 1fr;

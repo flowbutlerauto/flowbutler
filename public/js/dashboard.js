@@ -843,7 +843,6 @@ function initializeDashboard() {
     showView("home");
     showTrackingMode("excel");
     initializeTrackingUi();
-    initializeSkuUi();
     bindEvents();
 }
 

@@ -79,7 +79,6 @@ const skuFileInput = document.getElementById("sku-file");
 const skuFileNameEl = document.getElementById("sku-file-name");
 const skuValidateBtn = document.getElementById("sku-validate-btn");
 const skuHeaderConfigBtn = document.getElementById("sku-header-config-btn");
-const skuHeaderConfigBtnTop = document.getElementById("sku-header-config-btn-top");
 const skuResultEl = document.getElementById("sku-result");
 const skuTableHead = document.getElementById("sku-table-head");
 const skuTableBody = document.getElementById("sku-table-body");
@@ -968,7 +967,6 @@ function bindEvents() {
     trackingSearchBtn?.addEventListener("click", handleManualTrackingSearch);
     skuValidateBtn?.addEventListener("click", handleSkuValidate);
     skuHeaderConfigBtn?.addEventListener("click", openSkuHeaderModal);
-    skuHeaderConfigBtnTop?.addEventListener("click", openSkuHeaderModal);
     skuHeaderApplyBtn?.addEventListener("click", handleApplySkuHeaders);
     skuHeaderCancelBtn?.addEventListener("click", closeSkuHeaderModal);
     skuHeaderSelectAllBtn?.addEventListener("click", handleSelectAllSkuHeaders);

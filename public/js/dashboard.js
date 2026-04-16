@@ -1,8 +1,11 @@
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
-import { doc, getDoc } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+import { doc, getDoc, serverTimestamp, setDoc } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
 import { auth, db } from "./firebase-config.js";
 import { parseTrackingFile } from "./tracking-file.js";
 import { initializeLabelEditor } from "./label-editor.js";
+import { parseSkuFile } from "./sku-file.js";
+import { validateSkuRows } from "./sku-utils.js";
+import { SKU_FIELDS, SKU_REQUIRED_KEYS } from "./sku-schema.js";
 
 import {
     applyTrackingResults,
@@ -72,6 +75,25 @@ const trackingRunBtn = document.getElementById("tracking-run-btn");
 const trackingDownloadBtn = document.getElementById("tracking-download-btn");
 const trackingTableBody = document.getElementById("tracking-table-body");
 
+const skuFileInput = document.getElementById("sku-file");
+const skuFileNameEl = document.getElementById("sku-file-name");
+const skuHeaderConfigBtn = document.getElementById("sku-header-config-btn");
+const skuDeleteSelectedBtn = document.getElementById("sku-delete-selected-btn");
+const skuResultEl = document.getElementById("sku-result");
+const skuTableHead = document.getElementById("sku-table-head");
+const skuTableBody = document.getElementById("sku-table-body");
+const skuHeaderModal = document.getElementById("sku-header-modal");
+const skuHeaderCheckboxList = document.getElementById("sku-header-checkbox-list");
+const skuHeaderApplyBtn = document.getElementById("sku-header-apply-btn");
+const skuHeaderCancelBtn = document.getElementById("sku-header-cancel-btn");
+const skuHeaderSelectAllBtn = document.getElementById("sku-header-select-all-btn");
+const skuHeaderRequiredBtn = document.getElementById("sku-header-required-btn");
+const skuHeaderResetBtn = document.getElementById("sku-header-reset-btn");
+const skuEditModal = document.getElementById("sku-edit-modal");
+const skuEditForm = document.getElementById("sku-edit-form");
+const skuEditCancelBtn = document.getElementById("sku-edit-cancel-btn");
+const skuEditSaveBtn = document.getElementById("sku-edit-save-btn");
+
 const viewMeta = {
     home: {
         title: "홈",
@@ -82,8 +104,12 @@ const viewMeta = {
         subtitle: "엑셀 업로드와 수기입력 방식으로 Tracking 업무를 처리할 수 있습니다.",
     },
     label: {
-        title: "라벨 생성",
+        title: "라벨 양식 설정",
         subtitle: "텍스트 박스를 배치하고 엑셀 헤더와 연결할 수 있는 라벨 편집 화면입니다.",
+    },
+    sku: {
+        title: "SKU 관리",
+        subtitle: "SKU 파일 업로드와 필수값/형식 검증을 수행할 수 있습니다.",
     },
     settings: {
         title: "설정",
@@ -94,6 +120,11 @@ const viewMeta = {
 let trackingRows = [];
 let trackingExecuted = false;
 let lastTrackingSummary = null;
+let skuRows = [];
+let selectedSkuHeaderKeys = [];
+let selectedSkuRowIds = new Set();
+let editingSkuRowId = null;
+let skuWorkspaceUserId = null;
 
 function clampProgress(value) {
     return Math.max(0, Math.min(100, Number(value) || 0));
@@ -169,7 +200,358 @@ function setToolGroupOpenState(isOpen) {
 }
 
 function isToolView(viewName) {
-    return viewName === "tracking" || viewName === "label";
+    return viewName === "tracking" || viewName === "label" || viewName === "sku";
+}
+
+function setSkuResult(message) {
+    if (!skuResultEl) return;
+    skuResultEl.textContent = message ?? "";
+}
+
+function getSkuWorkspaceDocRef() {
+    if (!skuWorkspaceUserId) return null;
+    return doc(db, "users", skuWorkspaceUserId, "preferences", "skuWorkspace");
+}
+
+async function persistSkuWorkspace() {
+    const workspaceDocRef = getSkuWorkspaceDocRef();
+    if (!workspaceDocRef) return;
+
+    try {
+        await setDoc(
+            workspaceDocRef,
+            {
+                selectedSkuHeaderKeys,
+                rows: skuRows,
+                updatedAt: serverTimestamp(),
+            },
+            { merge: true },
+        );
+    } catch (error) {
+        console.error(error);
+    }
+}
+
+function buildSkuUploadErrorMessage(validationRows) {
+    const invalidRows = (validationRows ?? []).filter((row) => !row.isValid);
+    if (!invalidRows.length) return "";
+
+    const previewLines = invalidRows
+        .slice(0, 5)
+        .map((row) => `- ${row.rowId}행: ${(row.errors ?? []).join(", ")}`)
+        .join("\n");
+
+    const remainingCount = invalidRows.length - Math.min(invalidRows.length, 5);
+    const remainingLine = remainingCount > 0
+        ? `\n외 ${remainingCount}건의 오류가 더 있습니다.`
+        : "";
+
+    return `SKU 업로드에 실패했습니다.\n오류를 수정한 뒤 다시 업로드해주세요.\n\n${previewLines}${remainingLine}`;
+}
+
+function setSkuEmptyTable(message) {
+    if (!skuTableBody) return;
+    skuTableBody.innerHTML = `
+    <tr class="tracking-empty-row">
+      <td colspan="${getSkuTableColumnCount()}">${message}</td>
+    </tr>
+  `;
+}
+
+function getSkuTableColumnCount() {
+    return 2 + selectedSkuHeaderKeys.length + 3;
+}
+
+function getFieldByKey(key) {
+    return SKU_FIELDS.find((field) => field.key === key) ?? null;
+}
+
+function getDefaultSkuHeaderKeys() {
+    return ensureSkuHeaderSelection(["adminProductCode", "productName", "brand", "category"]);
+}
+
+function ensureSkuHeaderSelection(keys) {
+    const uniqueKeys = [...new Set(keys)];
+    const availableKeySet = new Set(SKU_FIELDS.map((field) => field.key));
+    const requiredKeySet = new Set(SKU_REQUIRED_KEYS);
+
+    const filtered = uniqueKeys.filter((key) => availableKeySet.has(key));
+    const merged = [...new Set([...filtered, ...SKU_REQUIRED_KEYS])];
+
+    if (!merged.length) {
+        return [...SKU_REQUIRED_KEYS];
+    }
+
+    return merged.sort((a, b) => {
+        const fieldIndexA = SKU_FIELDS.findIndex((field) => field.key === a);
+        const fieldIndexB = SKU_FIELDS.findIndex((field) => field.key === b);
+
+        const isRequiredA = requiredKeySet.has(a);
+        const isRequiredB = requiredKeySet.has(b);
+
+        if (isRequiredA && !isRequiredB) return -1;
+        if (!isRequiredA && isRequiredB) return 1;
+        return fieldIndexA - fieldIndexB;
+    });
+}
+
+function renderSkuTableHead() {
+    if (!skuTableHead) return;
+
+    const headerHtml = selectedSkuHeaderKeys
+        .map((key) => {
+            const field = getFieldByKey(key);
+            return `<th>${escapeHtml(field?.label ?? key)}</th>`;
+        })
+        .join("");
+
+    skuTableHead.innerHTML = `
+    <tr>
+      <th>선택</th>
+      <th>행</th>
+      ${headerHtml}
+      <th>상태</th>
+      <th>오류</th>
+      <th>수정</th>
+    </tr>
+  `;
+}
+
+function renderSkuTable(rows) {
+    if (!skuTableBody) return;
+
+    if (!rows.length) {
+        setSkuEmptyTable("검증 가능한 데이터가 없습니다.");
+        return;
+    }
+
+    skuTableBody.innerHTML = rows.map((row) => {
+        const status = row.isValid ? "정상" : "오류";
+        const errorText = row.isValid
+            ? "-"
+            : (row.errors ?? []).join("; ");
+        const columnHtml = selectedSkuHeaderKeys
+            .map((key) => `<td>${escapeHtml(row[key] ?? "")}</td>`)
+            .join("");
+
+        return `
+      <tr>
+        <td><input type="checkbox" data-sku-row-id="${row.rowId}" ${selectedSkuRowIds.has(row.rowId) ? "checked" : ""} /></td>
+        <td>${row.rowId}</td>
+        ${columnHtml}
+        <td>${status}</td>
+        <td>${escapeHtml(errorText)}</td>
+        <td><button type="button" class="secondary-btn" data-sku-edit-row-id="${row.rowId}">수정</button></td>
+      </tr>
+    `;
+    }).join("");
+}
+
+function renderSkuHeaderCheckboxes() {
+    if (!skuHeaderCheckboxList) return;
+
+    const requiredKeySet = new Set(SKU_REQUIRED_KEYS);
+
+    skuHeaderCheckboxList.innerHTML = SKU_FIELDS.map((field) => {
+        const checked = selectedSkuHeaderKeys.includes(field.key);
+        const disabled = requiredKeySet.has(field.key);
+        const requiredBadge = disabled ? " (필수)" : "";
+
+        return `
+      <label class="sku-header-checkbox-item">
+        <input type="checkbox" data-sku-header-key="${field.key}" ${checked ? "checked" : ""} ${disabled ? "disabled" : ""} />
+        <span>${escapeHtml(field.label)}${requiredBadge}</span>
+      </label>
+    `;
+    }).join("");
+}
+
+function setSkuHeaderCheckboxSelection(keys) {
+    if (!skuHeaderCheckboxList) return;
+
+    const selectedKeySet = new Set(ensureSkuHeaderSelection(keys));
+    const checkboxes = skuHeaderCheckboxList.querySelectorAll('input[data-sku-header-key]');
+    checkboxes.forEach((checkbox) => {
+        const key = checkbox.getAttribute("data-sku-header-key") || "";
+        checkbox.checked = selectedKeySet.has(key);
+    });
+}
+
+function openSkuHeaderModal() {
+    if (!skuHeaderModal) return;
+    renderSkuHeaderCheckboxes();
+    skuHeaderModal.classList.remove("is-hidden");
+    skuHeaderModal.setAttribute("aria-hidden", "false");
+}
+
+function closeSkuHeaderModal() {
+    if (!skuHeaderModal) return;
+    skuHeaderModal.classList.add("is-hidden");
+    skuHeaderModal.setAttribute("aria-hidden", "true");
+}
+
+function handleApplySkuHeaders() {
+    if (!skuHeaderCheckboxList) return;
+
+    const checkedKeys = [...skuHeaderCheckboxList.querySelectorAll('input[data-sku-header-key]:checked')]
+        .map((node) => node.getAttribute("data-sku-header-key") || "")
+        .filter(Boolean);
+
+    selectedSkuHeaderKeys = ensureSkuHeaderSelection(checkedKeys);
+    renderSkuTableHead();
+
+    if (skuRows.length) {
+        const validationResult = validateSkuRows(skuRows);
+        renderSkuTable(validationResult.rows);
+        const { total, valid, invalid } = validationResult.summary;
+        setSkuResult(`총 ${total}건 중 정상 ${valid}건, 오류 ${invalid}건`);
+    } else {
+        setSkuEmptyTable("SKU 파일을 선택하면 자동으로 검증합니다.");
+    }
+
+    persistSkuWorkspace();
+    closeSkuHeaderModal();
+}
+
+function renderCurrentSkuRows() {
+    if (!skuRows.length) {
+        setSkuEmptyTable("SKU 파일을 선택하면 자동으로 검증합니다.");
+        setSkuResult("선택된 SKU 데이터가 없습니다.");
+        return;
+    }
+
+    const validationResult = validateSkuRows(skuRows);
+    renderSkuTable(validationResult.rows);
+    const { total, valid, invalid } = validationResult.summary;
+    setSkuResult(`총 ${total}건 중 정상 ${valid}건, 오류 ${invalid}건`);
+}
+
+function handleSkuRowSelectionChange(event) {
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement)) return;
+    if (!target.matches('input[type="checkbox"][data-sku-row-id]')) return;
+
+    const rowId = Number(target.getAttribute("data-sku-row-id"));
+    if (!Number.isFinite(rowId)) return;
+
+    if (target.checked) {
+        selectedSkuRowIds.add(rowId);
+    } else {
+        selectedSkuRowIds.delete(rowId);
+    }
+}
+
+function handleDeleteSelectedSkuRows() {
+    if (!selectedSkuRowIds.size) {
+        window.alert("삭제할 SKU를 먼저 선택해주세요.");
+        return;
+    }
+
+    skuRows = skuRows.filter((row) => !selectedSkuRowIds.has(row.rowId));
+    selectedSkuRowIds = new Set();
+
+    if (!skuRows.length) {
+        updateSelectedFileName(null, skuFileNameEl);
+        setSkuEmptyTable("선택한 SKU를 모두 삭제했습니다. 새 파일을 업로드해주세요.");
+        setSkuResult("SKU 목록이 비어 있습니다.");
+        persistSkuWorkspace();
+        return;
+    }
+
+    renderCurrentSkuRows();
+    persistSkuWorkspace();
+}
+
+function openSkuEditModal(rowId) {
+    const targetRow = skuRows.find((row) => row.rowId === rowId);
+    if (!targetRow || !skuEditModal || !skuEditForm) return;
+
+    editingSkuRowId = rowId;
+    const editableKeys = ensureSkuHeaderSelection([...selectedSkuHeaderKeys, ...SKU_REQUIRED_KEYS]);
+
+    skuEditForm.innerHTML = editableKeys.map((key) => {
+        const field = getFieldByKey(key);
+        return `
+      <div class="form-group">
+        <label>${escapeHtml(field?.label ?? key)}</label>
+        <input type="text" data-sku-edit-key="${key}" value="${escapeHtml(targetRow[key] ?? "")}" />
+      </div>
+    `;
+    }).join("");
+
+    skuEditModal.classList.remove("is-hidden");
+    skuEditModal.setAttribute("aria-hidden", "false");
+}
+
+function closeSkuEditModal() {
+    editingSkuRowId = null;
+    if (!skuEditModal) return;
+    skuEditModal.classList.add("is-hidden");
+    skuEditModal.setAttribute("aria-hidden", "true");
+}
+
+function handleSkuTableClick(event) {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+
+    const editButton = target.closest("button[data-sku-edit-row-id]");
+    if (!(editButton instanceof HTMLButtonElement)) return;
+
+    const rowId = Number(editButton.getAttribute("data-sku-edit-row-id"));
+    if (!Number.isFinite(rowId)) return;
+    openSkuEditModal(rowId);
+}
+
+function handleSaveSkuEdit() {
+    if (!skuEditForm || editingSkuRowId === null) return;
+
+    const rowIndex = skuRows.findIndex((row) => row.rowId === editingSkuRowId);
+    if (rowIndex < 0) return;
+
+    const nextRow = { ...skuRows[rowIndex] };
+    const inputNodes = skuEditForm.querySelectorAll("input[data-sku-edit-key]");
+    inputNodes.forEach((node) => {
+        if (!(node instanceof HTMLInputElement)) return;
+        const key = node.getAttribute("data-sku-edit-key") || "";
+        if (!key) return;
+        nextRow[key] = node.value.trim();
+    });
+
+    const nextRows = [...skuRows];
+    nextRows[rowIndex] = nextRow;
+
+    const validationResult = validateSkuRows(nextRows);
+    const editedRowValidation = validationResult.rows.find((row) => row.rowId === editingSkuRowId);
+    if (editedRowValidation && !editedRowValidation.isValid) {
+        window.alert(`수정한 SKU에 오류가 있습니다.\n${(editedRowValidation.errors ?? []).join("\n")}`);
+        return;
+    }
+
+    skuRows = nextRows;
+    renderCurrentSkuRows();
+    persistSkuWorkspace();
+    closeSkuEditModal();
+}
+
+function handleSelectAllSkuHeaders() {
+    setSkuHeaderCheckboxSelection(SKU_FIELDS.map((field) => field.key));
+}
+
+function handleSelectRequiredSkuHeaders() {
+    setSkuHeaderCheckboxSelection(SKU_REQUIRED_KEYS);
+}
+
+function handleResetSkuHeaders() {
+    setSkuHeaderCheckboxSelection(getDefaultSkuHeaderKeys());
+}
+
+function escapeHtml(value) {
+    return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;");
 }
 
 
@@ -476,6 +858,48 @@ async function setFileSelectedState(file) {
     }
 }
 
+async function setSkuFileSelectedState(file) {
+    if (!file) {
+        skuRows = [];
+        selectedSkuRowIds = new Set();
+        closeSkuEditModal();
+        updateSelectedFileName(null, skuFileNameEl);
+        setSkuEmptyTable("SKU 파일을 선택하면 자동으로 검증합니다.");
+        setSkuResult("선택된 파일이 없습니다.");
+        return;
+    }
+
+    try {
+        const parsedRows = await parseSkuFile(file);
+        const validationResult = validateSkuRows(parsedRows);
+        const { total, valid, invalid } = validationResult.summary;
+
+        if (invalid > 0) {
+            if (!skuRows.length) {
+                setSkuEmptyTable("오류가 있는 파일은 업로드되지 않습니다. 파일을 수정한 뒤 다시 시도해주세요.");
+            }
+            setSkuResult(`업로드 실패: 총 ${total}건 중 오류 ${invalid}건`);
+            window.alert(buildSkuUploadErrorMessage(validationResult.rows));
+            return;
+        }
+
+        skuRows = parsedRows;
+        selectedSkuRowIds = new Set();
+        closeSkuEditModal();
+        updateSelectedFileName(file, skuFileNameEl);
+        renderSkuTable(validationResult.rows);
+        setSkuResult(`업로드 완료: 총 ${total}건 (정상 ${valid}건)`);
+        persistSkuWorkspace();
+    } catch (error) {
+        console.error(error);
+        if (!skuRows.length) {
+            setSkuEmptyTable("파일을 불러오지 못했습니다.");
+        }
+        setSkuResult(error.message || "파일 처리 중 오류가 발생했습니다.");
+        window.alert("SKU 파일을 업로드할 수 없습니다.\n파일 형식과 내용을 확인해주세요.");
+    }
+}
+
 async function handleTrackingRun() {
     trackingExecuted = false;
     updateDownloadButtonState();
@@ -701,6 +1125,12 @@ function bindEvents() {
         const file = trackingFileInput.files?.[0];
         await setFileSelectedState(file);
     });
+    skuFileInput?.addEventListener("change", async () => {
+        const file = skuFileInput.files?.[0];
+        await setSkuFileSelectedState(file);
+    });
+    skuTableBody?.addEventListener("change", handleSkuRowSelectionChange);
+    skuTableBody?.addEventListener("click", handleSkuTableClick);
 
     trackingTableBody?.addEventListener("input", (event) => {
         const target = event.target;
@@ -716,6 +1146,25 @@ function bindEvents() {
     trackingRunBtn?.addEventListener("click", handleTrackingRun);
     trackingDownloadBtn?.addEventListener("click", handleTrackingDownload);
     trackingSearchBtn?.addEventListener("click", handleManualTrackingSearch);
+    skuHeaderConfigBtn?.addEventListener("click", openSkuHeaderModal);
+    skuDeleteSelectedBtn?.addEventListener("click", handleDeleteSelectedSkuRows);
+    skuHeaderApplyBtn?.addEventListener("click", handleApplySkuHeaders);
+    skuHeaderCancelBtn?.addEventListener("click", closeSkuHeaderModal);
+    skuHeaderSelectAllBtn?.addEventListener("click", handleSelectAllSkuHeaders);
+    skuHeaderRequiredBtn?.addEventListener("click", handleSelectRequiredSkuHeaders);
+    skuHeaderResetBtn?.addEventListener("click", handleResetSkuHeaders);
+    skuEditSaveBtn?.addEventListener("click", handleSaveSkuEdit);
+    skuEditCancelBtn?.addEventListener("click", closeSkuEditModal);
+    skuHeaderModal?.addEventListener("click", (event) => {
+        if (event.target === skuHeaderModal) {
+            closeSkuHeaderModal();
+        }
+    });
+    skuEditModal?.addEventListener("click", (event) => {
+        if (event.target === skuEditModal) {
+            closeSkuEditModal();
+        }
+    });
 }
 
 function initializeTrackingUi() {
@@ -729,23 +1178,69 @@ function initializeTrackingUi() {
     updateManualCountInfo();
 }
 
+function initializeSkuUi() {
+    selectedSkuHeaderKeys = getDefaultSkuHeaderKeys();
+    selectedSkuRowIds = new Set();
+    editingSkuRowId = null;
+    renderSkuTableHead();
+    updateSelectedFileName(null, skuFileNameEl);
+    setSkuEmptyTable("SKU 파일을 선택하면 자동으로 검증합니다.");
+    setSkuResult("업로드 시 자동 검증되며, 오류가 있으면 업로드되지 않습니다.");
+    closeSkuHeaderModal();
+    closeSkuEditModal();
+}
+
+async function loadSkuWorkspace(userId) {
+    skuWorkspaceUserId = userId ?? null;
+    if (!skuWorkspaceUserId) return;
+
+    const workspaceDocRef = getSkuWorkspaceDocRef();
+    if (!workspaceDocRef) return;
+
+    try {
+        const workspaceSnap = await getDoc(workspaceDocRef);
+        const data = workspaceSnap.data();
+        const savedRows = Array.isArray(data?.rows) ? data.rows : [];
+        const savedHeaders = Array.isArray(data?.selectedSkuHeaderKeys) ? data.selectedSkuHeaderKeys : [];
+
+        skuRows = savedRows;
+        selectedSkuHeaderKeys = ensureSkuHeaderSelection(savedHeaders.length ? savedHeaders : getDefaultSkuHeaderKeys());
+        selectedSkuRowIds = new Set();
+        renderSkuTableHead();
+
+        if (skuRows.length) {
+            renderCurrentSkuRows();
+            setSkuResult(`저장된 SKU ${skuRows.length}건을 불러왔습니다.`);
+        } else {
+            setSkuEmptyTable("SKU 파일을 선택하면 자동으로 검증합니다.");
+            setSkuResult("업로드 시 자동 검증되며, 오류가 있으면 업로드되지 않습니다.");
+        }
+    } catch (error) {
+        console.error(error);
+        setSkuResult("저장된 SKU 정보를 불러오지 못했습니다.");
+    }
+}
+
 function initializeDashboard() {
     setToolGroupOpenState(false);
     showView("home");
     showTrackingMode("excel");
     initializeTrackingUi();
-    initializeLabelEditor();
+    initializeSkuUi();
     bindEvents();
 }
 
 onAuthStateChanged(auth, async (user) => {
     if (!user) {
+        skuWorkspaceUserId = null;
         window.location.href = "./login.html";
         return;
     }
 
     try {
         await loadApprovedUser(user);
+        await loadSkuWorkspace(user.uid);
+        initializeLabelEditor({ userId: user.uid });
     } catch (error) {
         console.error(error);
         dashboardUserInfoEl.textContent = "사용자 상태 확인 중 오류가 발생했습니다.";

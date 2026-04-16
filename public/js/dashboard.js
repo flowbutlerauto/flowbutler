@@ -215,7 +215,7 @@ function getSkuWorkspaceDocRef() {
 
 async function persistSkuWorkspace() {
     const workspaceDocRef = getSkuWorkspaceDocRef();
-    if (!workspaceDocRef) return;
+    if (!workspaceDocRef) return false;
 
     try {
         await setDoc(
@@ -227,8 +227,10 @@ async function persistSkuWorkspace() {
             },
             { merge: true },
         );
+        return true;
     } catch (error) {
         console.error(error);
+        return false;
     }
 }
 
@@ -409,7 +411,7 @@ function handleApplySkuHeaders() {
         setSkuEmptyTable("SKU 파일을 선택하면 자동으로 검증합니다.");
     }
 
-    persistSkuWorkspace();
+    void persistSkuWorkspace();
     closeSkuHeaderModal();
 }
 
@@ -454,12 +456,12 @@ function handleDeleteSelectedSkuRows() {
         updateSelectedFileName(null, skuFileNameEl);
         setSkuEmptyTable("선택한 SKU를 모두 삭제했습니다. 새 파일을 업로드해주세요.");
         setSkuResult("SKU 목록이 비어 있습니다.");
-        persistSkuWorkspace();
+        void persistSkuWorkspace();
         return;
     }
 
     renderCurrentSkuRows();
-    persistSkuWorkspace();
+    void persistSkuWorkspace();
 }
 
 function openSkuEditModal(rowId) {
@@ -529,7 +531,7 @@ function handleSaveSkuEdit() {
 
     skuRows = nextRows;
     renderCurrentSkuRows();
-    persistSkuWorkspace();
+    void persistSkuWorkspace();
     closeSkuEditModal();
 }
 
@@ -889,7 +891,7 @@ async function setSkuFileSelectedState(file) {
         updateSelectedFileName(file, skuFileNameEl);
         renderSkuTable(validationResult.rows);
         setSkuResult(`업로드 완료: 총 ${total}건 (정상 ${valid}건)`);
-        persistSkuWorkspace();
+        await persistSkuWorkspace();
     } catch (error) {
         console.error(error);
         if (!skuRows.length) {
@@ -1094,6 +1096,7 @@ function bindEvents() {
 
     logoutBtn?.addEventListener("click", async () => {
         try {
+            await persistSkuWorkspace();
             await signOut(auth);
             window.location.href = "./login.html";
         } catch (error) {
@@ -1238,6 +1241,7 @@ onAuthStateChanged(auth, async (user) => {
     }
 
     try {
+        skuWorkspaceUserId = user.uid;
         await loadApprovedUser(user);
         await loadSkuWorkspace(user.uid);
         initializeLabelEditor({ userId: user.uid });

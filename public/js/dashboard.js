@@ -89,6 +89,10 @@ const skuHeaderCancelBtn = document.getElementById("sku-header-cancel-btn");
 const skuHeaderSelectAllBtn = document.getElementById("sku-header-select-all-btn");
 const skuHeaderRequiredBtn = document.getElementById("sku-header-required-btn");
 const skuHeaderResetBtn = document.getElementById("sku-header-reset-btn");
+const skuEditModal = document.getElementById("sku-edit-modal");
+const skuEditForm = document.getElementById("sku-edit-form");
+const skuEditCancelBtn = document.getElementById("sku-edit-cancel-btn");
+const skuEditSaveBtn = document.getElementById("sku-edit-save-btn");
 
 const viewMeta = {
     home: {
@@ -119,6 +123,7 @@ let lastTrackingSummary = null;
 let skuRows = [];
 let selectedSkuHeaderKeys = [];
 let selectedSkuRowIds = new Set();
+let editingSkuRowId = null;
 
 function clampProgress(value) {
     return Math.max(0, Math.min(100, Number(value) || 0));
@@ -229,7 +234,7 @@ function setSkuEmptyTable(message) {
 }
 
 function getSkuTableColumnCount() {
-    return 2 + selectedSkuHeaderKeys.length + 2;
+    return 2 + selectedSkuHeaderKeys.length + 3;
 }
 
 function getFieldByKey(key) {
@@ -282,6 +287,7 @@ function renderSkuTableHead() {
       ${headerHtml}
       <th>상태</th>
       <th>오류</th>
+      <th>수정</th>
     </tr>
   `;
 }
@@ -310,6 +316,7 @@ function renderSkuTable(rows) {
         ${columnHtml}
         <td>${status}</td>
         <td>${escapeHtml(errorText)}</td>
+        <td><button type="button" class="secondary-btn" data-sku-edit-row-id="${row.rowId}">수정</button></td>
       </tr>
     `;
     }).join("");
@@ -425,6 +432,76 @@ function handleDeleteSelectedSkuRows() {
     }
 
     renderCurrentSkuRows();
+}
+
+function openSkuEditModal(rowId) {
+    const targetRow = skuRows.find((row) => row.rowId === rowId);
+    if (!targetRow || !skuEditModal || !skuEditForm) return;
+
+    editingSkuRowId = rowId;
+    const editableKeys = ensureSkuHeaderSelection([...selectedSkuHeaderKeys, ...SKU_REQUIRED_KEYS]);
+
+    skuEditForm.innerHTML = editableKeys.map((key) => {
+        const field = getFieldByKey(key);
+        return `
+      <div class="form-group">
+        <label>${escapeHtml(field?.label ?? key)}</label>
+        <input type="text" data-sku-edit-key="${key}" value="${escapeHtml(targetRow[key] ?? "")}" />
+      </div>
+    `;
+    }).join("");
+
+    skuEditModal.classList.remove("is-hidden");
+    skuEditModal.setAttribute("aria-hidden", "false");
+}
+
+function closeSkuEditModal() {
+    editingSkuRowId = null;
+    if (!skuEditModal) return;
+    skuEditModal.classList.add("is-hidden");
+    skuEditModal.setAttribute("aria-hidden", "true");
+}
+
+function handleSkuTableClick(event) {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+
+    const editButton = target.closest("button[data-sku-edit-row-id]");
+    if (!(editButton instanceof HTMLButtonElement)) return;
+
+    const rowId = Number(editButton.getAttribute("data-sku-edit-row-id"));
+    if (!Number.isFinite(rowId)) return;
+    openSkuEditModal(rowId);
+}
+
+function handleSaveSkuEdit() {
+    if (!skuEditForm || editingSkuRowId === null) return;
+
+    const rowIndex = skuRows.findIndex((row) => row.rowId === editingSkuRowId);
+    if (rowIndex < 0) return;
+
+    const nextRow = { ...skuRows[rowIndex] };
+    const inputNodes = skuEditForm.querySelectorAll("input[data-sku-edit-key]");
+    inputNodes.forEach((node) => {
+        if (!(node instanceof HTMLInputElement)) return;
+        const key = node.getAttribute("data-sku-edit-key") || "";
+        if (!key) return;
+        nextRow[key] = node.value.trim();
+    });
+
+    const nextRows = [...skuRows];
+    nextRows[rowIndex] = nextRow;
+
+    const validationResult = validateSkuRows(nextRows);
+    const editedRowValidation = validationResult.rows.find((row) => row.rowId === editingSkuRowId);
+    if (editedRowValidation && !editedRowValidation.isValid) {
+        window.alert(`수정한 SKU에 오류가 있습니다.\n${(editedRowValidation.errors ?? []).join("\n")}`);
+        return;
+    }
+
+    skuRows = nextRows;
+    renderCurrentSkuRows();
+    closeSkuEditModal();
 }
 
 function handleSelectAllSkuHeaders() {
@@ -756,6 +833,7 @@ async function setSkuFileSelectedState(file) {
     if (!file) {
         skuRows = [];
         selectedSkuRowIds = new Set();
+        closeSkuEditModal();
         updateSelectedFileName(null, skuFileNameEl);
         setSkuEmptyTable("SKU 파일을 선택하면 자동으로 검증합니다.");
         setSkuResult("선택된 파일이 없습니다.");
@@ -770,6 +848,7 @@ async function setSkuFileSelectedState(file) {
         if (invalid > 0) {
             skuRows = [];
             selectedSkuRowIds = new Set();
+            closeSkuEditModal();
             updateSelectedFileName(null, skuFileNameEl);
             setSkuEmptyTable("오류가 있는 파일은 업로드되지 않습니다. 파일을 수정한 뒤 다시 시도해주세요.");
             setSkuResult(`업로드 실패: 총 ${total}건 중 오류 ${invalid}건`);
@@ -779,6 +858,7 @@ async function setSkuFileSelectedState(file) {
 
         skuRows = parsedRows;
         selectedSkuRowIds = new Set();
+        closeSkuEditModal();
         updateSelectedFileName(file, skuFileNameEl);
         renderSkuTable(validationResult.rows);
         setSkuResult(`업로드 완료: 총 ${total}건 (정상 ${valid}건)`);
@@ -786,6 +866,7 @@ async function setSkuFileSelectedState(file) {
         console.error(error);
         skuRows = [];
         selectedSkuRowIds = new Set();
+        closeSkuEditModal();
         updateSelectedFileName(null, skuFileNameEl);
         setSkuEmptyTable("파일을 불러오지 못했습니다.");
         setSkuResult(error.message || "파일 처리 중 오류가 발생했습니다.");
@@ -1023,6 +1104,7 @@ function bindEvents() {
         await setSkuFileSelectedState(file);
     });
     skuTableBody?.addEventListener("change", handleSkuRowSelectionChange);
+    skuTableBody?.addEventListener("click", handleSkuTableClick);
 
     trackingTableBody?.addEventListener("input", (event) => {
         const target = event.target;
@@ -1045,9 +1127,16 @@ function bindEvents() {
     skuHeaderSelectAllBtn?.addEventListener("click", handleSelectAllSkuHeaders);
     skuHeaderRequiredBtn?.addEventListener("click", handleSelectRequiredSkuHeaders);
     skuHeaderResetBtn?.addEventListener("click", handleResetSkuHeaders);
+    skuEditSaveBtn?.addEventListener("click", handleSaveSkuEdit);
+    skuEditCancelBtn?.addEventListener("click", closeSkuEditModal);
     skuHeaderModal?.addEventListener("click", (event) => {
         if (event.target === skuHeaderModal) {
             closeSkuHeaderModal();
+        }
+    });
+    skuEditModal?.addEventListener("click", (event) => {
+        if (event.target === skuEditModal) {
+            closeSkuEditModal();
         }
     });
 }
@@ -1066,11 +1155,13 @@ function initializeTrackingUi() {
 function initializeSkuUi() {
     selectedSkuHeaderKeys = getDefaultSkuHeaderKeys();
     selectedSkuRowIds = new Set();
+    editingSkuRowId = null;
     renderSkuTableHead();
     updateSelectedFileName(null, skuFileNameEl);
     setSkuEmptyTable("SKU 파일을 선택하면 자동으로 검증합니다.");
     setSkuResult("업로드 시 자동 검증되며, 오류가 있으면 업로드되지 않습니다.");
     closeSkuHeaderModal();
+    closeSkuEditModal();
 }
 
 function initializeDashboard() {

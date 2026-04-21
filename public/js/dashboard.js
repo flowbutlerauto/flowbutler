@@ -327,7 +327,16 @@ function downloadKurlyLabelPdf(labelItems) {
     });
 
     const today = new Date().toISOString().slice(0, 10);
-    doc.save(`컬리_입고라벨_${today}.pdf`);
+    const blob = doc.output("blob");
+    const blobUrl = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = blobUrl;
+    anchor.download = `컬리_입고라벨_${today}.pdf`;
+    anchor.rel = "noopener";
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 3000);
     return true;
 }
 

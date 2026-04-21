@@ -1,12 +1,12 @@
-const REQUIRED_KURLY_HEADERS = [
-    "발주코드",
-    "상품명",
-    "마스터코드",
-    "유통기한/소비기한",
-    "박스당입수",
-    "발주확정 수량(낱개)",
-    "발주확정 수량(박스)",
-];
+const REQUIRED_KURLY_HEADER_GROUPS = {
+    orderCode: ["발주코드"],
+    productName: ["상품명"],
+    masterCode: ["마스터코드"],
+    expiry: ["유통기한/소비기한", "유통기한"],
+    boxPerUnit: ["박스당입수"],
+    totalEa: ["발주확정 수량(낱개)", "총입고수량(낱개)"],
+    totalBoxes: ["발주확정 수량(박스)", "전체박스수"],
+};
 
 function safeString(value) {
     return String(value ?? "").trim();
@@ -20,18 +20,35 @@ function buildHeaderIndexMap(headerRow) {
     return map;
 }
 
-function assertRequiredHeaders(headerRow) {
+function resolveHeaderMap(headerRow) {
     const normalizedHeaders = (headerRow ?? []).map((header) => safeString(header)).filter(Boolean);
     const headerSet = new Set(normalizedHeaders);
+    const resolved = {};
+    const missingLabels = [];
 
-    const missingHeaders = REQUIRED_KURLY_HEADERS.filter((header) => !headerSet.has(header));
-    if (missingHeaders.length) {
-        throw new Error(`필수 헤더 누락: ${missingHeaders.join(", ")}`);
+    Object.entries(REQUIRED_KURLY_HEADER_GROUPS).forEach(([key, candidates]) => {
+        const matched = candidates.find((candidate) => headerSet.has(candidate));
+        if (matched) {
+            resolved[key] = matched;
+        } else {
+            missingLabels.push(candidates[0]);
+        }
+    });
+
+    if (missingLabels.length) {
+        const previewHeaders = normalizedHeaders.slice(0, 12).join(", ");
+        const suffix = normalizedHeaders.length > 12 ? " ..." : "";
+        throw new Error(
+            `필수 헤더 누락: ${missingLabels.join(", ")}\n` +
+            `감지된 헤더(앞 12개): ${previewHeaders}${suffix}`
+        );
     }
 
     if (headerSet.has("상품코드")) {
         throw new Error("허용되지 않은 헤더명: 상품코드 (마스터코드만 허용)");
     }
+
+    return resolved;
 }
 
 function mapSheetRowsToKurlyRows(sheetRows) {
@@ -40,7 +57,7 @@ function mapSheetRowsToKurlyRows(sheetRows) {
     }
 
     const [headerRow, ...dataRows] = sheetRows;
-    assertRequiredHeaders(headerRow);
+    const resolvedHeaders = resolveHeaderMap(headerRow);
 
     const headerIndexMap = buildHeaderIndexMap(headerRow);
 
@@ -56,13 +73,13 @@ function mapSheetRowsToKurlyRows(sheetRows) {
 
             return {
                 rowId,
-                orderCode: getValue("발주코드"),
-                productName: getValue("상품명"),
-                masterCode: getValue("마스터코드"),
-                expiry: getValue("유통기한/소비기한"),
-                boxPerUnit: getValue("박스당입수"),
-                totalEa: getValue("발주확정 수량(낱개)"),
-                totalBoxes: getValue("발주확정 수량(박스)"),
+                orderCode: getValue(resolvedHeaders.orderCode),
+                productName: getValue(resolvedHeaders.productName),
+                masterCode: getValue(resolvedHeaders.masterCode),
+                expiry: getValue(resolvedHeaders.expiry),
+                boxPerUnit: getValue(resolvedHeaders.boxPerUnit),
+                totalEa: getValue(resolvedHeaders.totalEa),
+                totalBoxes: getValue(resolvedHeaders.totalBoxes),
             };
         })
         .filter((row) =>

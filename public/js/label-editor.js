@@ -3,6 +3,7 @@ const DRAG_CLICK_THRESHOLD_PX = 3;
 const MAX_LABEL_TEMPLATES = 5;
 
 import { auth, db } from "./firebase-config.js";
+import { SKU_FIELDS } from "./sku-schema.js";
 import {
     doc,
     getDoc,
@@ -199,6 +200,34 @@ function getSelectedBox() {
     return state.boxes.find((box) => box.id === state.selectedBoxId) ?? null;
 }
 
+function ensureHeaderOption(value) {
+    if (!elements.boxHeaderInput) return;
+    if (!value) return;
+
+    const optionExists = [...elements.boxHeaderInput.options]
+        .some((option) => option.value === value);
+
+    if (optionExists) return;
+
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = `${value} (기존 값)`;
+    elements.boxHeaderInput.appendChild(option);
+}
+
+function initializeHeaderOptions() {
+    if (!elements.boxHeaderInput) return;
+
+    elements.boxHeaderInput.innerHTML = '<option value="">선택 안함</option>';
+
+    SKU_FIELDS.forEach((field) => {
+        const option = document.createElement("option");
+        option.value = field.label;
+        option.textContent = field.label;
+        elements.boxHeaderInput.appendChild(option);
+    });
+}
+
 function updateCanvasSize() {
     if (!elements.canvas) return;
 
@@ -353,7 +382,10 @@ function syncPropertiesPanel() {
         return;
     }
 
-    if (elements.boxHeaderInput) elements.boxHeaderInput.value = selectedBox.headerName ?? "";
+    if (elements.boxHeaderInput) {
+        ensureHeaderOption(selectedBox.headerName ?? "");
+        elements.boxHeaderInput.value = selectedBox.headerName ?? "";
+    }
     if (elements.boxSampleInput) elements.boxSampleInput.value = selectedBox.sampleText ?? "";
     if (elements.boxXInput) elements.boxXInput.value = String(selectedBox.x);
     if (elements.boxYInput) elements.boxYInput.value = String(selectedBox.y);
@@ -577,6 +609,7 @@ function initializeLabelEditor(options = {}) {
     if (!elements.canvas) return;
     state.userId = options.userId ?? auth.currentUser?.uid ?? null;
 
+    initializeHeaderOptions();
     updateCanvasSize();
     renderLabelCanvas();
     renderLabelBoxList();

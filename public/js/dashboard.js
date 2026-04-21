@@ -6,6 +6,8 @@ import { initializeLabelEditor } from "./label-editor.js";
 import { parseSkuFile } from "./sku-file.js";
 import { validateSkuRows } from "./sku-utils.js";
 import { SKU_FIELDS, SKU_REQUIRED_KEYS } from "./sku-schema.js";
+import { parseKurlyLabelFile } from "./kurly-label-file.js";
+import { buildKurlyLabelItems, validateKurlyRows } from "./kurly-label-utils.js";
 
 import {
     applyTrackingResults,
@@ -98,6 +100,10 @@ const skuLabelTemplateSelect = document.getElementById("sku-label-template-selec
 const skuLabelPrintStatus = document.getElementById("sku-label-print-status");
 const skuLabelPrintCancelBtn = document.getElementById("sku-label-print-cancel-btn");
 const skuLabelPrintRunBtn = document.getElementById("sku-label-print-run-btn");
+const kurlyLabelFileInput = document.getElementById("kurly-label-file");
+const kurlyLabelFileNameEl = document.getElementById("kurly-label-file-name");
+const kurlyLabelGenerateBtn = document.getElementById("kurly-label-generate-btn");
+const kurlyLabelResultEl = document.getElementById("kurly-label-result");
 
 const viewMeta = {
     home: {
@@ -116,6 +122,10 @@ const viewMeta = {
         title: "SKU 관리",
         subtitle: "SKU 파일 업로드와 필수값/형식 검증을 수행할 수 있습니다.",
     },
+    "kurly-label": {
+        title: "컬리 라벨 생성",
+        subtitle: "엑셀 업로드 후 엄격 검증을 거쳐 컬리 라벨을 생성/출력합니다.",
+    },
     settings: {
         title: "설정",
         subtitle: "계정, 플랜, 권한과 같은 기본 정보를 확인할 수 있습니다.",
@@ -132,6 +142,8 @@ let editingSkuRowId = null;
 let skuWorkspaceUserId = null;
 let skuLabelTemplates = [];
 let printingSkuRowId = null;
+let kurlyRows = [];
+let kurlyParsedFileName = "";
 
 function clampProgress(value) {
     return Math.max(0, Math.min(100, Number(value) || 0));
@@ -207,7 +219,7 @@ function setToolGroupOpenState(isOpen) {
 }
 
 function isToolView(viewName) {
-    return viewName === "tracking" || viewName === "label" || viewName === "sku";
+    return viewName === "tracking" || viewName === "label" || viewName === "sku" || viewName === "kurly-label";
 }
 
 function setSkuResult(message) {
@@ -224,6 +236,198 @@ function setSkuLabelPrintStatus(message, tone = "info") {
     };
     skuLabelPrintStatus.textContent = message ?? "";
     skuLabelPrintStatus.style.color = colorMap[tone] ?? colorMap.info;
+}
+
+function setKurlyLabelResult(message) {
+    if (!kurlyLabelResultEl) return;
+    kurlyLabelResultEl.textContent = message ?? "";
+}
+
+function buildKurlyUploadErrorMessage(validationRows) {
+    const invalidRows = (validationRows ?? []).filter((row) => !row.isValid);
+    if (!invalidRows.length) return "";
+
+    const previewLines = invalidRows
+        .slice(0, 5)
+        .map((row) => `- ${row.rowId}행: ${(row.errors ?? []).join(", ")}`)
+        .join("\n");
+
+    const remainingCount = invalidRows.length - Math.min(invalidRows.length, 5);
+    const remainingLine = remainingCount > 0
+        ? `\n외 ${remainingCount}건의 오류가 더 있습니다.`
+        : "";
+
+    return `컬리 라벨 생성에 실패했습니다.\n오류를 수정한 뒤 다시 업로드해주세요.\n\n${previewLines}${remainingLine}`;
+}
+
+async function downloadKurlyLabelPdf(labelItems) {
+    if (!labelItems.length) {
+        setKurlyLabelResult("생성할 라벨이 없습니다.");
+        return false;
+    }
+
+    const jsPdfLib = window.jspdf?.jsPDF;
+    const html2canvasLib = window.html2canvas;
+    if (!jsPdfLib || !html2canvasLib) {
+        setKurlyLabelResult("PDF 라이브러리를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.");
+        return false;
+    }
+
+    const doc = new jsPdfLib({
+        orientation: "landscape",
+        unit: "mm",
+        format: "a4",
+    });
+
+    const renderLabelNode = (item) => {
+        const rows = [
+            ["발주코드", item.orderCode],
+            ["공급사명", item.supplierName],
+            ["상품명", item.productName],
+            ["상품코드", item.productCode],
+            ["유통기한", item.expiry],
+            ["수량/총수량", `박스 내 입수량 (${item.boxPerUnit}) / 총 입고수량 (${item.totalEa})`],
+            ["C/T", `박스 번호 (${item.boxNo}) / 전체 박스 수 (${item.totalBoxes})`],
+        ];
+
+        const wrapper = document.createElement("div");
+        wrapper.style.position = "fixed";
+        wrapper.style.left = "-10000px";
+        wrapper.style.top = "0";
+        wrapper.style.width = "1122px"; // A4 landscape @ 96dpi
+        wrapper.style.height = "794px";
+        wrapper.style.background = "#ffffff";
+        wrapper.style.padding = "40px";
+        wrapper.style.boxSizing = "border-box";
+        wrapper.style.fontFamily = "\"Malgun Gothic\", \"Apple SD Gothic Neo\", sans-serif";
+
+        const table = document.createElement("table");
+        table.style.width = "100%";
+        table.style.height = "100%";
+        table.style.borderCollapse = "collapse";
+        table.style.tableLayout = "fixed";
+        table.style.fontSize = "28px";
+        table.style.fontWeight = "700";
+        table.style.color = "#111827";
+
+        rows.forEach(([key, value]) => {
+            const tr = document.createElement("tr");
+            const th = document.createElement("th");
+            const td = document.createElement("td");
+
+            th.textContent = String(key ?? "");
+            td.textContent = String(value ?? "");
+
+            th.style.width = "200px";
+            th.style.border = "2px solid #111827";
+            td.style.border = "2px solid #111827";
+            th.style.padding = "14px 16px";
+            td.style.padding = "14px 16px";
+            th.style.textAlign = "left";
+            td.style.textAlign = "left";
+            th.style.verticalAlign = "middle";
+            td.style.verticalAlign = "middle";
+            td.style.wordBreak = "break-word";
+            td.style.whiteSpace = "pre-wrap";
+
+            tr.appendChild(th);
+            tr.appendChild(td);
+            table.appendChild(tr);
+        });
+
+        wrapper.appendChild(table);
+        document.body.appendChild(wrapper);
+        return wrapper;
+    };
+
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+
+    for (let index = 0; index < labelItems.length; index += 1) {
+        const item = labelItems[index];
+        const node = renderLabelNode(item);
+        try {
+            const canvas = await html2canvasLib(node, {
+                scale: 2,
+                useCORS: true,
+                backgroundColor: "#ffffff",
+                logging: false,
+            });
+            const imageData = canvas.toDataURL("image/png");
+            if (index > 0) doc.addPage("a4", "landscape");
+            doc.addImage(imageData, "PNG", 0, 0, pageWidth, pageHeight, undefined, "FAST");
+        } finally {
+            document.body.removeChild(node);
+        }
+    }
+
+    return doc.output("blob");
+}
+
+function sanitizeFilenamePart(value) {
+    return String(value ?? "")
+        .trim()
+        .replace(/[\\/:*?"<>|]/g, "_")
+        .replace(/\s+/g, "_")
+        .slice(0, 40) || "미지정센터";
+}
+
+function triggerBlobDownload(blob, filename) {
+    const blobUrl = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = blobUrl;
+    anchor.download = filename;
+    anchor.rel = "noopener";
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 3000);
+}
+
+async function downloadKurlyLabelByCenter(labelItems) {
+    if (!labelItems.length) {
+        setKurlyLabelResult("생성할 라벨이 없습니다.");
+        return false;
+    }
+
+    const grouped = new Map();
+    labelItems.forEach((item) => {
+        const centerKey = sanitizeFilenamePart(item.center || "미지정센터");
+        if (!grouped.has(centerKey)) grouped.set(centerKey, []);
+        grouped.get(centerKey).push(item);
+    });
+
+    try {
+        const today = new Date().toISOString().slice(0, 10);
+        const centerEntries = Array.from(grouped.entries());
+
+        if (centerEntries.length === 1) {
+            const [center, items] = centerEntries[0];
+            const pdfBlob = await downloadKurlyLabelPdf(items);
+            triggerBlobDownload(pdfBlob, `컬리_입고라벨_${center}_${today}.pdf`);
+            return true;
+        }
+
+        const zipLib = window.JSZip;
+        if (!zipLib) {
+            setKurlyLabelResult("ZIP 라이브러리를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.");
+            return false;
+        }
+
+        const zip = new zipLib();
+        for (const [center, items] of centerEntries) {
+            const pdfBlob = await downloadKurlyLabelPdf(items);
+            zip.file(`컬리_입고라벨_${center}_${today}.pdf`, pdfBlob);
+        }
+
+        const zipBlob = await zip.generateAsync({ type: "blob" });
+        triggerBlobDownload(zipBlob, `컬리_입고라벨_${today}_센터별.zip`);
+        return true;
+    } catch (error) {
+        console.error(error);
+        setKurlyLabelResult("PDF 저장 중 오류가 발생했습니다. 브라우저 다운로드 설정을 확인해주세요.");
+        return false;
+    }
 }
 
 function getSkuWorkspaceDocRef() {
@@ -1083,6 +1287,72 @@ async function setSkuFileSelectedState(file) {
     }
 }
 
+async function setKurlyFileSelectedState(file) {
+    if (!file) {
+        kurlyRows = [];
+        kurlyParsedFileName = "";
+        updateSelectedFileName(null, kurlyLabelFileNameEl);
+        setKurlyLabelResult("선택된 파일이 없습니다.");
+        return;
+    }
+
+    try {
+        const parsedRows = await parseKurlyLabelFile(file);
+        const validationResult = validateKurlyRows(parsedRows);
+        const { total, valid, invalid } = validationResult.summary;
+
+        if (!total) {
+            kurlyRows = [];
+            kurlyParsedFileName = "";
+            updateSelectedFileName(file, kurlyLabelFileNameEl);
+            setKurlyLabelResult("파일은 읽었지만 처리할 데이터가 없습니다.");
+            return;
+        }
+
+        if (invalid > 0) {
+            kurlyRows = [];
+            kurlyParsedFileName = "";
+            updateSelectedFileName(file, kurlyLabelFileNameEl);
+            setKurlyLabelResult(`업로드 실패: 총 ${total}건 중 오류 ${invalid}건`);
+            window.alert(buildKurlyUploadErrorMessage(validationResult.rows));
+            return;
+        }
+
+        kurlyRows = validationResult.rows;
+        kurlyParsedFileName = file.name;
+        updateSelectedFileName(file, kurlyLabelFileNameEl);
+        setKurlyLabelResult(`업로드 완료: 총 ${total}건 (정상 ${valid}건)\n마스터코드 값이 라벨 상품코드로 사용됩니다.`);
+    } catch (error) {
+        console.error(error);
+        kurlyRows = [];
+        kurlyParsedFileName = "";
+        updateSelectedFileName(file, kurlyLabelFileNameEl);
+        setKurlyLabelResult(error.message || "컬리 라벨 파일 처리 중 오류가 발생했습니다.");
+    }
+}
+
+async function handleGenerateKurlyLabels() {
+    if (!kurlyRows.length) {
+        setKurlyLabelResult("먼저 컬리 라벨 파일을 업로드해주세요.");
+        return;
+    }
+
+    const validRows = kurlyRows.filter((row) => row.isValid);
+    const labelItems = buildKurlyLabelItems(validRows);
+    if (!labelItems.length) {
+        setKurlyLabelResult("생성 가능한 라벨이 없습니다.");
+        return;
+    }
+
+    const downloaded = await downloadKurlyLabelByCenter(labelItems);
+    if (!downloaded) return;
+
+    const centerCount = new Set(labelItems.map((item) => item.center || "미지정센터")).size;
+    setKurlyLabelResult(
+        `다운로드 완료: ${kurlyParsedFileName || "업로드 파일"} 기준 ${validRows.length}행, 총 ${labelItems.length}장, 센터 ${centerCount}개`
+    );
+}
+
 async function handleTrackingRun() {
     trackingExecuted = false;
     updateDownloadButtonState();
@@ -1313,6 +1583,10 @@ function bindEvents() {
         const file = skuFileInput.files?.[0];
         await setSkuFileSelectedState(file);
     });
+    kurlyLabelFileInput?.addEventListener("change", async () => {
+        const file = kurlyLabelFileInput.files?.[0];
+        await setKurlyFileSelectedState(file);
+    });
     skuTableBody?.addEventListener("change", handleSkuRowSelectionChange);
     skuTableBody?.addEventListener("click", handleSkuTableClick);
 
@@ -1341,6 +1615,7 @@ function bindEvents() {
     skuEditCancelBtn?.addEventListener("click", closeSkuEditModal);
     skuLabelPrintRunBtn?.addEventListener("click", handleRunSkuLabelPrint);
     skuLabelPrintCancelBtn?.addEventListener("click", closeSkuLabelPrintModal);
+    kurlyLabelGenerateBtn?.addEventListener("click", handleGenerateKurlyLabels);
     skuHeaderModal?.addEventListener("click", (event) => {
         if (event.target === skuHeaderModal) {
             closeSkuHeaderModal();
@@ -1380,6 +1655,13 @@ function initializeSkuUi() {
     closeSkuHeaderModal();
     closeSkuEditModal();
     closeSkuLabelPrintModal();
+}
+
+function initializeKurlyLabelUi() {
+    kurlyRows = [];
+    kurlyParsedFileName = "";
+    updateSelectedFileName(null, kurlyLabelFileNameEl);
+    setKurlyLabelResult("필수 헤더가 정확히 일치해야 라벨을 생성할 수 있습니다. (상품코드 헤더 불가, 마스터코드만 허용)");
 }
 
 async function loadSkuWorkspace(userId) {
@@ -1423,6 +1705,7 @@ function initializeDashboard() {
     showTrackingMode("excel");
     initializeTrackingUi();
     initializeSkuUi();
+    initializeKurlyLabelUi();
     bindEvents();
 }
 

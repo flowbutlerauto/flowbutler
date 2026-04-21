@@ -93,6 +93,11 @@ const skuEditModal = document.getElementById("sku-edit-modal");
 const skuEditForm = document.getElementById("sku-edit-form");
 const skuEditCancelBtn = document.getElementById("sku-edit-cancel-btn");
 const skuEditSaveBtn = document.getElementById("sku-edit-save-btn");
+const skuLabelPrintModal = document.getElementById("sku-label-print-modal");
+const skuLabelTemplateSelect = document.getElementById("sku-label-template-select");
+const skuLabelPrintStatus = document.getElementById("sku-label-print-status");
+const skuLabelPrintCancelBtn = document.getElementById("sku-label-print-cancel-btn");
+const skuLabelPrintRunBtn = document.getElementById("sku-label-print-run-btn");
 
 const viewMeta = {
     home: {
@@ -125,6 +130,8 @@ let selectedSkuHeaderKeys = [];
 let selectedSkuRowIds = new Set();
 let editingSkuRowId = null;
 let skuWorkspaceUserId = null;
+let skuLabelTemplates = [];
+let printingSkuRowId = null;
 
 function clampProgress(value) {
     return Math.max(0, Math.min(100, Number(value) || 0));
@@ -208,6 +215,17 @@ function setSkuResult(message) {
     skuResultEl.textContent = message ?? "";
 }
 
+function setSkuLabelPrintStatus(message, tone = "info") {
+    if (!skuLabelPrintStatus) return;
+    const colorMap = {
+        info: "#475569",
+        success: "#166534",
+        error: "#b91c1c",
+    };
+    skuLabelPrintStatus.textContent = message ?? "";
+    skuLabelPrintStatus.style.color = colorMap[tone] ?? colorMap.info;
+}
+
 function getSkuWorkspaceDocRef() {
     if (!skuWorkspaceUserId) return null;
     return doc(db, "users", skuWorkspaceUserId, "preferences", "skuWorkspace");
@@ -239,6 +257,46 @@ async function persistSkuWorkspace() {
     }
 }
 
+function getLabelTemplateDocRefByUser(userId) {
+    if (!userId) return null;
+    return doc(db, "users", userId, "preferences", "labelTemplates");
+}
+
+async function loadSkuLabelTemplates(userId) {
+    const templateDocRef = getLabelTemplateDocRefByUser(userId);
+    if (!templateDocRef) return;
+
+    try {
+        const templateSnap = await getDoc(templateDocRef);
+        const templates = templateSnap.data()?.templates;
+        skuLabelTemplates = Array.isArray(templates) ? templates : [];
+        renderSkuLabelTemplateOptions();
+    } catch (error) {
+        console.error(error);
+        skuLabelTemplates = [];
+        renderSkuLabelTemplateOptions();
+    }
+}
+
+function renderSkuLabelTemplateOptions(preferredId = "") {
+    if (!skuLabelTemplateSelect) return;
+
+    skuLabelTemplateSelect.innerHTML = "";
+    if (!skuLabelTemplates.length) {
+        skuLabelTemplateSelect.innerHTML = `<option value="">저장된 라벨 양식이 없습니다.</option>`;
+        return;
+    }
+
+    skuLabelTemplates.forEach((template) => {
+        const option = document.createElement("option");
+        option.value = template.id;
+        option.textContent = template.name;
+        skuLabelTemplateSelect.appendChild(option);
+    });
+
+    skuLabelTemplateSelect.value = preferredId || skuLabelTemplates[0].id;
+}
+
 function buildSkuUploadErrorMessage(validationRows) {
     const invalidRows = (validationRows ?? []).filter((row) => !row.isValid);
     if (!invalidRows.length) return "";
@@ -266,7 +324,7 @@ function setSkuEmptyTable(message) {
 }
 
 function getSkuTableColumnCount() {
-    return 2 + selectedSkuHeaderKeys.length + 3;
+    return 2 + selectedSkuHeaderKeys.length + 4;
 }
 
 function getFieldByKey(key) {
@@ -320,6 +378,7 @@ function renderSkuTableHead() {
       <th>상태</th>
       <th>오류</th>
       <th>수정</th>
+      <th>라벨 출력</th>
     </tr>
   `;
 }
@@ -349,6 +408,7 @@ function renderSkuTable(rows) {
         <td>${status}</td>
         <td>${escapeHtml(errorText)}</td>
         <td><button type="button" class="secondary-btn" data-sku-edit-row-id="${row.rowId}">수정</button></td>
+        <td><button type="button" class="secondary-btn" data-sku-print-row-id="${row.rowId}">라벨 출력</button></td>
       </tr>
     `;
     }).join("");
@@ -497,16 +557,132 @@ function closeSkuEditModal() {
     skuEditModal.setAttribute("aria-hidden", "true");
 }
 
+function openSkuLabelPrintModal(rowId) {
+    if (!skuLabelPrintModal) return;
+    printingSkuRowId = rowId;
+    renderSkuLabelTemplateOptions();
+    setSkuLabelPrintStatus("출력할 라벨 양식을 선택해주세요.", "info");
+    skuLabelPrintModal.classList.remove("is-hidden");
+    skuLabelPrintModal.setAttribute("aria-hidden", "false");
+}
+
+function closeSkuLabelPrintModal() {
+    printingSkuRowId = null;
+    if (!skuLabelPrintModal) return;
+    skuLabelPrintModal.classList.add("is-hidden");
+    skuLabelPrintModal.setAttribute("aria-hidden", "true");
+}
+
+function normalizeLookupToken(value) {
+    return String(value ?? "")
+        .toLowerCase()
+        .replace(/\s+/g, "")
+        .replace(/[()_\-]/g, "");
+}
+
+function buildSkuValueLookup(row) {
+    const lookup = new Map();
+    SKU_FIELDS.forEach((field) => {
+        const fieldValue = String(row?.[field.key] ?? "");
+        lookup.set(normalizeLookupToken(field.key), fieldValue);
+        lookup.set(normalizeLookupToken(field.label), fieldValue);
+    });
+    return lookup;
+}
+
+function buildPrintMarkup(template, row) {
+    const mmToPx = (mm) => Math.round((Number(mm) || 0) * 3.78);
+    const snapshot = template?.snapshot ?? {};
+    const label = snapshot.label ?? { widthMm: 100, heightMm: 150 };
+    const boxes = Array.isArray(snapshot.boxes) ? snapshot.boxes : [];
+    const lookup = buildSkuValueLookup(row);
+
+    const boxHtml = boxes.map((box) => {
+        const lookupKey = normalizeLookupToken(box.headerName ?? "");
+        const mappedValue = lookup.get(lookupKey);
+        const text = mappedValue || box.sampleText || box.headerName || box.name || "";
+
+        return `
+      <div style="
+        position:absolute;
+        left:${mmToPx(box.x)}px;
+        top:${mmToPx(box.y)}px;
+        width:${mmToPx(box.width)}px;
+        height:${mmToPx(box.height)}px;
+        font-size:${box.fontSize || 10}px;
+        text-align:${box.textAlign || "left"};
+        overflow:hidden;
+        line-height:1.2;
+      ">${escapeHtml(text)}</div>
+    `;
+    }).join("");
+
+    return `
+    <div style="
+      position:relative;
+      width:${mmToPx(label.widthMm)}px;
+      height:${mmToPx(label.heightMm)}px;
+      border:1px solid #cbd5e1;
+      box-sizing:border-box;
+      background:#fff;
+    ">
+      ${boxHtml}
+    </div>
+  `;
+}
+
+function handleRunSkuLabelPrint() {
+    if (printingSkuRowId === null) return;
+    const row = skuRows.find((item) => item.rowId === printingSkuRowId);
+    if (!row) {
+        setSkuLabelPrintStatus("출력 대상 SKU를 찾을 수 없습니다.", "error");
+        return;
+    }
+
+    const templateId = skuLabelTemplateSelect?.value || "";
+    const template = skuLabelTemplates.find((item) => item.id === templateId);
+    if (!template) {
+        setSkuLabelPrintStatus("출력할 라벨 양식을 먼저 선택해주세요.", "error");
+        return;
+    }
+
+    const printWindow = window.open("", "_blank", "width=900,height=700");
+    if (!printWindow) {
+        setSkuLabelPrintStatus("팝업이 차단되었습니다. 팝업 허용 후 다시 시도해주세요.", "error");
+        return;
+    }
+
+    const markup = buildPrintMarkup(template, row);
+    printWindow.document.write(`
+      <html>
+        <head><title>SKU 라벨 출력</title></head>
+        <body style="margin:20px;font-family:Arial,sans-serif;">${markup}</body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+    setSkuLabelPrintStatus("라벨 출력 창을 열었습니다.", "success");
+}
+
 function handleSkuTableClick(event) {
     const target = event.target;
     if (!(target instanceof HTMLElement)) return;
 
     const editButton = target.closest("button[data-sku-edit-row-id]");
-    if (!(editButton instanceof HTMLButtonElement)) return;
+    if (editButton instanceof HTMLButtonElement) {
+        const rowId = Number(editButton.getAttribute("data-sku-edit-row-id"));
+        if (!Number.isFinite(rowId)) return;
+        openSkuEditModal(rowId);
+        return;
+    }
 
-    const rowId = Number(editButton.getAttribute("data-sku-edit-row-id"));
-    if (!Number.isFinite(rowId)) return;
-    openSkuEditModal(rowId);
+    const printButton = target.closest("button[data-sku-print-row-id]");
+    if (printButton instanceof HTMLButtonElement) {
+        const rowId = Number(printButton.getAttribute("data-sku-print-row-id"));
+        if (!Number.isFinite(rowId)) return;
+        openSkuLabelPrintModal(rowId);
+    }
 }
 
 function handleSaveSkuEdit() {
@@ -1163,6 +1339,8 @@ function bindEvents() {
     skuHeaderResetBtn?.addEventListener("click", handleResetSkuHeaders);
     skuEditSaveBtn?.addEventListener("click", handleSaveSkuEdit);
     skuEditCancelBtn?.addEventListener("click", closeSkuEditModal);
+    skuLabelPrintRunBtn?.addEventListener("click", handleRunSkuLabelPrint);
+    skuLabelPrintCancelBtn?.addEventListener("click", closeSkuLabelPrintModal);
     skuHeaderModal?.addEventListener("click", (event) => {
         if (event.target === skuHeaderModal) {
             closeSkuHeaderModal();
@@ -1171,6 +1349,11 @@ function bindEvents() {
     skuEditModal?.addEventListener("click", (event) => {
         if (event.target === skuEditModal) {
             closeSkuEditModal();
+        }
+    });
+    skuLabelPrintModal?.addEventListener("click", (event) => {
+        if (event.target === skuLabelPrintModal) {
+            closeSkuLabelPrintModal();
         }
     });
 }
@@ -1196,6 +1379,7 @@ function initializeSkuUi() {
     setSkuResult("업로드 시 자동 검증되며, 오류가 있으면 업로드되지 않습니다.");
     closeSkuHeaderModal();
     closeSkuEditModal();
+    closeSkuLabelPrintModal();
 }
 
 async function loadSkuWorkspace(userId) {
@@ -1245,6 +1429,7 @@ function initializeDashboard() {
 onAuthStateChanged(auth, async (user) => {
     if (!user) {
         skuWorkspaceUserId = null;
+        skuLabelTemplates = [];
         window.location.href = "./login.html";
         return;
     }
@@ -1253,6 +1438,7 @@ onAuthStateChanged(auth, async (user) => {
         skuWorkspaceUserId = user.uid;
         await loadApprovedUser(user);
         await loadSkuWorkspace(user.uid);
+        await loadSkuLabelTemplates(user.uid);
         initializeLabelEditor({ userId: user.uid });
     } catch (error) {
         console.error(error);

@@ -38,8 +38,12 @@
                                 </button>
 
                                 <button class="sidebar-subnav-item" data-view="label" type="button">
-                                    <span class="sidebar-nav-title">라벨 생성</span>
+                                    <span class="sidebar-nav-title">라벨 양식 설정</span>
                                     <span class="sidebar-nav-desc">텍스트 박스 기반 라벨 편집</span>
+                                </button>
+                                <button class="sidebar-subnav-item" data-view="sku" type="button">
+                                    <span class="sidebar-nav-title">SKU 관리</span>
+                                    <span class="sidebar-nav-desc">상품 마스터 등록 / 검증</span>
                                 </button>
                             </div>
                         </div>
@@ -300,7 +304,7 @@
                         <section class="workspace-card">
                             <div class="section-head">
                                 <div>
-                                    <h2 class="section-title">라벨 생성</h2>
+                                    <h2 class="section-title">라벨 양식 설정</h2>
                                     <p class="workspace-text">
                                         빈 라벨 위에 텍스트 박스를 배치하고 엑셀 헤더와 연결할 수 있는 편집 화면입니다.
                                     </p>
@@ -314,7 +318,7 @@
                                         <div>
                                             <h3 class="subcard-title">라벨 캔버스</h3>
                                             <p class="subcard-text">
-                                                텍스트 박스를 추가한 뒤 위치와 크기를 조절할 영역입니다.
+                                                텍스트 박스를 추가한 뒤 위치와 크기를 조절할 영역입니다. 박스를 드래그해서 위치를 빠르게 이동할 수 있습니다.
                                             </p>
                                         </div>
                                         <div class="label-canvas-meta">100mm × 150mm</div>
@@ -352,12 +356,37 @@
                                             </div>
                                         </div>
 
+                                        <div class="form-group">
+                                            <label for="label-template-name">양식 이름</label>
+                                            <input type="text" id="label-template-name" maxlength="40"
+                                                placeholder="예: 쇼핑몰 기본 라벨" />
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label for="label-template-list">저장된 양식 (최대 5개)</label>
+                                            <select id="label-template-list">
+                                                <option value="">저장된 양식이 없습니다.</option>
+                                            </select>
+                                        </div>
+
                                         <div class="label-tool-actions">
                                             <button id="label-apply-size-btn" class="secondary-btn" type="button">크기
                                                 적용</button>
                                             <button id="label-add-text-btn" class="primary-btn" type="button">텍스트 박스
                                                 추가</button>
                                         </div>
+
+                                        <div class="label-tool-actions">
+                                            <button id="label-template-save-btn" class="secondary-btn"
+                                                type="button">양식 저장</button>
+                                            <button id="label-template-load-btn" class="secondary-btn"
+                                                type="button">양식 불러오기</button>
+                                            <button id="label-template-delete-btn" class="secondary-btn"
+                                                type="button">양식 삭제</button>
+                                        </div>
+                                        <p id="label-template-status" class="label-template-status">
+                                            로그인한 계정 기준으로 라벨 양식을 저장/불러오기 할 수 있습니다.
+                                        </p>
                                     </div>
 
                                     <div class="workspace-subcard label-properties-card">
@@ -376,8 +405,10 @@
 
                                         <div class="label-properties-form is-collapsed">
                                             <div class="form-group">
-                                                <label for="label-box-header">헤더명</label>
-                                                <input type="text" id="label-box-header" placeholder="예: 상품명" />
+                                                <label for="label-box-header">헤더명 (SKU 기준)</label>
+                                                <select id="label-box-header">
+                                                    <option value="">선택 안함</option>
+                                                </select>
                                             </div>
 
                                             <div class="form-group">
@@ -444,6 +475,116 @@
                                         <div id="label-box-list" class="label-box-list label-box-list-compact">
                                             <div class="label-box-list-empty">아직 생성된 텍스트 박스가 없습니다.</div>
                                         </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+
+                    <div id="view-sku" class="workspace-view">
+                        <section class="workspace-card">
+                            <div class="section-head">
+                                <div>
+                                    <h2 class="section-title">SKU 관리</h2>
+                                    <p class="workspace-text">
+                                        SKU 마스터 파일을 업로드하고 필수값/형식 오류를 빠르게 점검할 수 있는 화면입니다.
+                                    </p>
+                                </div>
+                                <div class="section-badge">SKU MVP</div>
+                            </div>
+
+                            <div class="workspace-subcard">
+                                <div class="tracking-toolbar">
+                                    <div class="tracking-toolbar-left">
+                                        <label for="sku-file" class="file-trigger-btn">SKU 파일 선택</label>
+                                        <input type="file" id="sku-file" accept=".xlsx,.xls,.csv"
+                                            class="hidden-file-input" />
+                                        <div id="sku-file-name" class="selected-file-name">선택된 파일 없음</div>
+                                    </div>
+                                    <div class="tracking-toolbar-right">
+                                        <div class="tracking-link-buttons">
+                                            <a href="./assets/SKU-template.xlsx" download
+                                                class="secondary-btn tracking-link-btn">
+                                                SKU 양식 다운로드
+                                            </a>
+                                        </div>
+                                        <div class="tracking-action-buttons">
+                                            <button id="sku-header-config-btn" class="secondary-btn"
+                                                type="button">표시 헤더 설정</button>
+                                            <button id="sku-delete-selected-btn" class="secondary-btn"
+                                                type="button">선택 SKU 삭제</button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div id="sku-result" class="info-block tracking-result-box">
+                                    업로드 시 자동 검증되며, 오류가 있으면 업로드되지 않습니다.
+                                </div>
+
+                                <div class="tracking-table-wrap">
+                                    <div class="tracking-table-scroll">
+                                        <table class="tracking-table">
+                                            <thead id="sku-table-head"></thead>
+                                            <tbody id="sku-table-body">
+                                                <tr class="tracking-empty-row">
+                                                    <td colspan="5">SKU 파일을 선택하면 자동으로 검증합니다.</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="sku-header-modal" class="sku-header-modal is-hidden" aria-hidden="true">
+                                <div class="sku-header-modal-card">
+                                    <h3 class="subcard-title">SKU 표시 헤더 설정</h3>
+                                    <p class="subcard-text">표시할 컬럼을 선택한 뒤 적용 버튼을 눌러주세요.</p>
+                                    <div id="sku-header-checkbox-list" class="sku-header-checkbox-list"></div>
+                                    <div class="label-tool-actions">
+                                        <button id="sku-header-select-all-btn" class="secondary-btn" type="button">전체
+                                            선택</button>
+                                        <button id="sku-header-required-btn" class="secondary-btn" type="button">필수만
+                                            선택</button>
+                                        <button id="sku-header-reset-btn" class="secondary-btn" type="button">기본값
+                                            복원</button>
+                                    </div>
+                                    <div class="label-tool-actions">
+                                        <button id="sku-header-cancel-btn" class="secondary-btn"
+                                            type="button">취소</button>
+                                        <button id="sku-header-apply-btn" class="primary-btn"
+                                            type="button">적용</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="sku-edit-modal" class="sku-header-modal is-hidden" aria-hidden="true">
+                                <div class="sku-header-modal-card">
+                                    <h3 class="subcard-title">SKU 수정</h3>
+                                    <p class="subcard-text">값을 수정한 뒤 저장 버튼을 눌러주세요.</p>
+                                    <div id="sku-edit-form" class="sku-header-checkbox-list"></div>
+                                    <div class="label-tool-actions">
+                                        <button id="sku-edit-cancel-btn" class="secondary-btn" type="button">취소</button>
+                                        <button id="sku-edit-save-btn" class="primary-btn" type="button">저장</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="sku-label-print-modal" class="sku-header-modal is-hidden" aria-hidden="true">
+                                <div class="sku-header-modal-card">
+                                    <h3 class="subcard-title">SKU 라벨 출력</h3>
+                                    <p class="subcard-text">출력할 라벨 양식을 선택한 뒤 출력 버튼을 눌러주세요.</p>
+                                    <div class="form-group">
+                                        <label for="sku-label-template-select">라벨 양식</label>
+                                        <select id="sku-label-template-select">
+                                            <option value="">저장된 라벨 양식이 없습니다.</option>
+                                        </select>
+                                    </div>
+                                    <div id="sku-label-print-status" class="label-template-status"></div>
+                                    <div class="label-tool-actions">
+                                        <button id="sku-label-print-cancel-btn" class="secondary-btn"
+                                            type="button">취소</button>
+                                        <button id="sku-label-print-run-btn" class="primary-btn"
+                                            type="button">출력</button>
                                     </div>
                                 </div>
                             </div>

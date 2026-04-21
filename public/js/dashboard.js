@@ -104,7 +104,7 @@ const kurlyLabelFileInput = document.getElementById("kurly-label-file");
 const kurlyLabelFileNameEl = document.getElementById("kurly-label-file-name");
 const kurlyLabelGenerateBtn = document.getElementById("kurly-label-generate-btn");
 const kurlyLabelResultEl = document.getElementById("kurly-label-result");
-const kurlyProgressWrapEl = document.getElementById("kurly-progress-wrap");
+const kurlyProgressCardEl = document.getElementById("kurly-progress-card");
 const kurlyProgressMessageEl = document.getElementById("kurly-progress-message");
 const kurlyProgressDetailEl = document.getElementById("kurly-progress-detail");
 const kurlyProgressBarEl = document.getElementById("kurly-progress-bar");
@@ -260,9 +260,9 @@ function setKurlyProgress({
     if (kurlyProgressDetailEl) kurlyProgressDetailEl.textContent = detail;
     if (kurlyProgressBarEl) kurlyProgressBarEl.style.width = `${percent}%`;
     if (kurlyProgressPercentEl) kurlyProgressPercentEl.textContent = `${percent}%`;
-    if (kurlyProgressWrapEl) {
-        kurlyProgressWrapEl.classList.toggle("is-hidden", !visible);
-        kurlyProgressWrapEl.setAttribute("aria-hidden", visible ? "false" : "true");
+    if (kurlyProgressCardEl) {
+        kurlyProgressCardEl.classList.toggle("is-hidden", !visible);
+        kurlyProgressCardEl.setAttribute("aria-hidden", visible ? "false" : "true");
     }
 }
 

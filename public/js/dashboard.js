@@ -104,6 +104,11 @@ const kurlyLabelFileInput = document.getElementById("kurly-label-file");
 const kurlyLabelFileNameEl = document.getElementById("kurly-label-file-name");
 const kurlyLabelGenerateBtn = document.getElementById("kurly-label-generate-btn");
 const kurlyLabelResultEl = document.getElementById("kurly-label-result");
+const kurlyProgressWrapEl = document.getElementById("kurly-progress-wrap");
+const kurlyProgressMessageEl = document.getElementById("kurly-progress-message");
+const kurlyProgressDetailEl = document.getElementById("kurly-progress-detail");
+const kurlyProgressBarEl = document.getElementById("kurly-progress-bar");
+const kurlyProgressPercentEl = document.getElementById("kurly-progress-percent");
 
 const viewMeta = {
     home: {
@@ -243,6 +248,33 @@ function setKurlyLabelResult(message) {
     kurlyLabelResultEl.textContent = message ?? "";
 }
 
+function setKurlyProgress({
+    message = "",
+    detail = "",
+    value = 0,
+    visible = true,
+} = {}) {
+    const percent = clampProgress(value);
+
+    if (kurlyProgressMessageEl) kurlyProgressMessageEl.textContent = message;
+    if (kurlyProgressDetailEl) kurlyProgressDetailEl.textContent = detail;
+    if (kurlyProgressBarEl) kurlyProgressBarEl.style.width = `${percent}%`;
+    if (kurlyProgressPercentEl) kurlyProgressPercentEl.textContent = `${percent}%`;
+    if (kurlyProgressWrapEl) {
+        kurlyProgressWrapEl.classList.toggle("is-hidden", !visible);
+        kurlyProgressWrapEl.setAttribute("aria-hidden", visible ? "false" : "true");
+    }
+}
+
+function resetKurlyProgress() {
+    setKurlyProgress({
+        message: "준비됨",
+        detail: "파일 업로드 후 컬리 라벨 PDF 다운로드를 눌러주세요.",
+        value: 0,
+        visible: false,
+    });
+}
+
 function buildKurlyUploadErrorMessage(validationRows) {
     const invalidRows = (validationRows ?? []).filter((row) => !row.isValid);
     if (!invalidRows.length) return "";
@@ -260,7 +292,7 @@ function buildKurlyUploadErrorMessage(validationRows) {
     return `컬리 라벨 생성에 실패했습니다.\n오류를 수정한 뒤 다시 업로드해주세요.\n\n${previewLines}${remainingLine}`;
 }
 
-async function downloadKurlyLabelPdf(labelItems) {
+async function downloadKurlyLabelPdf(labelItems, options = {}) {
     if (!labelItems.length) {
         setKurlyLabelResult("생성할 라벨이 없습니다.");
         return false;
@@ -345,6 +377,14 @@ async function downloadKurlyLabelPdf(labelItems) {
 
     for (let index = 0; index < labelItems.length; index += 1) {
         const item = labelItems[index];
+        options.onProgress?.({
+            step: "render-page",
+            current: index + 1,
+            total: labelItems.length,
+            message: options.message || "PDF 페이지를 생성하는 중입니다...",
+            detail: `${index + 1}/${labelItems.length} 페이지 렌더링`,
+            percent: Math.round(((index + 1) / labelItems.length) * 100),
+        });
         const node = renderLabelNode(item);
         try {
             const canvas = await html2canvasLib(node, {
@@ -400,11 +440,33 @@ async function downloadKurlyLabelByCenter(labelItems) {
     try {
         const today = new Date().toISOString().slice(0, 10);
         const centerEntries = Array.from(grouped.entries());
+        setKurlyProgress({
+            message: "센터별 파일을 준비하는 중입니다...",
+            detail: `총 ${centerEntries.length}개 센터`,
+            value: 5,
+            visible: true,
+        });
 
         if (centerEntries.length === 1) {
             const [center, items] = centerEntries[0];
-            const pdfBlob = await downloadKurlyLabelPdf(items);
+            const pdfBlob = await downloadKurlyLabelPdf(items, {
+                message: `[${center}] PDF 생성 중`,
+                onProgress: ({ detail, percent }) => {
+                    setKurlyProgress({
+                        message: `[${center}] PDF 생성 중`,
+                        detail,
+                        value: 10 + Math.round(percent * 0.8),
+                        visible: true,
+                    });
+                },
+            });
             triggerBlobDownload(pdfBlob, `컬리_입고라벨_${center}_${today}.pdf`);
+            setKurlyProgress({
+                message: "다운로드 완료",
+                detail: `${center} 센터 PDF 1개를 다운로드했습니다.`,
+                value: 100,
+                visible: true,
+            });
             return true;
         }
 
@@ -415,17 +477,47 @@ async function downloadKurlyLabelByCenter(labelItems) {
         }
 
         const zip = new zipLib();
-        for (const [center, items] of centerEntries) {
-            const pdfBlob = await downloadKurlyLabelPdf(items);
+        for (let i = 0; i < centerEntries.length; i += 1) {
+            const [center, items] = centerEntries[i];
+            const centerBase = Math.round((i / centerEntries.length) * 80);
+            const pdfBlob = await downloadKurlyLabelPdf(items, {
+                message: `[${center}] PDF 생성 중`,
+                onProgress: ({ detail, percent }) => {
+                    setKurlyProgress({
+                        message: `[${center}] PDF 생성 중`,
+                        detail,
+                        value: 10 + centerBase + Math.round((percent / centerEntries.length) * 0.8),
+                        visible: true,
+                    });
+                },
+            });
             zip.file(`컬리_입고라벨_${center}_${today}.pdf`, pdfBlob);
         }
 
+        setKurlyProgress({
+            message: "센터별 ZIP 파일을 압축하는 중입니다...",
+            detail: `${centerEntries.length}개 PDF 압축`,
+            value: 92,
+            visible: true,
+        });
         const zipBlob = await zip.generateAsync({ type: "blob" });
         triggerBlobDownload(zipBlob, `컬리_입고라벨_${today}_센터별.zip`);
+        setKurlyProgress({
+            message: "다운로드 완료",
+            detail: `센터 ${centerEntries.length}개 파일을 ZIP으로 다운로드했습니다.`,
+            value: 100,
+            visible: true,
+        });
         return true;
     } catch (error) {
         console.error(error);
         setKurlyLabelResult("PDF 저장 중 오류가 발생했습니다. 브라우저 다운로드 설정을 확인해주세요.");
+        setKurlyProgress({
+            message: "다운로드 실패",
+            detail: error?.message || "PDF/ZIP 생성 중 오류가 발생했습니다.",
+            value: 100,
+            visible: true,
+        });
         return false;
     }
 }
@@ -1293,11 +1385,24 @@ async function setKurlyFileSelectedState(file) {
         kurlyParsedFileName = "";
         updateSelectedFileName(null, kurlyLabelFileNameEl);
         setKurlyLabelResult("선택된 파일이 없습니다.");
+        resetKurlyProgress();
         return;
     }
 
     try {
+        setKurlyProgress({
+            message: "엑셀 파일을 읽는 중입니다...",
+            detail: `${file.name}`,
+            value: 15,
+            visible: true,
+        });
         const parsedRows = await parseKurlyLabelFile(file);
+        setKurlyProgress({
+            message: "데이터를 검증하는 중입니다...",
+            detail: `${parsedRows.length}건 검증`,
+            value: 45,
+            visible: true,
+        });
         const validationResult = validateKurlyRows(parsedRows);
         const { total, valid, invalid } = validationResult.summary;
 
@@ -1306,6 +1411,12 @@ async function setKurlyFileSelectedState(file) {
             kurlyParsedFileName = "";
             updateSelectedFileName(file, kurlyLabelFileNameEl);
             setKurlyLabelResult("파일은 읽었지만 처리할 데이터가 없습니다.");
+            setKurlyProgress({
+                message: "처리할 데이터 없음",
+                detail: "업로드 파일의 본문 데이터가 비어 있습니다.",
+                value: 100,
+                visible: true,
+            });
             return;
         }
 
@@ -1315,6 +1426,12 @@ async function setKurlyFileSelectedState(file) {
             updateSelectedFileName(file, kurlyLabelFileNameEl);
             setKurlyLabelResult(`업로드 실패: 총 ${total}건 중 오류 ${invalid}건`);
             window.alert(buildKurlyUploadErrorMessage(validationResult.rows));
+            setKurlyProgress({
+                message: "검증 실패",
+                detail: `오류 ${invalid}건`,
+                value: 100,
+                visible: true,
+            });
             return;
         }
 
@@ -1322,12 +1439,24 @@ async function setKurlyFileSelectedState(file) {
         kurlyParsedFileName = file.name;
         updateSelectedFileName(file, kurlyLabelFileNameEl);
         setKurlyLabelResult(`업로드 완료: 총 ${total}건 (정상 ${valid}건)\n마스터코드 값이 라벨 상품코드로 사용됩니다.`);
+        setKurlyProgress({
+            message: "업로드/검증 완료",
+            detail: `정상 ${valid}건, 다운로드 준비 완료`,
+            value: 100,
+            visible: true,
+        });
     } catch (error) {
         console.error(error);
         kurlyRows = [];
         kurlyParsedFileName = "";
         updateSelectedFileName(file, kurlyLabelFileNameEl);
         setKurlyLabelResult(error.message || "컬리 라벨 파일 처리 중 오류가 발생했습니다.");
+        setKurlyProgress({
+            message: "파일 처리 실패",
+            detail: error.message || "엑셀 파싱 중 오류",
+            value: 100,
+            visible: true,
+        });
     }
 }
 
@@ -1343,6 +1472,13 @@ async function handleGenerateKurlyLabels() {
         setKurlyLabelResult("생성 가능한 라벨이 없습니다.");
         return;
     }
+
+    setKurlyProgress({
+        message: "라벨 데이터를 정리하는 중입니다...",
+        detail: `${validRows.length}행 / ${labelItems.length}라벨`,
+        value: 5,
+        visible: true,
+    });
 
     const downloaded = await downloadKurlyLabelByCenter(labelItems);
     if (!downloaded) return;
@@ -1662,6 +1798,7 @@ function initializeKurlyLabelUi() {
     kurlyParsedFileName = "";
     updateSelectedFileName(null, kurlyLabelFileNameEl);
     setKurlyLabelResult("필수 헤더가 정확히 일치해야 라벨을 생성할 수 있습니다. (상품코드 헤더 불가, 마스터코드만 허용)");
+    resetKurlyProgress();
 }
 
 async function loadSkuWorkspace(userId) {

@@ -48,7 +48,6 @@ const elements = {
     propertiesForm: document.querySelector(".label-properties-form"),
 
     boxHeaderInput: document.getElementById("label-box-header"),
-    boxSampleInput: document.getElementById("label-box-sample"),
     boxXInput: document.getElementById("label-box-x"),
     boxYInput: document.getElementById("label-box-y"),
     boxWidthInput: document.getElementById("label-box-width"),
@@ -251,7 +250,6 @@ function createDefaultBox() {
         name: `텍스트 박스 ${number}`,
         type: "text",
         headerName: "",
-        sampleText: `샘플 텍스트 ${number}`,
         x: 10,
         y: 10 + (number - 1) * 8,
         width: 40,
@@ -302,7 +300,6 @@ function renderLabelCanvas() {
         boxEl.style.textAlign = box.textAlign;
 
         const displayText =
-            box.sampleText?.trim() ||
             box.headerName?.trim() ||
             box.name;
 
@@ -372,7 +369,6 @@ function syncPropertiesPanel() {
 
     if (!selectedBox) {
         if (elements.boxHeaderInput) elements.boxHeaderInput.value = "";
-        if (elements.boxSampleInput) elements.boxSampleInput.value = "";
         if (elements.boxXInput) elements.boxXInput.value = "0";
         if (elements.boxYInput) elements.boxYInput.value = "0";
         if (elements.boxWidthInput) elements.boxWidthInput.value = "40";
@@ -386,7 +382,6 @@ function syncPropertiesPanel() {
         ensureHeaderOption(selectedBox.headerName ?? "");
         elements.boxHeaderInput.value = selectedBox.headerName ?? "";
     }
-    if (elements.boxSampleInput) elements.boxSampleInput.value = selectedBox.sampleText ?? "";
     if (elements.boxXInput) elements.boxXInput.value = String(selectedBox.x);
     if (elements.boxYInput) elements.boxYInput.value = String(selectedBox.y);
     if (elements.boxWidthInput) elements.boxWidthInput.value = String(selectedBox.width);
@@ -417,7 +412,6 @@ function handleUpdateSelectedBox() {
     if (!selectedBox) return;
 
     selectedBox.headerName = elements.boxHeaderInput?.value.trim() ?? "";
-    selectedBox.sampleText = elements.boxSampleInput?.value ?? "";
     selectedBox.x = clamp(Number(elements.boxXInput?.value || 0), 0, state.label.widthMm);
     selectedBox.y = clamp(Number(elements.boxYInput?.value || 0), 0, state.label.heightMm);
     selectedBox.width = clamp(Number(elements.boxWidthInput?.value || 40), 5, state.label.widthMm);

@@ -600,7 +600,7 @@ function buildPrintMarkup(template, row) {
     const boxHtml = boxes.map((box) => {
         const lookupKey = normalizeLookupToken(box.headerName ?? "");
         const mappedValue = lookup.get(lookupKey);
-        const text = mappedValue || box.sampleText || box.headerName || box.name || "";
+        const text = mappedValue || box.headerName || box.name || "";
 
         return `
       <div style="

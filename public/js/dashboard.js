@@ -260,24 +260,75 @@ function buildKurlyUploadErrorMessage(validationRows) {
     return `컬리 라벨 생성에 실패했습니다.\n오류를 수정한 뒤 다시 업로드해주세요.\n\n${previewLines}${remainingLine}`;
 }
 
-function openKurlyLabelPrintWindow(labelItems) {
+function downloadKurlyLabelPdf(labelItems) {
     if (!labelItems.length) {
         setKurlyLabelResult("생성할 라벨이 없습니다.");
-        return;
+        return false;
     }
 
-    const printWindow = window.open("", "_blank", "noopener,noreferrer,width=1100,height=900");
-    if (!printWindow) {
-        setKurlyLabelResult("팝업이 차단되었습니다. 팝업 허용 후 다시 시도해주세요.");
-        return;
+    const jsPdfLib = window.jspdf?.jsPDF;
+    if (!jsPdfLib) {
+        setKurlyLabelResult("PDF 라이브러리를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.");
+        return false;
     }
 
-    const pages = labelItems
-        .map((item) => `\n      <section class=\"label-page\">\n        <table class=\"label-table\">\n          <tr><th>발주코드</th><td>${escapeHtml(item.orderCode)}</td></tr>\n          <tr><th>공급사명</th><td>${escapeHtml(item.supplierName)}</td></tr>\n          <tr><th>상품명</th><td>${escapeHtml(item.productName)}</td></tr>\n          <tr><th>상품코드</th><td>${escapeHtml(item.productCode)}</td></tr>\n          <tr><th>유통기한</th><td>${escapeHtml(item.expiry)}</td></tr>\n          <tr><th>수량/총수량</th><td>박스 내 입수량 (${item.boxPerUnit}) / 총 입고수량 (${item.totalEa})</td></tr>\n          <tr><th>C/T</th><td>박스 번호 (${item.boxNo}) / 전체 박스 수 (${item.totalBoxes})</td></tr>\n        </table>\n      </section>`)
-        .join("\n");
+    const doc = new jsPdfLib({
+        orientation: "landscape",
+        unit: "mm",
+        format: "a4",
+    });
 
-    printWindow.document.write(`<!doctype html>\n<html lang=\"ko\">\n<head>\n  <meta charset=\"utf-8\" />\n  <title>컬리 라벨 생성</title>\n  <style>\n    @page { size: A4 landscape; margin: 10mm; }\n    body { margin: 0; font-family: 'Malgun Gothic', sans-serif; }\n    .label-page { page-break-after: always; min-height: 180mm; display: flex; align-items: center; justify-content: center; }\n    .label-page:last-child { page-break-after: auto; }\n    .label-table { border-collapse: collapse; width: 95%; table-layout: fixed; font-size: 20px; font-weight: 700; }\n    .label-table th, .label-table td { border: 2px solid #111; padding: 14px; vertical-align: middle; text-align: left; word-break: break-word; }\n    .label-table th { width: 210px; background: #f8fafc; }\n  </style>\n</head>\n<body>\n${pages}\n<script>window.onload = () => window.print();</script>\n</body>\n</html>`);
-    printWindow.document.close();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 10;
+    const startX = margin;
+    const startY = margin;
+    const labelW = pageWidth - margin * 2;
+    const labelH = pageHeight - margin * 2;
+    const leftW = 52;
+    const rows = [
+        { key: "발주코드", value: (item) => item.orderCode },
+        { key: "공급사명", value: (item) => item.supplierName },
+        { key: "상품명", value: (item) => item.productName },
+        { key: "상품코드", value: (item) => item.productCode },
+        { key: "유통기한", value: (item) => item.expiry },
+        { key: "수량/총수량", value: (item) => `박스 내 입수량 (${item.boxPerUnit}) / 총 입고수량 (${item.totalEa})` },
+        { key: "C/T", value: (item) => `박스 번호 (${item.boxNo}) / 전체 박스 수 (${item.totalBoxes})` },
+    ];
+    const rowH = labelH / rows.length;
+
+    const renderPage = (item) => {
+        doc.setDrawColor(17, 24, 39);
+        doc.setLineWidth(0.6);
+        doc.rect(startX, startY, labelW, labelH);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(13);
+
+        rows.forEach((row, index) => {
+            const y = startY + rowH * index;
+            if (index > 0) {
+                doc.line(startX, y, startX + labelW, y);
+            }
+            doc.line(startX + leftW, y, startX + leftW, y + rowH);
+
+            const keyY = y + rowH / 2 + 1.5;
+            doc.text(row.key, startX + 3, keyY);
+
+            const valueText = String(row.value(item) ?? "");
+            const lines = doc.splitTextToSize(valueText, labelW - leftW - 6);
+            const firstLineY = y + 6;
+            doc.text(lines, startX + leftW + 3, firstLineY);
+        });
+    };
+
+    labelItems.forEach((item, index) => {
+        if (index > 0) doc.addPage("a4", "landscape");
+        renderPage(item);
+    });
+
+    const today = new Date().toISOString().slice(0, 10);
+    doc.save(`컬리_입고라벨_${today}.pdf`);
+    return true;
 }
 
 function getSkuWorkspaceDocRef() {
@@ -1194,9 +1245,11 @@ function handleGenerateKurlyLabels() {
         return;
     }
 
-    openKurlyLabelPrintWindow(labelItems);
+    const downloaded = downloadKurlyLabelPdf(labelItems);
+    if (!downloaded) return;
+
     setKurlyLabelResult(
-        `라벨 생성 완료: ${kurlyParsedFileName || "업로드 파일"} 기준 ${validRows.length}행, 총 ${labelItems.length}장`
+        `PDF 다운로드 완료: ${kurlyParsedFileName || "업로드 파일"} 기준 ${validRows.length}행, 총 ${labelItems.length}장`
     );
 }
 

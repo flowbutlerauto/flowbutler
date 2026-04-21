@@ -362,17 +362,14 @@ async function downloadKurlyLabelPdf(labelItems) {
     }
 
     const today = new Date().toISOString().slice(0, 10);
-    const blob = doc.output("blob");
-    const blobUrl = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = blobUrl;
-    anchor.download = `컬리_입고라벨_${today}.pdf`;
-    anchor.rel = "noopener";
-    document.body.appendChild(anchor);
-    anchor.click();
-    document.body.removeChild(anchor);
-    setTimeout(() => URL.revokeObjectURL(blobUrl), 3000);
-    return true;
+    try {
+        await doc.save(`컬리_입고라벨_${today}.pdf`, { returnPromise: true });
+        return true;
+    } catch (error) {
+        console.error(error);
+        setKurlyLabelResult("PDF 저장 중 오류가 발생했습니다. 브라우저 다운로드 설정을 확인해주세요.");
+        return false;
+    }
 }
 
 function getSkuWorkspaceDocRef() {

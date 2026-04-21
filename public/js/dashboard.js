@@ -260,14 +260,15 @@ function buildKurlyUploadErrorMessage(validationRows) {
     return `컬리 라벨 생성에 실패했습니다.\n오류를 수정한 뒤 다시 업로드해주세요.\n\n${previewLines}${remainingLine}`;
 }
 
-function downloadKurlyLabelPdf(labelItems) {
+async function downloadKurlyLabelPdf(labelItems) {
     if (!labelItems.length) {
         setKurlyLabelResult("생성할 라벨이 없습니다.");
         return false;
     }
 
     const jsPdfLib = window.jspdf?.jsPDF;
-    if (!jsPdfLib) {
+    const html2canvasLib = window.html2canvas;
+    if (!jsPdfLib || !html2canvasLib) {
         setKurlyLabelResult("PDF 라이브러리를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.");
         return false;
     }
@@ -278,53 +279,87 @@ function downloadKurlyLabelPdf(labelItems) {
         format: "a4",
     });
 
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-    const margin = 10;
-    const startX = margin;
-    const startY = margin;
-    const labelW = pageWidth - margin * 2;
-    const labelH = pageHeight - margin * 2;
-    const leftW = 52;
-    const rows = [
-        { key: "발주코드", value: (item) => item.orderCode },
-        { key: "공급사명", value: (item) => item.supplierName },
-        { key: "상품명", value: (item) => item.productName },
-        { key: "상품코드", value: (item) => item.productCode },
-        { key: "유통기한", value: (item) => item.expiry },
-        { key: "수량/총수량", value: (item) => `박스 내 입수량 (${item.boxPerUnit}) / 총 입고수량 (${item.totalEa})` },
-        { key: "C/T", value: (item) => `박스 번호 (${item.boxNo}) / 전체 박스 수 (${item.totalBoxes})` },
-    ];
-    const rowH = labelH / rows.length;
+    const renderLabelNode = (item) => {
+        const rows = [
+            ["발주코드", item.orderCode],
+            ["공급사명", item.supplierName],
+            ["상품명", item.productName],
+            ["상품코드", item.productCode],
+            ["유통기한", item.expiry],
+            ["수량/총수량", `박스 내 입수량 (${item.boxPerUnit}) / 총 입고수량 (${item.totalEa})`],
+            ["C/T", `박스 번호 (${item.boxNo}) / 전체 박스 수 (${item.totalBoxes})`],
+        ];
 
-    const renderPage = (item) => {
-        doc.setDrawColor(17, 24, 39);
-        doc.setLineWidth(0.6);
-        doc.rect(startX, startY, labelW, labelH);
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(13);
+        const wrapper = document.createElement("div");
+        wrapper.style.position = "fixed";
+        wrapper.style.left = "-10000px";
+        wrapper.style.top = "0";
+        wrapper.style.width = "1122px"; // A4 landscape @ 96dpi
+        wrapper.style.height = "794px";
+        wrapper.style.background = "#ffffff";
+        wrapper.style.padding = "40px";
+        wrapper.style.boxSizing = "border-box";
+        wrapper.style.fontFamily = "\"Malgun Gothic\", \"Apple SD Gothic Neo\", sans-serif";
 
-        rows.forEach((row, index) => {
-            const y = startY + rowH * index;
-            if (index > 0) {
-                doc.line(startX, y, startX + labelW, y);
-            }
-            doc.line(startX + leftW, y, startX + leftW, y + rowH);
+        const table = document.createElement("table");
+        table.style.width = "100%";
+        table.style.height = "100%";
+        table.style.borderCollapse = "collapse";
+        table.style.tableLayout = "fixed";
+        table.style.fontSize = "28px";
+        table.style.fontWeight = "700";
+        table.style.color = "#111827";
 
-            const keyY = y + rowH / 2 + 1.5;
-            doc.text(row.key, startX + 3, keyY);
+        rows.forEach(([key, value]) => {
+            const tr = document.createElement("tr");
+            const th = document.createElement("th");
+            const td = document.createElement("td");
 
-            const valueText = String(row.value(item) ?? "");
-            const lines = doc.splitTextToSize(valueText, labelW - leftW - 6);
-            const firstLineY = y + 6;
-            doc.text(lines, startX + leftW + 3, firstLineY);
+            th.textContent = String(key ?? "");
+            td.textContent = String(value ?? "");
+
+            th.style.width = "200px";
+            th.style.border = "2px solid #111827";
+            td.style.border = "2px solid #111827";
+            th.style.padding = "14px 16px";
+            td.style.padding = "14px 16px";
+            th.style.textAlign = "left";
+            td.style.textAlign = "left";
+            th.style.verticalAlign = "middle";
+            td.style.verticalAlign = "middle";
+            td.style.wordBreak = "break-word";
+            td.style.whiteSpace = "pre-wrap";
+
+            tr.appendChild(th);
+            tr.appendChild(td);
+            table.appendChild(tr);
         });
+
+        wrapper.appendChild(table);
+        document.body.appendChild(wrapper);
+        return wrapper;
     };
 
-    labelItems.forEach((item, index) => {
-        if (index > 0) doc.addPage("a4", "landscape");
-        renderPage(item);
-    });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+
+    for (let index = 0; index < labelItems.length; index += 1) {
+        const item = labelItems[index];
+        const node = renderLabelNode(item);
+        try {
+            const canvas = await html2canvasLib(node, {
+                scale: 2,
+                useCORS: true,
+                backgroundColor: "#ffffff",
+                logging: false,
+            });
+            const imageData = canvas.toDataURL("image/png");
+            if (index > 0) doc.addPage("a4", "landscape");
+            doc.addImage(imageData, "PNG", 0, 0, pageWidth, pageHeight, undefined, "FAST");
+        } finally {
+            document.body.removeChild(node);
+        }
+    }
 
     const today = new Date().toISOString().slice(0, 10);
     const blob = doc.output("blob");
@@ -1241,7 +1276,7 @@ async function setKurlyFileSelectedState(file) {
     }
 }
 
-function handleGenerateKurlyLabels() {
+async function handleGenerateKurlyLabels() {
     if (!kurlyRows.length) {
         setKurlyLabelResult("먼저 컬리 라벨 파일을 업로드해주세요.");
         return;
@@ -1254,7 +1289,7 @@ function handleGenerateKurlyLabels() {
         return;
     }
 
-    const downloaded = downloadKurlyLabelPdf(labelItems);
+    const downloaded = await downloadKurlyLabelPdf(labelItems);
     if (!downloaded) return;
 
     setKurlyLabelResult(

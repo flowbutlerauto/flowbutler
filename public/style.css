@@ -833,6 +833,10 @@ a {
   border: 1px solid #e4eaf5;
 }
 
+.tracking-status-card.is-hidden {
+  display: none;
+}
+
 .tracking-progress-head {
   display: flex;
   align-items: flex-start;

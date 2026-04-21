@@ -6,6 +6,7 @@ const REQUIRED_KURLY_HEADER_GROUPS = {
     boxPerUnit: ["박스당입수"],
     totalEa: ["발주확정 수량(낱개)", "총입고수량(낱개)"],
     totalBoxes: ["발주확정 수량(박스)", "전체박스수"],
+    center: ["입고지"],
 };
 
 function safeString(value) {
@@ -80,10 +81,11 @@ function mapSheetRowsToKurlyRows(sheetRows) {
                 boxPerUnit: getValue(resolvedHeaders.boxPerUnit),
                 totalEa: getValue(resolvedHeaders.totalEa),
                 totalBoxes: getValue(resolvedHeaders.totalBoxes),
+                center: getValue(resolvedHeaders.center),
             };
         })
         .filter((row) =>
-            [row.orderCode, row.productName, row.masterCode, row.expiry, row.boxPerUnit, row.totalEa, row.totalBoxes]
+            [row.orderCode, row.productName, row.masterCode, row.expiry, row.boxPerUnit, row.totalEa, row.totalBoxes, row.center]
                 .some((value) => value !== "")
         );
 }

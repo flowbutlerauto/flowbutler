@@ -361,9 +361,67 @@ async function downloadKurlyLabelPdf(labelItems) {
         }
     }
 
-    const today = new Date().toISOString().slice(0, 10);
+    return doc.output("blob");
+}
+
+function sanitizeFilenamePart(value) {
+    return String(value ?? "")
+        .trim()
+        .replace(/[\\/:*?"<>|]/g, "_")
+        .replace(/\s+/g, "_")
+        .slice(0, 40) || "미지정센터";
+}
+
+function triggerBlobDownload(blob, filename) {
+    const blobUrl = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = blobUrl;
+    anchor.download = filename;
+    anchor.rel = "noopener";
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 3000);
+}
+
+async function downloadKurlyLabelByCenter(labelItems) {
+    if (!labelItems.length) {
+        setKurlyLabelResult("생성할 라벨이 없습니다.");
+        return false;
+    }
+
+    const grouped = new Map();
+    labelItems.forEach((item) => {
+        const centerKey = sanitizeFilenamePart(item.center || "미지정센터");
+        if (!grouped.has(centerKey)) grouped.set(centerKey, []);
+        grouped.get(centerKey).push(item);
+    });
+
     try {
-        await doc.save(`컬리_입고라벨_${today}.pdf`, { returnPromise: true });
+        const today = new Date().toISOString().slice(0, 10);
+        const centerEntries = Array.from(grouped.entries());
+
+        if (centerEntries.length === 1) {
+            const [center, items] = centerEntries[0];
+            const pdfBlob = await downloadKurlyLabelPdf(items);
+            triggerBlobDownload(pdfBlob, `컬리_입고라벨_${center}_${today}.pdf`);
+            return true;
+        }
+
+        const zipLib = window.JSZip;
+        if (!zipLib) {
+            setKurlyLabelResult("ZIP 라이브러리를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.");
+            return false;
+        }
+
+        const zip = new zipLib();
+        for (const [center, items] of centerEntries) {
+            const pdfBlob = await downloadKurlyLabelPdf(items);
+            zip.file(`컬리_입고라벨_${center}_${today}.pdf`, pdfBlob);
+        }
+
+        const zipBlob = await zip.generateAsync({ type: "blob" });
+        triggerBlobDownload(zipBlob, `컬리_입고라벨_${today}_센터별.zip`);
         return true;
     } catch (error) {
         console.error(error);
@@ -1286,11 +1344,12 @@ async function handleGenerateKurlyLabels() {
         return;
     }
 
-    const downloaded = await downloadKurlyLabelPdf(labelItems);
+    const downloaded = await downloadKurlyLabelByCenter(labelItems);
     if (!downloaded) return;
 
+    const centerCount = new Set(labelItems.map((item) => item.center || "미지정센터")).size;
     setKurlyLabelResult(
-        `PDF 다운로드 완료: ${kurlyParsedFileName || "업로드 파일"} 기준 ${validRows.length}행, 총 ${labelItems.length}장`
+        `다운로드 완료: ${kurlyParsedFileName || "업로드 파일"} 기준 ${validRows.length}행, 총 ${labelItems.length}장, 센터 ${centerCount}개`
     );
 }
 

@@ -24,6 +24,7 @@ export function validateKurlyRows(rows) {
         if (!safeString(normalizedRow.orderCode)) errors.push("발주코드 값이 비어 있습니다.");
         if (!safeString(normalizedRow.productName)) errors.push("상품명 값이 비어 있습니다.");
         if (!safeString(normalizedRow.masterCode)) errors.push("마스터코드 값이 비어 있습니다.");
+        if (!safeString(normalizedRow.center)) errors.push("입고지 값이 비어 있습니다.");
         if (!safeString(normalizedRow.expiry)) errors.push("유통기한/소비기한 값이 비어 있습니다.");
 
         const boxPerUnit = parseNumber(normalizedRow.boxPerUnit);
@@ -73,6 +74,7 @@ export function buildKurlyLabelItems(validRows, options = {}) {
                 supplierName,
                 productName: safeString(row.productName),
                 productCode: safeString(row.masterCode),
+                center: safeString(row.center),
                 expiry: normalizeExpiry(row.expiry),
                 boxPerUnit,
                 totalEa,

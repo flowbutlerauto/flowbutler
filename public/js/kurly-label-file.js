@@ -2,10 +2,10 @@ const REQUIRED_KURLY_HEADERS = [
     "발주코드",
     "상품명",
     "마스터코드",
-    "유통기한",
+    "유통기한/소비기한",
     "박스당입수",
-    "총입고수량(낱개)",
-    "전체박스수",
+    "발주확정 수량(낱개)",
+    "발주확정 수량(박스)",
 ];
 
 function safeString(value) {
@@ -59,10 +59,10 @@ function mapSheetRowsToKurlyRows(sheetRows) {
                 orderCode: getValue("발주코드"),
                 productName: getValue("상품명"),
                 masterCode: getValue("마스터코드"),
-                expiry: getValue("유통기한"),
+                expiry: getValue("유통기한/소비기한"),
                 boxPerUnit: getValue("박스당입수"),
-                totalEa: getValue("총입고수량(낱개)"),
-                totalBoxes: getValue("전체박스수"),
+                totalEa: getValue("발주확정 수량(낱개)"),
+                totalBoxes: getValue("발주확정 수량(박스)"),
             };
         })
         .filter((row) =>

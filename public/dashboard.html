@@ -45,6 +45,10 @@
                                     <span class="sidebar-nav-title">SKU 관리</span>
                                     <span class="sidebar-nav-desc">상품 마스터 등록 / 검증</span>
                                 </button>
+                                <button class="sidebar-subnav-item" data-view="kurly-label" type="button">
+                                    <span class="sidebar-nav-title">컬리 라벨 생성</span>
+                                    <span class="sidebar-nav-desc">엑셀 업로드 기반 라벨 출력</span>
+                                </button>
                             </div>
                         </div>
 
@@ -586,6 +590,41 @@
                         </section>
                     </div>
 
+                    <div id="view-kurly-label" class="workspace-view">
+                        <section class="workspace-card">
+                            <div class="section-head">
+                                <div>
+                                    <h2 class="section-title">컬리 라벨 생성</h2>
+                                    <p class="workspace-text">
+                                        컬리 전용 엑셀 파일을 업로드한 뒤 박스 수 기준으로 라벨을 생성하고 출력할 수 있습니다.
+                                    </p>
+                                </div>
+                                <div class="section-badge">KURLY LABEL</div>
+                            </div>
+
+                            <div class="workspace-subcard">
+                                <div class="tracking-toolbar">
+                                    <div class="tracking-toolbar-left">
+                                        <label for="kurly-label-file" class="file-trigger-btn">컬리 라벨 파일 선택</label>
+                                        <input type="file" id="kurly-label-file" accept=".xlsx,.xls"
+                                            class="hidden-file-input" />
+                                        <div id="kurly-label-file-name" class="selected-file-name">선택된 파일 없음</div>
+                                    </div>
+                                    <div class="tracking-toolbar-right">
+                                        <div class="tracking-action-buttons">
+                                            <button id="kurly-label-generate-btn" class="primary-btn"
+                                                type="button">컬리 라벨 PDF 다운로드</button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div id="kurly-label-result" class="info-block tracking-result-box">
+                                    필수 헤더가 정확히 일치해야 라벨을 생성할 수 있습니다. (상품코드 헤더 불가, 마스터코드만 허용)
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+
                     <div id="view-settings" class="workspace-view">
                         <section class="workspace-card">
                             <h2 class="section-title">설정</h2>
@@ -621,6 +660,7 @@
     </main>
 
     <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
     <script type="module" src="./js/dashboard.js"></script>
 </body>
 

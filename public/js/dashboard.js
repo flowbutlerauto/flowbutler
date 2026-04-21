@@ -230,6 +230,11 @@ async function persistSkuWorkspace() {
         return true;
     } catch (error) {
         console.error(error);
+        if (error?.code === "permission-denied") {
+            setSkuResult("SKU 저장 권한이 없습니다. Firestore 보안 규칙을 확인해주세요.");
+        } else {
+            setSkuResult("SKU 저장 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
+        }
         return false;
     }
 }
@@ -1220,7 +1225,11 @@ async function loadSkuWorkspace(userId) {
         }
     } catch (error) {
         console.error(error);
-        setSkuResult("저장된 SKU 정보를 불러오지 못했습니다.");
+        if (error?.code === "permission-denied") {
+            setSkuResult("SKU 조회 권한이 없습니다. Firestore 보안 규칙을 확인해주세요.");
+        } else {
+            setSkuResult("저장된 SKU 정보를 불러오지 못했습니다.");
+        }
     }
 }
 

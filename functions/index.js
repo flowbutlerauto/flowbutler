@@ -1,17 +1,53 @@
-const { onRequest } = require('firebase-functions/v2/https');
+const {onRequest} = require('firebase-functions/v2/https');
 const logger = require('firebase-functions/logger');
 const express = require('express');
 const cors = require('cors');
 
-const { getCjTrackingResults } = require('./cj-tracking');
-const { getLotteTrackingResults } = require('./lotte-tracking');
-const { getDoobalHeroTrackingResults } = require('./doobalhero-tracking');
-const { getEpostTrackingResults } = require('./epost-tracking');
+const {getCjTrackingResults} = require('./cj-tracking');
+const {getLotteTrackingResults} = require('./lotte-tracking');
+const {getDoobalHeroTrackingResults} = require('./doobalhero-tracking');
+const {getEpostTrackingResults} = require('./epost-tracking');
 
 const app = express();
 
-app.use(cors({ origin: true }));
+app.use(cors({origin: true}));
 app.use(express.json());
+
+const COURIER_CONFIG = Object.freeze({
+  CJ: Object.freeze({
+    aliases: Object.freeze(['CJ', 'CJ대한통운']),
+    displayName: 'CJ대한통운',
+    getResults: getCjTrackingResults,
+  }),
+  LOTTE: Object.freeze({
+    aliases: Object.freeze(['LOTTE', '롯데택배', '롯데글로벌로지스']),
+    displayName: '롯데택배',
+    getResults: getLotteTrackingResults,
+  }),
+  DOOBALHERO: Object.freeze({
+    aliases: Object.freeze(['DOOBALHERO', '두발히어로', '체인로지스']),
+    displayName: '두발히어로',
+    getResults: getDoobalHeroTrackingResults,
+  }),
+  EPOST: Object.freeze({
+    aliases: Object.freeze(['EPOST', '우체국', '우체국택배', '우편', 'POST']),
+    displayName: '우체국택배',
+    getResults: getEpostTrackingResults,
+  }),
+});
+
+const COURIER_CODE_BY_ALIAS = Object.freeze(
+    Object.entries(COURIER_CONFIG).reduce(function (acc, entry) {
+      const courierCode = entry[0];
+      const courierConfig = entry[1];
+
+      courierConfig.aliases.forEach(function (alias) {
+        acc[String(alias).toUpperCase()] = courierCode;
+      });
+
+      return acc;
+    }, {}),
+);
 
 function safeString(value) {
   return String(value ?? '').trim();
@@ -24,23 +60,7 @@ function normalizeCourierCode(value) {
     return '';
   }
 
-  if (['CJ', 'CJ대한통운'].includes(raw)) {
-    return 'CJ';
-  }
-
-  if (['LOTTE', '롯데택배', '롯데글로벌로지스'].includes(raw)) {
-    return 'LOTTE';
-  }
-
-  if (['DOOBALHERO', '두발히어로', '체인로지스'].includes(raw)) {
-    return 'DOOBALHERO';
-  }
-
-  if (['EPOST', '우체국', '우체국택배', '우편', 'POST'].includes(raw)) {
-    return 'EPOST';
-  }
-
-  return 'UNSUPPORTED';
+  return COURIER_CODE_BY_ALIAS[raw] || 'UNSUPPORTED';
 }
 
 function normalizeTrackingNumbers(values) {
@@ -48,35 +68,23 @@ function normalizeTrackingNumbers(values) {
     return [];
   }
 
-  return Array.from(
-    new Set(
-      values
-        .map(function (value) {
-          return safeString(value).replace(/\D/g, '');
-        })
-        .filter(Boolean),
-    ),
-  );
+  const normalized = values
+      .map(function (value) {
+        return safeString(value).replace(/\D/g, '');
+      })
+      .filter(Boolean);
+
+  return Array.from(new Set(normalized));
 }
 
 function getCourierDisplayName(courierCode) {
-  if (courierCode === 'CJ') {
-    return 'CJ대한통운';
-  }
+  const courierConfig = COURIER_CONFIG[courierCode];
+  return courierConfig ? courierConfig.displayName : '';
+}
 
-  if (courierCode === 'LOTTE') {
-    return '롯데택배';
-  }
-
-  if (courierCode === 'DOOBALHERO') {
-    return '두발히어로';
-  }
-
-  if (courierCode === 'EPOST') {
-    return '우체국택배';
-  }
-
-  return '';
+function getCourierHandler(courierCode) {
+  const courierConfig = COURIER_CONFIG[courierCode];
+  return courierConfig ? courierConfig.getResults : null;
 }
 
 app.get('/api/health', function (req, res) {
@@ -134,17 +142,16 @@ app.post('/api/tracking', async function (req, res) {
       });
     }
 
-    let results = {};
-
-    if (normalizedCourier === 'CJ') {
-      results = await getCjTrackingResults(normalizedNumbers);
-    } else if (normalizedCourier === 'LOTTE') {
-      results = await getLotteTrackingResults(normalizedNumbers);
-    } else if (normalizedCourier === 'DOOBALHERO') {
-      results = await getDoobalHeroTrackingResults(normalizedNumbers);
-    } else if (normalizedCourier === 'EPOST') {
-      results = await getEpostTrackingResults(normalizedNumbers);
+    const trackingHandler = getCourierHandler(normalizedCourier);
+    if (!trackingHandler) {
+      return res.status(500).json({
+        code: 'COURIER_HANDLER_NOT_CONFIGURED',
+        message: '택배사 핸들러가 서버에 설정되지 않았습니다.',
+        receivedCourier: normalizedCourier,
+      });
     }
+
+    const results = await trackingHandler(normalizedNumbers);
 
 
     return res.json({
@@ -165,10 +172,10 @@ app.post('/api/tracking', async function (req, res) {
 });
 
 exports.api = onRequest(
-  {
-    region: 'asia-northeast3',
-    timeoutSeconds: 60,
-    memory: '512MiB',
-  },
-  app,
+    {
+      region: 'asia-northeast3',
+      timeoutSeconds: 60,
+      memory: '512MiB',
+    },
+    app,
 );

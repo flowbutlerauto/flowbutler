@@ -1,17 +1,38 @@
-const { onRequest } = require('firebase-functions/v2/https');
+const {onRequest} = require('firebase-functions/v2/https');
 const logger = require('firebase-functions/logger');
 const express = require('express');
 const cors = require('cors');
 
-const { getCjTrackingResults } = require('./cj-tracking');
-const { getLotteTrackingResults } = require('./lotte-tracking');
-const { getDoobalHeroTrackingResults } = require('./doobalhero-tracking');
-const { getEpostTrackingResults } = require('./epost-tracking');
+const {getCjTrackingResults} = require('./cj-tracking');
+const {getLotteTrackingResults} = require('./lotte-tracking');
+const {getDoobalHeroTrackingResults} = require('./doobalhero-tracking');
+const {getEpostTrackingResults} = require('./epost-tracking');
 
 const app = express();
 
-app.use(cors({ origin: true }));
+app.use(cors({origin: true}));
 app.use(express.json());
+
+const COURIER_ALIASES = {
+  CJ: ['CJ', 'CJ대한통운'],
+  LOTTE: ['LOTTE', '롯데택배', '롯데글로벌로지스'],
+  DOOBALHERO: ['DOOBALHERO', '두발히어로', '체인로지스'],
+  EPOST: ['EPOST', '우체국', '우체국택배', '우편', 'POST'],
+};
+
+const COURIER_DISPLAY_NAMES = {
+  CJ: 'CJ대한통운',
+  LOTTE: '롯데택배',
+  DOOBALHERO: '두발히어로',
+  EPOST: '우체국택배',
+};
+
+const TRACKING_HANDLER_MAP = {
+  CJ: getCjTrackingResults,
+  LOTTE: getLotteTrackingResults,
+  DOOBALHERO: getDoobalHeroTrackingResults,
+  EPOST: getEpostTrackingResults,
+};
 
 function safeString(value) {
   return String(value ?? '').trim();
@@ -24,20 +45,13 @@ function normalizeCourierCode(value) {
     return '';
   }
 
-  if (['CJ', 'CJ대한통운'].includes(raw)) {
-    return 'CJ';
-  }
+  const matchedEntry = Object.entries(COURIER_ALIASES).find(function (entry) {
+    const aliasList = entry[1];
+    return aliasList.includes(raw);
+  });
 
-  if (['LOTTE', '롯데택배', '롯데글로벌로지스'].includes(raw)) {
-    return 'LOTTE';
-  }
-
-  if (['DOOBALHERO', '두발히어로', '체인로지스'].includes(raw)) {
-    return 'DOOBALHERO';
-  }
-
-  if (['EPOST', '우체국', '우체국택배', '우편', 'POST'].includes(raw)) {
-    return 'EPOST';
+  if (matchedEntry) {
+    return matchedEntry[0];
   }
 
   return 'UNSUPPORTED';
@@ -49,34 +63,18 @@ function normalizeTrackingNumbers(values) {
   }
 
   return Array.from(
-    new Set(
-      values
-        .map(function (value) {
-          return safeString(value).replace(/\D/g, '');
-        })
-        .filter(Boolean),
-    ),
+      new Set(
+          values
+              .map(function (value) {
+                return safeString(value).replace(/\D/g, '');
+              })
+              .filter(Boolean),
+      ),
   );
 }
 
 function getCourierDisplayName(courierCode) {
-  if (courierCode === 'CJ') {
-    return 'CJ대한통운';
-  }
-
-  if (courierCode === 'LOTTE') {
-    return '롯데택배';
-  }
-
-  if (courierCode === 'DOOBALHERO') {
-    return '두발히어로';
-  }
-
-  if (courierCode === 'EPOST') {
-    return '우체국택배';
-  }
-
-  return '';
+  return COURIER_DISPLAY_NAMES[courierCode] || '';
 }
 
 app.get('/api/health', function (req, res) {
@@ -134,17 +132,10 @@ app.post('/api/tracking', async function (req, res) {
       });
     }
 
-    let results = {};
-
-    if (normalizedCourier === 'CJ') {
-      results = await getCjTrackingResults(normalizedNumbers);
-    } else if (normalizedCourier === 'LOTTE') {
-      results = await getLotteTrackingResults(normalizedNumbers);
-    } else if (normalizedCourier === 'DOOBALHERO') {
-      results = await getDoobalHeroTrackingResults(normalizedNumbers);
-    } else if (normalizedCourier === 'EPOST') {
-      results = await getEpostTrackingResults(normalizedNumbers);
-    }
+    const trackingHandler = TRACKING_HANDLER_MAP[normalizedCourier];
+    const results = trackingHandler ?
+      await trackingHandler(normalizedNumbers) :
+      {};
 
 
     return res.json({
@@ -165,10 +156,10 @@ app.post('/api/tracking', async function (req, res) {
 });
 
 exports.api = onRequest(
-  {
-    region: 'asia-northeast3',
-    timeoutSeconds: 60,
-    memory: '512MiB',
-  },
-  app,
+    {
+      region: 'asia-northeast3',
+      timeoutSeconds: 60,
+      memory: '512MiB',
+    },
+    app,
 );

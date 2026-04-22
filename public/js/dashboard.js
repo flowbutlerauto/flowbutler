@@ -153,6 +153,7 @@ let kurlyRows = [];
 let kurlyParsedFileName = "";
 const SKU_IMAGE_FIELD_KEY = "productImageUrl";
 const SKU_IMAGE_MAX_BYTES = 2 * 1024 * 1024;
+let draggingSkuHeaderKey = "";
 
 function clampProgress(value) {
     return Math.max(0, Math.min(100, Number(value) || 0));
@@ -670,7 +671,11 @@ function renderSkuTableHead() {
     const headerHtml = selectedSkuHeaderKeys
         .map((key) => {
             const field = getFieldByKey(key);
-            return `<th>${escapeHtml(field?.label ?? key)}</th>`;
+            return `
+              <th class="sku-draggable-header" draggable="true" data-sku-header-key="${key}">
+                <span class="sku-draggable-header-label">${escapeHtml(field?.label ?? key)}</span>
+              </th>
+            `;
         })
         .join("");
 
@@ -1114,6 +1119,92 @@ function handleSelectRequiredSkuHeaders() {
 
 function handleResetSkuHeaders() {
     setSkuHeaderCheckboxSelection(getDefaultSkuHeaderKeys());
+}
+
+function clearSkuHeaderDragClasses() {
+    if (!skuTableHead) return;
+    skuTableHead.querySelectorAll("th.sku-draggable-header").forEach((th) => {
+        th.classList.remove("is-dragging", "is-drag-over");
+    });
+}
+
+function moveSkuHeaderKey(sourceKey, targetKey) {
+    const sourceIndex = selectedSkuHeaderKeys.indexOf(sourceKey);
+    const targetIndex = selectedSkuHeaderKeys.indexOf(targetKey);
+    if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) return false;
+
+    const nextKeys = [...selectedSkuHeaderKeys];
+    const [movedKey] = nextKeys.splice(sourceIndex, 1);
+    nextKeys.splice(targetIndex, 0, movedKey);
+    selectedSkuHeaderKeys = nextKeys;
+    return true;
+}
+
+function handleSkuHeaderDragStart(event) {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+
+    const th = target.closest("th[data-sku-header-key]");
+    if (!(th instanceof HTMLTableCellElement)) return;
+
+    const key = th.getAttribute("data-sku-header-key") || "";
+    if (!key) return;
+
+    draggingSkuHeaderKey = key;
+    th.classList.add("is-dragging");
+    if (event.dataTransfer) {
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData("text/plain", key);
+    }
+}
+
+function handleSkuHeaderDragOver(event) {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+
+    const th = target.closest("th[data-sku-header-key]");
+    if (!(th instanceof HTMLTableCellElement) || !draggingSkuHeaderKey) return;
+
+    event.preventDefault();
+    clearSkuHeaderDragClasses();
+    th.classList.add("is-drag-over");
+    if (event.dataTransfer) {
+        event.dataTransfer.dropEffect = "move";
+    }
+}
+
+function handleSkuHeaderDrop(event) {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+
+    const th = target.closest("th[data-sku-header-key]");
+    if (!(th instanceof HTMLTableCellElement)) return;
+    event.preventDefault();
+
+    const targetKey = th.getAttribute("data-sku-header-key") || "";
+    if (!draggingSkuHeaderKey || !targetKey) {
+        clearSkuHeaderDragClasses();
+        return;
+    }
+
+    const moved = moveSkuHeaderKey(draggingSkuHeaderKey, targetKey);
+    clearSkuHeaderDragClasses();
+    draggingSkuHeaderKey = "";
+
+    if (!moved) return;
+
+    renderSkuTableHead();
+    if (skuRows.length) {
+        renderCurrentSkuRows();
+    } else {
+        setSkuEmptyTable("SKU 파일을 선택하면 자동으로 검증합니다.");
+    }
+    void persistSkuWorkspace();
+}
+
+function handleSkuHeaderDragEnd() {
+    draggingSkuHeaderKey = "";
+    clearSkuHeaderDragClasses();
 }
 
 function escapeHtml(value) {
@@ -1874,6 +1965,10 @@ function bindEvents() {
             closeSkuLabelPrintModal();
         }
     });
+    skuTableHead?.addEventListener("dragstart", handleSkuHeaderDragStart);
+    skuTableHead?.addEventListener("dragover", handleSkuHeaderDragOver);
+    skuTableHead?.addEventListener("drop", handleSkuHeaderDrop);
+    skuTableHead?.addEventListener("dragend", handleSkuHeaderDragEnd);
 }
 
 function initializeTrackingUi() {

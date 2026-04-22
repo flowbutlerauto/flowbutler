@@ -1,6 +1,7 @@
 const SKU_FIELDS = [
     { key: "brand", label: "브랜드" },
     { key: "category", label: "카테고리" },
+    { key: "productImageUrl", label: "제품 사진 URL", aliases: ["제품 사진", "제품이미지", "이미지 URL"] },
     { key: "barcode", label: "바코드" },
     { key: "adminProductCode", label: "어드민 상품코드", required: true },
     { key: "selfProductCode", label: "자체상품코드" },
@@ -33,7 +34,7 @@ const SKU_FIELDS = [
 ];
 
 const SKU_HEADER_ALIASES = SKU_FIELDS.reduce((accumulator, field) => {
-    accumulator[field.key] = [field.label];
+    accumulator[field.key] = [field.label, ...(field.aliases ?? [])];
     return accumulator;
 }, {});
 

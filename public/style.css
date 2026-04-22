@@ -679,6 +679,7 @@ a {
 
 .workspace-view.is-visible {
   display: grid;
+  min-width: 0;
 }
 
 .workspace-text {
@@ -830,6 +831,7 @@ a {
   border-radius: 20px;
   padding: 20px;
   background: #fbfcff;
+  min-width: 0;
 }
 
 .subcard-title {
@@ -1119,17 +1121,52 @@ a {
   border-radius: 18px;
   overflow: hidden;
   background: #fff;
+  min-width: 0;
 }
 
 .tracking-table-scroll {
   max-height: 360px;
   overflow: auto;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .tracking-table {
   width: 100%;
   border-collapse: collapse;
   min-width: 760px;
+}
+
+#view-sku .tracking-table {
+  width: max-content;
+  min-width: 100%;
+}
+
+#view-sku .tracking-table-scroll {
+  overflow-x: visible;
+}
+
+#view-sku {
+  overflow-x: hidden;
+}
+
+#view-sku .workspace-card,
+#view-sku .workspace-subcard {
+  overflow-x: hidden;
+}
+
+#view-sku .tracking-table-wrap {
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+#view-sku .tracking-table thead th,
+#view-sku .tracking-table tbody td {
+  white-space: nowrap;
+}
+
+#view-sku .tracking-table .sku-data-column {
+  min-width: 140px;
 }
 
 .tracking-table thead th {
@@ -1898,6 +1935,49 @@ a {
   gap: 8px;
   font-size: 14px;
   color: #334155;
+}
+
+.sku-product-thumb {
+  width: 52px;
+  height: 52px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  object-fit: cover;
+  display: block;
+  background: #f8fafc;
+}
+
+.sku-image-link {
+  display: inline-flex;
+  align-items: center;
+}
+
+.sku-image-empty {
+  color: #94a3b8;
+}
+
+.sku-image-edit-controls {
+  margin-top: 8px;
+  display: grid;
+  gap: 4px;
+}
+
+.sku-image-edit-controls input[type="file"] {
+  font-size: 12px;
+}
+
+.sku-draggable-header {
+  cursor: grab;
+  user-select: none;
+}
+
+.sku-draggable-header.is-dragging {
+  opacity: 0.45;
+}
+
+.sku-draggable-header.is-drag-over {
+  outline: 2px dashed #5563dd;
+  outline-offset: -3px;
 }
 
 @media (max-width: 640px) {

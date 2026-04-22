@@ -1,5 +1,13 @@
 import { SKU_FIELDS, SKU_HEADER_ALIASES } from "./sku-schema.js";
 
+const CODE_LIKE_TEXT_KEYS = new Set([
+    "barcode",
+    "adminProductCode",
+    "selfProductCode",
+    "manufacturerProductCode",
+    "hsCode",
+]);
+
 function safeString(value) {
     return String(value ?? "").trim();
 }
@@ -23,6 +31,60 @@ function buildHeaderMap(rowObject) {
     return keyByNormalized;
 }
 
+function convertScientificToPlainString(value) {
+    const raw = safeString(value);
+    const match = raw.match(/^([+-]?)(\d+(?:\.\d+)?)[eE]([+-]?\d+)$/);
+    if (!match) return raw;
+
+    const sign = match[1] === "-" ? "-" : "";
+    const mantissa = match[2];
+    const exponent = Number(match[3]);
+
+    if (!Number.isFinite(exponent)) return raw;
+
+    const [integerPart, decimalPart = ""] = mantissa.split(".");
+    const digits = `${integerPart}${decimalPart}`;
+    const decimalIndex = integerPart.length;
+    const movedIndex = decimalIndex + exponent;
+
+    let plain;
+    if (movedIndex <= 0) {
+        plain = `0.${"0".repeat(Math.abs(movedIndex))}${digits}`;
+    } else if (movedIndex >= digits.length) {
+        plain = `${digits}${"0".repeat(movedIndex - digits.length)}`;
+    } else {
+        plain = `${digits.slice(0, movedIndex)}.${digits.slice(movedIndex)}`;
+    }
+
+    const normalized = plain
+        .replace(/^0+(?=\d)/, "")
+        .replace(/(\.\d*?)0+$/, "$1")
+        .replace(/\.$/, "");
+
+    return `${sign}${normalized || "0"}`;
+}
+
+function normalizeCodeLikeValue(value) {
+    if (value === null || value === undefined) return "";
+
+    if (typeof value === "number" && Number.isFinite(value)) {
+        return convertScientificToPlainString(value.toString());
+    }
+
+    const text = safeString(value);
+    if (!text) return "";
+
+    const plainText = convertScientificToPlainString(text);
+    return plainText.replace(/\.0+$/, "");
+}
+
+function normalizeSkuCellValue(fieldKey, rawValue) {
+    if (CODE_LIKE_TEXT_KEYS.has(fieldKey)) {
+        return normalizeCodeLikeValue(rawValue);
+    }
+    return safeString(rawValue);
+}
+
 function mapSheetRowsToSkuRows(jsonRows) {
     return (jsonRows ?? []).map((row, index) => {
         const headerMap = buildHeaderMap(row);
@@ -34,7 +96,9 @@ function mapSheetRowsToSkuRows(jsonRows) {
 
             const matchedHeader = aliasCandidates.find((normalizedAlias) => headerMap.has(normalizedAlias));
             const originalHeaderKey = matchedHeader ? headerMap.get(matchedHeader) : null;
-            mappedRow[field.key] = originalHeaderKey ? safeString(row[originalHeaderKey]) : "";
+            mappedRow[field.key] = originalHeaderKey
+                ? normalizeSkuCellValue(field.key, row[originalHeaderKey])
+                : "";
         });
 
         return mappedRow;

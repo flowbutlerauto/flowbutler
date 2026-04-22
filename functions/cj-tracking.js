@@ -1,5 +1,10 @@
 const axios = require('axios');
 const cheerio = require('cheerio');
+const {
+  isRetryableTrackingResult,
+  mapWithConcurrency,
+  runWithRetry,
+} = require('./tracking-request-utils');
 
 const CJ_TRACKING_PAGE_URL =
   'https://www.cjlogistics.com/ko/tool/parcel/tracking';
@@ -174,11 +179,23 @@ async function fetchSingleTracking(trackingNumber) {
 }
 
 async function getCjTrackingResults(trackingNumbers) {
-  const entries = await Promise.all(
-    trackingNumbers.map(async function (trackingNumber) {
-      const result = await fetchSingleTracking(trackingNumber);
+  const entries = await mapWithConcurrency(
+    trackingNumbers,
+    async function (trackingNumber) {
+      const result = await runWithRetry(
+        async function () {
+          return fetchSingleTracking(trackingNumber);
+        },
+        {
+          maxAttempts: 3,
+          baseDelayMs: 300,
+          shouldRetryResult: isRetryableTrackingResult,
+        },
+      );
+
       return [trackingNumber, result];
-    }),
+    },
+    6,
   );
 
   return Object.fromEntries(entries);

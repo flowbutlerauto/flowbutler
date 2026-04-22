@@ -1132,6 +1132,16 @@ a {
   min-width: 760px;
 }
 
+#view-sku .tracking-table {
+  width: max-content;
+  min-width: 100%;
+}
+
+#view-sku .tracking-table thead th,
+#view-sku .tracking-table tbody td {
+  white-space: nowrap;
+}
+
 .tracking-table thead th {
   position: sticky;
   top: 0;
@@ -1932,12 +1942,6 @@ a {
 .sku-draggable-header {
   cursor: grab;
   user-select: none;
-}
-
-.sku-draggable-header-label::before {
-  content: "⋮⋮ ";
-  color: #94a3b8;
-  font-size: 11px;
 }
 
 .sku-draggable-header.is-dragging {

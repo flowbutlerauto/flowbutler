@@ -1,5 +1,10 @@
 const axios = require("axios");
 const cheerio = require("cheerio");
+const {
+    isRetryableTrackingResult,
+    mapWithConcurrency,
+    runWithRetry,
+} = require("./tracking-request-utils");
 
 function safeString(value) {
     return String(value ?? "").trim();
@@ -174,14 +179,26 @@ async function fetchSingleTracking(trackingNumber) {
 }
 
 async function getEpostTrackingResults(trackingNumbers) {
-    const entries = await Promise.all(
-        trackingNumbers.map(async (trackingNumber) => {
-            const result = await fetchSingleTracking(trackingNumber);
-            return [trackingNumber, result];
-        })
-    );
+  const entries = await mapWithConcurrency(
+    trackingNumbers,
+    async function (trackingNumber) {
+      const result = await runWithRetry(
+        async function () {
+          return fetchSingleTracking(trackingNumber);
+        },
+        {
+          maxAttempts: 3,
+          baseDelayMs: 300,
+          shouldRetryResult: isRetryableTrackingResult,
+        },
+      );
 
-    return Object.fromEntries(entries);
+      return [trackingNumber, result];
+    },
+    6,
+  );
+
+  return Object.fromEntries(entries);
 }
 
 module.exports = {

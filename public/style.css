@@ -1900,6 +1900,35 @@ a {
   color: #334155;
 }
 
+.sku-product-thumb {
+  width: 52px;
+  height: 52px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  object-fit: cover;
+  display: block;
+  background: #f8fafc;
+}
+
+.sku-image-link {
+  display: inline-flex;
+  align-items: center;
+}
+
+.sku-image-empty {
+  color: #94a3b8;
+}
+
+.sku-image-edit-controls {
+  margin-top: 8px;
+  display: grid;
+  gap: 4px;
+}
+
+.sku-image-edit-controls input[type="file"] {
+  font-size: 12px;
+}
+
 @media (max-width: 640px) {
   .menu-grid {
     grid-template-columns: 1fr;

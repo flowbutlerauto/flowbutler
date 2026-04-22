@@ -56,6 +56,8 @@ const toolSubnavEl = document.getElementById("sidebar-tools-menu");
 
 const viewTitleEl = document.getElementById("view-title");
 const viewSubtitleEl = document.getElementById("view-subtitle");
+const headerActionsEl = document.getElementById("header-actions");
+const headerQuickViewButtons = document.querySelectorAll("[data-quick-view]");
 
 const trackingModeButtons = document.querySelectorAll(".tracking-mode-btn");
 const trackingModePanels = document.querySelectorAll(".tracking-mode-panel");
@@ -113,7 +115,7 @@ const kurlyProgressPercentEl = document.getElementById("kurly-progress-percent")
 const viewMeta = {
     home: {
         title: "홈",
-        subtitle: "FlowButler 작업 공간에 오신 것을 환영합니다.",
+        subtitle: "지금 필요한 물류 자동화 작업을 빠르게 시작하세요.",
     },
     tracking: {
         title: "송장번호 Tracking",
@@ -1058,6 +1060,10 @@ function showView(viewName) {
         viewTitleEl.textContent = meta.title;
         viewSubtitleEl.textContent = meta.subtitle;
     }
+
+    if (headerActionsEl) {
+        headerActionsEl.hidden = viewName !== "home";
+    }
 }
 
 function showTrackingMode(modeName) {
@@ -1700,6 +1706,14 @@ function bindEvents() {
     navButtons.forEach((button) => {
         button.addEventListener("click", () => {
             const viewName = button.dataset.view;
+            if (!viewName) return;
+            showView(viewName);
+        });
+    });
+
+    headerQuickViewButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+            const viewName = button.dataset.quickView;
             if (!viewName) return;
             showView(viewName);
         });

@@ -71,50 +71,58 @@
 
                 <section class="workspace-main">
                     <header class="workspace-header-card">
-                        <div>
-                            <div class="status-badge approved-badge">ACTIVE</div>
-                            <h1 id="view-title" class="workspace-title">홈</h1>
-                            <p id="view-subtitle" class="workspace-subtitle">
-                                FlowButler 작업 공간에 오신 것을 환영합니다.
-                            </p>
+                        <div class="workspace-header-content">
+                            <div>
+                                <div class="status-badge approved-badge">ACTIVE</div>
+                                <h1 id="view-title" class="workspace-title">홈</h1>
+                                <p id="view-subtitle" class="workspace-subtitle">
+                                    지금 필요한 물류 자동화 작업을 빠르게 시작하세요.
+                                </p>
+                            </div>
+                            <div id="header-actions" class="workspace-header-actions">
+                                <button type="button" class="primary-btn header-action-btn" data-quick-view="tracking">
+                                    송장 조회 시작
+                                </button>
+                                <button type="button" class="secondary-btn header-action-btn" data-quick-view="label">
+                                    라벨 양식 설정
+                                </button>
+                            </div>
                         </div>
                     </header>
 
                     <div id="view-home" class="workspace-view is-visible">
                         <section class="workspace-card">
-                            <h2 class="section-title">업무 시작</h2>
-                            <p class="workspace-text">
-                                물류 업무에 필요한 자동화 기능을 이 공간에 순차적으로 추가할 예정입니다.
-                                현재는 홈, 송장번호 Tracking, 설정 메뉴 구조가 준비되어 있어요.
-                            </p>
+                            <div class="section-head">
+                                <div>
+                                    <h2 class="section-title">업무 현황 요약</h2>
+                                    <p class="workspace-text">
+                                        현재 운영 상태와 주요 기능 준비 단계를 한눈에 확인할 수 있습니다.
+                                    </p>
+                                </div>
+                            </div>
 
                             <div class="summary-grid">
                                 <div class="summary-card">
                                     <div class="summary-label">현재 상태</div>
-                                    <div class="summary-value">정상 접속</div>
-                                    <div class="summary-desc">승인된 사용자 전용 작업 공간입니다.</div>
+                                    <div class="summary-value">정상 운영</div>
+                                    <div class="summary-desc">승인된 사용자 워크스페이스</div>
                                 </div>
 
                                 <div class="summary-card">
                                     <div class="summary-label">Tracking 방식</div>
-                                    <div class="summary-value">2가지</div>
-                                    <div class="summary-desc">엑셀 업로드와 수기입력을 지원하도록 설계했습니다.</div>
+                                    <div class="summary-value">업로드 / 수기입력</div>
+                                    <div class="summary-desc">엑셀 파일 또는 직접 입력</div>
                                 </div>
 
                                 <div class="summary-card">
                                     <div class="summary-label">서비스 단계</div>
                                     <div class="summary-value">MVP</div>
-                                    <div class="summary-desc">기능 골격부터 순차적으로 확장 중입니다.</div>
+                                    <div class="summary-desc">핵심 기능 중심 확장 진행 중</div>
                                 </div>
                             </div>
-                        </section>
-
-                        <section class="workspace-card">
-                            <h2 class="section-title">빠른 안내</h2>
-                            <div class="info-block">
-                                왼쪽 메뉴를 눌러 화면을 전환할 수 있어요.
-                                다음 단계에서는 송장번호 조회 결과 테이블, 업로드 결과 목록, 작업 이력 등을 붙이면 됩니다.
-                            </div>
+                            <p class="inline-notice">
+                                빠른 안내: 좌측 메뉴에서 도구를 전환할 수 있으며, 최근 작업/이력 기능이 순차적으로 추가될 예정입니다.
+                            </p>
                         </section>
                     </div>
 

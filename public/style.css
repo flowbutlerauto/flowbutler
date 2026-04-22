@@ -1142,6 +1142,10 @@ a {
   white-space: nowrap;
 }
 
+#view-sku .tracking-table .sku-data-column {
+  min-width: 140px;
+}
+
 .tracking-table thead th {
   position: sticky;
   top: 0;

@@ -672,7 +672,7 @@ function renderSkuTableHead() {
         .map((key) => {
             const field = getFieldByKey(key);
             return `
-              <th class="sku-draggable-header" draggable="true" data-sku-header-key="${key}">
+              <th class="sku-draggable-header sku-data-column" draggable="true" data-sku-header-key="${key}">
                 <span class="sku-draggable-header-label">${escapeHtml(field?.label ?? key)}</span>
               </th>
             `;
@@ -690,6 +690,12 @@ function renderSkuTableHead() {
       <th>라벨 출력</th>
     </tr>
   `;
+
+    const skuTable = skuTableHead.closest("table");
+    if (skuTable instanceof HTMLTableElement) {
+        const estimatedWidth = 620 + (selectedSkuHeaderKeys.length * 140);
+        skuTable.style.minWidth = `${Math.max(estimatedWidth, 980)}px`;
+    }
 }
 
 function renderSkuTable(rows) {
@@ -706,7 +712,7 @@ function renderSkuTable(rows) {
             ? "-"
             : (row.errors ?? []).join("; ");
         const columnHtml = selectedSkuHeaderKeys
-            .map((key) => `<td>${buildSkuCellMarkup(key, row[key])}</td>`)
+            .map((key) => `<td class="sku-data-column">${buildSkuCellMarkup(key, row[key])}</td>`)
             .join("");
 
         return `

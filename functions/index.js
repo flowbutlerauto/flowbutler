@@ -34,6 +34,19 @@ const TRACKING_HANDLER_MAP = {
   EPOST: getEpostTrackingResults,
 };
 
+const COURIER_CODE_BY_ALIAS = Object.freeze(
+    Object.entries(COURIER_ALIASES).reduce(function (acc, entry) {
+      const courierCode = entry[0];
+      const aliasList = entry[1];
+
+      aliasList.forEach(function (alias) {
+        acc[String(alias).toUpperCase()] = courierCode;
+      });
+
+      return acc;
+    }, {}),
+);
+
 function safeString(value) {
   return String(value ?? '').trim();
 }
@@ -45,16 +58,7 @@ function normalizeCourierCode(value) {
     return '';
   }
 
-  const matchedEntry = Object.entries(COURIER_ALIASES).find(function (entry) {
-    const aliasList = entry[1];
-    return aliasList.includes(raw);
-  });
-
-  if (matchedEntry) {
-    return matchedEntry[0];
-  }
-
-  return 'UNSUPPORTED';
+  return COURIER_CODE_BY_ALIAS[raw] || 'UNSUPPORTED';
 }
 
 function normalizeTrackingNumbers(values) {
@@ -133,9 +137,15 @@ app.post('/api/tracking', async function (req, res) {
     }
 
     const trackingHandler = TRACKING_HANDLER_MAP[normalizedCourier];
-    const results = trackingHandler ?
-      await trackingHandler(normalizedNumbers) :
-      {};
+    if (!trackingHandler) {
+      return res.status(500).json({
+        code: 'COURIER_HANDLER_NOT_CONFIGURED',
+        message: '택배사 핸들러가 서버에 설정되지 않았습니다.',
+        receivedCourier: normalizedCourier,
+      });
+    }
+
+    const results = await trackingHandler(normalizedNumbers);
 
 
     return res.json({

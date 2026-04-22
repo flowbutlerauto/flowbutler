@@ -1143,7 +1143,21 @@ a {
 }
 
 #view-sku .tracking-table-scroll {
+  overflow-x: visible;
+}
+
+#view-sku {
+  overflow-x: hidden;
+}
+
+#view-sku .workspace-card,
+#view-sku .workspace-subcard {
+  overflow-x: hidden;
+}
+
+#view-sku .tracking-table-wrap {
   overflow-x: auto;
+  overflow-y: hidden;
 }
 
 #view-sku .tracking-table thead th,

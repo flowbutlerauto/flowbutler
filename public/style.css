@@ -679,6 +679,7 @@ a {
 
 .workspace-view.is-visible {
   display: grid;
+  min-width: 0;
 }
 
 .workspace-text {
@@ -830,6 +831,7 @@ a {
   border-radius: 20px;
   padding: 20px;
   background: #fbfcff;
+  min-width: 0;
 }
 
 .subcard-title {
@@ -1119,11 +1121,14 @@ a {
   border-radius: 18px;
   overflow: hidden;
   background: #fff;
+  min-width: 0;
 }
 
 .tracking-table-scroll {
   max-height: 360px;
   overflow: auto;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .tracking-table {
@@ -1135,6 +1140,10 @@ a {
 #view-sku .tracking-table {
   width: max-content;
   min-width: 100%;
+}
+
+#view-sku .tracking-table-scroll {
+  overflow-x: auto;
 }
 
 #view-sku .tracking-table thead th,

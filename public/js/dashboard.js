@@ -119,7 +119,7 @@ const viewMeta = {
     },
     tracking: {
         title: "송장번호 Tracking",
-        subtitle: "엑셀 업로드와 수기입력 방식으로 Tracking 업무를 처리할 수 있습니다.",
+        subtitle: "",
     },
     label: {
         title: "라벨 양식 설정",

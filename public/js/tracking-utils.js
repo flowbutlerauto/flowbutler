@@ -1,4 +1,5 @@
-const MAX_TRACKING_REQUEST_COUNT = 500;
+const MAX_TRACKING_REQUEST_COUNT = 2000;
+const MAX_TRACKING_API_BATCH_SIZE = 500;
 
 const COURIER_CONFIG = {
     CJ: {
@@ -220,10 +221,23 @@ export function buildTrackingRequests(validatedRows) {
         groupedMap.get(apiCourierCode).add(row.normalizedTrackingNumber);
     }
 
-    const requests = [...groupedMap.entries()].map(([courier, trackingNumberSet]) => ({
-        courier,
-        trackingNumbers: [...trackingNumberSet],
-    }));
+    const requests = [];
+
+    [...groupedMap.entries()].forEach(([courier, trackingNumberSet]) => {
+        const numbers = [...trackingNumberSet];
+
+        for (let startIndex = 0; startIndex < numbers.length; startIndex += MAX_TRACKING_API_BATCH_SIZE) {
+            const chunk = numbers.slice(
+                startIndex,
+                startIndex + MAX_TRACKING_API_BATCH_SIZE
+            );
+
+            requests.push({
+                courier,
+                trackingNumbers: chunk,
+            });
+        }
+    });
 
     const totalTrackingNumbers = requests.flatMap(
         (request) => request.trackingNumbers

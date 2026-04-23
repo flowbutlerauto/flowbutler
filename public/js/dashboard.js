@@ -1705,7 +1705,7 @@ async function handleTrackingRun() {
         if (requestBuildResult.reason === "NO_VALID_ROWS") {
             setTrackingResult("조회 가능한 송장번호가 없습니다.");
         } else if (requestBuildResult.reason === "TOO_MANY_ROWS") {
-            setTrackingResult("한 번에 최대 500건까지 조회할 수 있습니다.");
+            setTrackingResult("한 번에 최대 2,000건까지 조회할 수 있습니다.");
         } else {
             setTrackingResult("조회 요청을 생성할 수 없습니다.");
         }
@@ -1805,7 +1805,7 @@ async function handleManualTrackingSearch() {
         if (requestBuildResult.reason === "NO_VALID_ROWS") {
             setManualTrackingResult("조회 가능한 송장번호가 없습니다.");
         } else if (requestBuildResult.reason === "TOO_MANY_ROWS") {
-            setManualTrackingResult("한 번에 최대 500건까지 조회할 수 있습니다.");
+            setManualTrackingResult("한 번에 최대 2,000건까지 조회할 수 있습니다.");
         } else {
             setManualTrackingResult("조회 요청을 생성할 수 없습니다.");
         }

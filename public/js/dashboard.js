@@ -123,7 +123,7 @@ const viewMeta = {
     },
     label: {
         title: "라벨 양식 설정",
-        subtitle: "텍스트 박스를 배치하고 엑셀 헤더와 연결할 수 있는 라벨 편집 화면입니다.",
+        subtitle: "",
     },
     sku: {
         title: "SKU 관리",

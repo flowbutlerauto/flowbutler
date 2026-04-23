@@ -1428,7 +1428,9 @@ async function executeTrackingRequests(validatedRows, onProgress = () => { }) {
             };
         }
 
-        mergedRows = applyTrackingResults(mergedRows, apiResult.data);
+        mergedRows = applyTrackingResults(mergedRows, apiResult.data, {
+            trackingNumbers: payload.trackingNumbers,
+        });
 
         const endValue = 18 + Math.round(((index + 1) / totalRequests) * 62);
 

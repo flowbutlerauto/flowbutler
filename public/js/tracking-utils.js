@@ -294,9 +294,15 @@ export function buildTrackingRequest(validatedRows) {
     };
 }
 
-export function applyTrackingResults(validatedRows, apiResponse) {
+export function applyTrackingResults(validatedRows, apiResponse, options = {}) {
     const resultsMap = apiResponse?.results ?? {};
     const responseCourier = safeString(apiResponse?.courier);
+    const targetTrackingNumbers = new Set(
+        (options.trackingNumbers ?? []).map((value) =>
+            safeString(value).replaceAll("-", "").replaceAll(" ", "")
+        )
+    );
+    const hasTargetFilter = targetTrackingNumbers.size > 0;
 
     return (validatedRows ?? []).map((row) => {
         if (!row?.isValid) {
@@ -307,6 +313,14 @@ export function applyTrackingResults(validatedRows, apiResponse) {
 
         // 현재 API 응답 택배사와 다른 row는 그대로 둠
         if (responseCourier && rowCourier && responseCourier !== rowCourier) {
+            return row;
+        }
+
+        // 배치 호출 시 현재 요청에 포함되지 않은 송장번호는 유지
+        if (
+            hasTargetFilter &&
+            !targetTrackingNumbers.has(safeString(row?.normalizedTrackingNumber))
+        ) {
             return row;
         }
 

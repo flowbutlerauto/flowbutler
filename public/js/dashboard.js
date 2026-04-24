@@ -131,7 +131,7 @@ const viewMeta = {
     },
     "kurly-label": {
         title: "컬리 라벨 생성",
-        subtitle: "엑셀 업로드 후 엄격 검증을 거쳐 컬리 라벨을 생성/출력합니다.",
+        subtitle: "",
     },
     settings: {
         title: "설정",

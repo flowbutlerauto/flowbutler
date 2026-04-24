@@ -127,7 +127,7 @@ const viewMeta = {
     },
     sku: {
         title: "SKU 관리",
-        subtitle: "SKU 파일 업로드와 필수값/형식 검증을 수행할 수 있습니다.",
+        subtitle: "",
     },
     "kurly-label": {
         title: "컬리 라벨 생성",

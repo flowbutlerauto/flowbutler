@@ -1,4 +1,5 @@
-const MAX_TRACKING_REQUEST_COUNT = 500;
+const MAX_TRACKING_REQUEST_COUNT = 2000;
+const MAX_TRACKING_API_BATCH_SIZE = 500;
 
 const COURIER_CONFIG = {
     CJ: {
@@ -220,10 +221,23 @@ export function buildTrackingRequests(validatedRows) {
         groupedMap.get(apiCourierCode).add(row.normalizedTrackingNumber);
     }
 
-    const requests = [...groupedMap.entries()].map(([courier, trackingNumberSet]) => ({
-        courier,
-        trackingNumbers: [...trackingNumberSet],
-    }));
+    const requests = [];
+
+    [...groupedMap.entries()].forEach(([courier, trackingNumberSet]) => {
+        const numbers = [...trackingNumberSet];
+
+        for (let startIndex = 0; startIndex < numbers.length; startIndex += MAX_TRACKING_API_BATCH_SIZE) {
+            const chunk = numbers.slice(
+                startIndex,
+                startIndex + MAX_TRACKING_API_BATCH_SIZE
+            );
+
+            requests.push({
+                courier,
+                trackingNumbers: chunk,
+            });
+        }
+    });
 
     const totalTrackingNumbers = requests.flatMap(
         (request) => request.trackingNumbers
@@ -280,9 +294,15 @@ export function buildTrackingRequest(validatedRows) {
     };
 }
 
-export function applyTrackingResults(validatedRows, apiResponse) {
+export function applyTrackingResults(validatedRows, apiResponse, options = {}) {
     const resultsMap = apiResponse?.results ?? {};
     const responseCourier = safeString(apiResponse?.courier);
+    const targetTrackingNumbers = new Set(
+        (options.trackingNumbers ?? []).map((value) =>
+            safeString(value).replaceAll("-", "").replaceAll(" ", "")
+        )
+    );
+    const hasTargetFilter = targetTrackingNumbers.size > 0;
 
     return (validatedRows ?? []).map((row) => {
         if (!row?.isValid) {
@@ -293,6 +313,14 @@ export function applyTrackingResults(validatedRows, apiResponse) {
 
         // 현재 API 응답 택배사와 다른 row는 그대로 둠
         if (responseCourier && rowCourier && responseCourier !== rowCourier) {
+            return row;
+        }
+
+        // 배치 호출 시 현재 요청에 포함되지 않은 송장번호는 유지
+        if (
+            hasTargetFilter &&
+            !targetTrackingNumbers.has(safeString(row?.normalizedTrackingNumber))
+        ) {
             return row;
         }
 

@@ -83,9 +83,11 @@ signupBtn?.addEventListener("click", async () => {
         await setDoc(doc(db, "users", user.uid), {
             email: user.email,
             approved: false,
+            status: "pending",
             plan: "free",
             role: "user",
-            createdAt: serverTimestamp()
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp()
         });
 
         setStatus(TEXT.SIGNUP_SUCCESS);

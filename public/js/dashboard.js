@@ -58,6 +58,7 @@ const viewTitleEl = document.getElementById("view-title");
 const viewSubtitleEl = document.getElementById("view-subtitle");
 const headerActionsEl = document.getElementById("header-actions");
 const headerQuickViewButtons = document.querySelectorAll("[data-quick-view]");
+const paidFeatureButtons = document.querySelectorAll('[data-paid-feature="true"]');
 
 const trackingModeButtons = document.querySelectorAll(".tracking-mode-btn");
 const trackingModePanels = document.querySelectorAll(".tracking-mode-panel");
@@ -170,6 +171,13 @@ function showPaidAccessRequiredMessage(featureName) {
     setManualTrackingResult(message);
     setKurlyLabelResult(message);
     window.alert(message);
+}
+
+function updatePaidFeatureLockUi() {
+    const locked = !hasPaidFeatureAccess();
+    paidFeatureButtons.forEach((button) => {
+        button.classList.toggle("is-locked", locked);
+    });
 }
 
 function setTrackingResult(message) {
@@ -1891,6 +1899,7 @@ async function loadApprovedUser(user) {
     const plan = userData.plan ?? "free";
     const role = userData.role ?? "user";
     currentUserPlan = plan;
+    updatePaidFeatureLockUi();
 
     const planLabel = plan === "paid" ? "유료" : "무료";
     const roleLabel = role === "admin" ? "관리자" : (role === "manager" ? "매니저" : "일반 사용자");
@@ -2085,6 +2094,7 @@ async function loadSkuWorkspace(userId) {
 
 function initializeDashboard() {
     setToolGroupOpenState(false);
+    updatePaidFeatureLockUi();
     showView("home");
     showTrackingMode("excel");
     initializeTrackingUi();
@@ -2098,6 +2108,7 @@ onAuthStateChanged(auth, async (user) => {
         skuWorkspaceUserId = null;
         skuLabelTemplates = [];
         currentUserPlan = "free";
+        updatePaidFeatureLockUi();
         window.location.href = "./login.html";
         return;
     }

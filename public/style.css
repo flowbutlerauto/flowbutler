@@ -620,6 +620,28 @@ a {
 
 .sidebar-logout-btn {
   width: 100%;
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  color: #374151;
+}
+
+.sidebar-logout-btn:hover {
+  background: #f8fafc;
+}
+
+.paid-lock-icon {
+  display: none;
+  margin-left: 6px;
+  font-size: 12px;
+  vertical-align: middle;
+}
+
+[data-paid-feature=\"true\"].is-locked .paid-lock-icon {
+  display: inline;
+}
+
+[data-paid-feature=\"true\"].is-locked .sidebar-nav-desc {
+  color: #94a3b8;
 }
 
 .workspace-main {

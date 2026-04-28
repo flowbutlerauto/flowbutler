@@ -13,6 +13,10 @@ function safeString(value) {
     return String(value ?? "").trim();
 }
 
+function normalizeHeaderForCompare(value) {
+    return safeString(value).replace(/\s+/g, "");
+}
+
 function buildHeaderIndexMap(headerRow) {
     const map = new Map();
     (headerRow ?? []).forEach((header, index) => {
@@ -26,6 +30,8 @@ function resolveHeaderMap(headerRow) {
     const headerSet = new Set(normalizedHeaders);
     const resolved = {};
     const missingLabels = [];
+    const typoHints = [];
+    const normalizedHeaderMap = new Map(normalizedHeaders.map((header) => [normalizeHeaderForCompare(header), header]));
 
     Object.entries(REQUIRED_KURLY_HEADER_GROUPS).forEach(([key, candidates]) => {
         const matched = candidates.find((candidate) => headerSet.has(candidate));
@@ -33,20 +39,38 @@ function resolveHeaderMap(headerRow) {
             resolved[key] = matched;
         } else {
             missingLabels.push(candidates[0]);
+            const typoCandidate = candidates.find((candidate) => normalizedHeaderMap.has(normalizeHeaderForCompare(candidate)));
+            if (typoCandidate) {
+                typoHints.push({
+                    actual: normalizedHeaderMap.get(normalizeHeaderForCompare(typoCandidate)),
+                    expected: typoCandidate,
+                });
+            }
         }
     });
 
-    if (missingLabels.length) {
-        const previewHeaders = normalizedHeaders.slice(0, 12).join(", ");
-        const suffix = normalizedHeaders.length > 12 ? " ..." : "";
-        throw new Error(
-            `필수 헤더 누락: ${missingLabels.join(", ")}\n` +
-            `감지된 헤더(앞 12개): ${previewHeaders}${suffix}`
-        );
-    }
+    const forbiddenHeaders = [];
+    if (headerSet.has("상품코드")) forbiddenHeaders.push("상품코드");
 
-    if (headerSet.has("상품코드")) {
-        throw new Error("허용되지 않은 헤더명: 상품코드 (마스터코드만 허용)");
+    if (missingLabels.length || forbiddenHeaders.length) {
+        const details = [];
+        if (missingLabels.length) {
+            details.push(`누락된 필수 헤더: ${missingLabels.join(", ")}`);
+        }
+        if (typoHints.length) {
+            const typoMessages = typoHints.map((hint) => `${hint.actual} → ${hint.expected}`);
+            details.push(`헤더 오타 의심: ${typoMessages.join(", ")}`);
+        }
+        if (forbiddenHeaders.length) {
+            details.push(`허용되지 않은 헤더명: ${forbiddenHeaders.join(", ")} (마스터코드만 허용)`);
+        }
+        const previewHeaders = normalizedHeaders.slice(0, 16).join(", ");
+        const suffix = normalizedHeaders.length > 16 ? " ..." : "";
+        throw new Error(
+            `컬리 업로드 헤더 검증 실패\n` +
+            `${details.map((line, index) => `${index + 1}) ${line}`).join("\n")}\n` +
+            `감지된 헤더(앞 16개): ${previewHeaders}${suffix}`
+        );
     }
 
     return resolved;

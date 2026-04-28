@@ -1031,7 +1031,7 @@ a {
 .tracking-toolbar-right {
   display: flex;
   flex-direction: row;
-  align-items: flex-end;
+  align-items: flex-start;
   justify-content: flex-end;
   gap: 12px;
   flex-wrap: nowrap;
@@ -1093,6 +1093,13 @@ a {
 .tracking-action-buttons .primary-btn,
 .tracking-action-buttons .secondary-btn {
   min-width: 190px;
+}
+
+#view-sku .tracking-link-btn,
+#view-sku .tracking-action-buttons .secondary-btn,
+#view-kurly-label .tracking-link-btn,
+#view-kurly-label .tracking-action-buttons .primary-btn {
+  min-width: 170px;
 }
 
 .tracking-link-buttons .secondary-btn {

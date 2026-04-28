@@ -8,6 +8,7 @@ import { validateSkuRows } from "./sku-utils.js";
 import { SKU_FIELDS, SKU_REQUIRED_KEYS } from "./sku-schema.js";
 import { parseKurlyLabelFile } from "./kurly-label-file.js";
 import { buildKurlyLabelItems, validateKurlyRows } from "./kurly-label-utils.js";
+import { tossConfig } from "./toss-config.js";
 
 import {
     applyTrackingResults,
@@ -44,6 +45,7 @@ const settingsUserEmailEl = document.getElementById("settings-user-email");
 const settingsUserPlanEl = document.getElementById("settings-user-plan");
 const settingsUserRoleEl = document.getElementById("settings-user-role");
 
+const paymentBtn = document.getElementById("payment-btn");
 const logoutBtn = document.getElementById("logout-btn");
 const navButtons = document.querySelectorAll(".sidebar-nav-item, .sidebar-subnav-item");
 const topLevelNavButtons = document.querySelectorAll(".sidebar-nav-item");
@@ -156,6 +158,7 @@ const SKU_IMAGE_FIELD_KEY = "productImageUrl";
 const SKU_IMAGE_MAX_BYTES = 2 * 1024 * 1024;
 let draggingSkuHeaderKey = "";
 let currentUserPlan = "free";
+let currentUserEmail = "";
 
 function clampProgress(value) {
     return Math.max(0, Math.min(100, Number(value) || 0));
@@ -178,6 +181,71 @@ function updatePaidFeatureLockUi() {
     paidFeatureButtons.forEach((button) => {
         button.classList.toggle("is-locked", locked);
     });
+    updatePaymentButtonUi();
+}
+
+function updatePaymentButtonUi() {
+    if (!paymentBtn) return;
+
+    const hasPaidPlan = hasPaidFeatureAccess();
+    paymentBtn.disabled = hasPaidPlan;
+    paymentBtn.textContent = hasPaidPlan ? "유료 플랜 이용중" : "결제하기";
+}
+
+function createTossOrderId() {
+    const uidPart = auth.currentUser?.uid?.slice(0, 8) || "guest";
+    return `flowbutler-${Date.now()}-${uidPart}`;
+}
+
+async function requestTossPayment() {
+    if (hasPaidFeatureAccess()) {
+        window.alert("이미 유료 플랜을 이용 중입니다.");
+        return;
+    }
+
+    if (typeof window.TossPayments !== "function") {
+        window.alert("결제 모듈을 불러오지 못했습니다. 잠시 후 다시 시도해주세요.");
+        return;
+    }
+
+    const clientKey = tossConfig.clientKey?.trim();
+    if (!clientKey || typeof clientKey !== "string") {
+        window.alert("toss-config.js 파일에 토스 클라이언트 키를 입력해주세요.");
+        return;
+    }
+
+    const tossPayments = window.TossPayments(clientKey);
+    const customerEmail = currentUserEmail || auth.currentUser?.email || "";
+    const customerName = customerEmail ? customerEmail.split("@")[0] : "FlowButler 사용자";
+
+    await tossPayments.requestPayment("카드", {
+        amount: tossConfig.amount,
+        orderId: createTossOrderId(),
+        orderName: tossConfig.orderName,
+        customerName,
+        customerEmail,
+        successUrl: `${window.location.origin}${tossConfig.successPath}`,
+        failUrl: `${window.location.origin}${tossConfig.failPath}`,
+    });
+}
+
+function handlePaymentReturnMessage() {
+    const params = new URLSearchParams(window.location.search);
+    const paymentStatus = params.get("payment");
+    if (!paymentStatus) return;
+
+    if (paymentStatus === "success") {
+        const successMessage = "결제가 완료되었습니다. 관리자 승인 후 유료 플랜이 반영됩니다.";
+        setTrackingResult(successMessage);
+        window.alert(successMessage);
+        return;
+    }
+
+    if (paymentStatus === "fail") {
+        const failMessage = "결제가 취소되었거나 실패했습니다. 다시 시도해주세요.";
+        setTrackingResult(failMessage);
+        window.alert(failMessage);
+    }
 }
 
 function setTrackingResult(message) {
@@ -1899,6 +1967,7 @@ async function loadApprovedUser(user) {
     const plan = userData.plan ?? "free";
     const role = userData.role ?? "user";
     currentUserPlan = plan;
+    currentUserEmail = user.email ?? "";
     updatePaidFeatureLockUi();
 
     const planLabel = plan === "paid" ? "유료" : "무료";
@@ -1930,6 +1999,15 @@ function bindEvents() {
         } catch (error) {
             console.error(error);
             dashboardUserInfoEl.textContent = "로그아웃 중 오류가 발생했습니다.";
+        }
+    });
+
+    paymentBtn?.addEventListener("click", async () => {
+        try {
+            await requestTossPayment();
+        } catch (error) {
+            console.error(error);
+            window.alert("결제 요청 중 오류가 발생했습니다.");
         }
     });
 
@@ -2095,6 +2173,7 @@ async function loadSkuWorkspace(userId) {
 function initializeDashboard() {
     setToolGroupOpenState(false);
     updatePaidFeatureLockUi();
+    handlePaymentReturnMessage();
     showView("home");
     showTrackingMode("excel");
     initializeTrackingUi();
@@ -2108,6 +2187,7 @@ onAuthStateChanged(auth, async (user) => {
         skuWorkspaceUserId = null;
         skuLabelTemplates = [];
         currentUserPlan = "free";
+        currentUserEmail = "";
         updatePaidFeatureLockUi();
         window.location.href = "./login.html";
         return;

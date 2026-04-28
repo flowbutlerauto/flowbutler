@@ -616,6 +616,12 @@ a {
 
 .sidebar-footer {
   margin-top: 14px;
+  display: grid;
+  gap: 8px;
+}
+
+.sidebar-payment-btn {
+  width: 100%;
 }
 
 .sidebar-logout-btn {

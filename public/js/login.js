@@ -17,6 +17,22 @@ const moveSignupBtn = document.getElementById("move-signup-btn");
 const userInfoEl = document.getElementById("user-info");
 const statusEl = document.getElementById("status");
 
+function safeText(value) {
+    return String(value ?? "").trim();
+}
+
+function getUserStatus(userData) {
+    if (safeText(userData?.status)) {
+        return safeText(userData.status).toLowerCase();
+    }
+
+    return userData?.approved === true ? "approved" : "pending";
+}
+
+function isManagerOrAdmin(role) {
+    return role === "manager" || role === "admin";
+}
+
 function setStatus(message) {
     statusEl.textContent = message;
 }
@@ -31,9 +47,16 @@ async function moveUserByApproval(user) {
     }
 
     const userData = userSnap.data();
+    const status = getUserStatus(userData);
+    const role = safeText(userData?.role).toLowerCase() || "user";
 
-    if (userData.approved !== true) {
+    if (status !== "approved") {
         window.location.href = "./pending.html";
+        return;
+    }
+
+    if (isManagerOrAdmin(role)) {
+        window.location.href = "./admin.html";
         return;
     }
 

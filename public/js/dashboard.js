@@ -1847,7 +1847,9 @@ async function loadApprovedUser(user) {
 
     const userData = userSnap.data();
 
-    if (userData.approved !== true) {
+    const status = String(userData.status ?? "").trim().toLowerCase() || (userData.approved === true ? "approved" : "pending");
+
+    if (status !== "approved") {
         window.location.href = "./pending.html";
         return;
     }
@@ -1856,7 +1858,7 @@ async function loadApprovedUser(user) {
     const role = userData.role ?? "user";
 
     const planLabel = plan === "paid" ? "유료" : "무료";
-    const roleLabel = role === "admin" ? "관리자" : "일반 사용자";
+    const roleLabel = role === "admin" ? "관리자" : (role === "manager" ? "매니저" : "일반 사용자");
 
     dashboardUserInfoEl.textContent = `계정: ${user.email}`;
     dashboardPlanInfoEl.textContent = `플랜: ${planLabel}`;

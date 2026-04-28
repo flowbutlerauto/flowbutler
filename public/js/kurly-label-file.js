@@ -62,7 +62,7 @@ function resolveHeaderMap(headerRow) {
             details.push(`헤더 오타 의심: ${typoMessages.join(", ")}`);
         }
         if (forbiddenHeaders.length) {
-            details.push(`허용되지 않은 헤더명: ${forbiddenHeaders.join(", ")} (마스터코드만 허용)`);
+            details.push(`허용되지 않은 헤더명: ${forbiddenHeaders.join(", ")}`);
         }
         const previewHeaders = normalizedHeaders.slice(0, 16).join(", ");
         const suffix = normalizedHeaders.length > 16 ? " ..." : "";

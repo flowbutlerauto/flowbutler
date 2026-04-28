@@ -2007,7 +2007,7 @@ function initializeKurlyLabelUi() {
     kurlyRows = [];
     kurlyParsedFileName = "";
     updateSelectedFileName(null, kurlyLabelFileNameEl);
-    setKurlyLabelResult("필수 헤더가 정확히 일치해야 라벨을 생성할 수 있습니다. (상품코드 헤더 불가, 마스터코드만 허용)");
+    setKurlyLabelResult("필수 헤더가 정확히 일치해야 라벨을 생성할 수 있습니다.");
     resetKurlyProgress();
 }
 

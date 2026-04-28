@@ -2073,3 +2073,14 @@ a {
   text-align: center !important;
   color: #64748b;
 }
+
+
+.admin-delete-btn {
+  border-color: #fecaca;
+  color: #b91c1c;
+  background: #fff1f2;
+}
+
+.admin-delete-btn:hover {
+  background: #ffe4e6;
+}

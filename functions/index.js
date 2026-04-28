@@ -101,6 +101,54 @@ function isManagerOrAdminRole(role) {
   return role === 'manager' || role === 'admin';
 }
 
+async function enqueueStatusEmail(type, userEmail, payload) {
+  const email = safeString(userEmail);
+  if (!email) return;
+
+  const subjectByType = {
+    approved: '[FlowButler] 가입 승인 완료 안내',
+    rejected: '[FlowButler] 가입 반려 안내',
+    deleted: '[FlowButler] 계정 삭제 안내',
+  };
+
+  const linesByType = {
+    approved: [
+      '안녕하세요.',
+      'FlowButler 가입 요청이 승인되었습니다.',
+      '이제 로그인 후 서비스를 이용하실 수 있습니다.',
+    ],
+    rejected: [
+      '안녕하세요.',
+      'FlowButler 가입 요청이 반려되었습니다.',
+      `사유: ${safeString(payload.reason) || '사유 없음'}`,
+      '문제가 해결되면 관리자에게 재승인을 요청해 주세요.',
+    ],
+    deleted: [
+      '안녕하세요.',
+      'FlowButler 계정이 관리자에 의해 삭제되었습니다.',
+      `사유: ${safeString(payload.reason) || '사유 없음'}`,
+      '필요 시 다시 회원가입을 진행해 주세요.',
+    ],
+  };
+
+  const subject = subjectByType[type] || '[FlowButler] 계정 상태 안내';
+  const bodyLines = linesByType[type] || ['계정 상태가 변경되었습니다.'];
+
+  await firestore.collection('mail').add({
+    to: [email],
+    message: {
+      subject,
+      text: bodyLines.join('\n'),
+    },
+    meta: {
+      kind: 'user_status_notification',
+      type,
+      ...payload,
+    },
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+}
+
 async function verifyAdminRequest(req, res) {
   const authHeader = safeString(req.headers.authorization);
 
@@ -241,16 +289,24 @@ app.post('/api/admin/users/:uid/approve', async function (req, res) {
     }
 
     const userDocRef = firestore.collection('users').doc(targetUid);
+    const userSnap = await userDocRef.get();
+
+    if (!userSnap.exists) {
+      return res.status(404).json({
+        code: 'USER_NOT_FOUND',
+        message: '사용자 문서를 찾을 수 없습니다.',
+      });
+    }
+
+    const userData = userSnap.data() || {};
+    const userEmail = safeString(userData.email);
 
     await firestore.runTransaction(async function (transaction) {
-      const userSnap = await transaction.get(userDocRef);
-      if (!userSnap.exists) {
-        throw new Error('USER_NOT_FOUND');
-      }
+      const txUserSnap = await transaction.get(userDocRef);
+      const txUserData = txUserSnap.data() || {};
+      const status = getUserStatus(txUserData);
 
-      const userData = userSnap.data() || {};
-      const status = getUserStatus(userData);
-      if (status !== 'pending') {
+      if (status !== 'pending' && status !== 'rejected') {
         throw new Error('USER_ALREADY_PROCESSED');
       }
 
@@ -259,6 +315,9 @@ app.post('/api/admin/users/:uid/approve', async function (req, res) {
         approved: true,
         approvedAt: admin.firestore.FieldValue.serverTimestamp(),
         approvedBy: actor.uid,
+        rejectedAt: admin.firestore.FieldValue.delete(),
+        rejectedBy: admin.firestore.FieldValue.delete(),
+        rejectedReason: admin.firestore.FieldValue.delete(),
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       });
 
@@ -268,8 +327,16 @@ app.post('/api/admin/users/:uid/approve', async function (req, res) {
         targetUid,
         actorUid: actor.uid,
         actorRole: actor.role,
+        fromStatus: status,
+        toStatus: 'approved',
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
       });
+    });
+
+    await enqueueStatusEmail('approved', userEmail, {
+      uid: targetUid,
+      actorUid: actor.uid,
+      actorRole: actor.role,
     });
 
     return res.json({
@@ -324,15 +391,22 @@ app.post('/api/admin/users/:uid/reject', async function (req, res) {
     }
 
     const userDocRef = firestore.collection('users').doc(targetUid);
+    const userSnap = await userDocRef.get();
+
+    if (!userSnap.exists) {
+      return res.status(404).json({
+        code: 'USER_NOT_FOUND',
+        message: '사용자 문서를 찾을 수 없습니다.',
+      });
+    }
+
+    const userData = userSnap.data() || {};
+    const userEmail = safeString(userData.email);
 
     await firestore.runTransaction(async function (transaction) {
-      const userSnap = await transaction.get(userDocRef);
-      if (!userSnap.exists) {
-        throw new Error('USER_NOT_FOUND');
-      }
-
-      const userData = userSnap.data() || {};
-      const status = getUserStatus(userData);
+      const txUserSnap = await transaction.get(userDocRef);
+      const txUserData = txUserSnap.data() || {};
+      const status = getUserStatus(txUserData);
       if (status !== 'pending') {
         throw new Error('USER_ALREADY_PROCESSED');
       }
@@ -353,8 +427,17 @@ app.post('/api/admin/users/:uid/reject', async function (req, res) {
         actorUid: actor.uid,
         actorRole: actor.role,
         reason,
+        fromStatus: status,
+        toStatus: 'rejected',
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
       });
+    });
+
+    await enqueueStatusEmail('rejected', userEmail, {
+      uid: targetUid,
+      actorUid: actor.uid,
+      actorRole: actor.role,
+      reason,
     });
 
     return res.json({
@@ -381,6 +464,95 @@ app.post('/api/admin/users/:uid/reject', async function (req, res) {
     return res.status(500).json({
       code: 'INTERNAL_ERROR',
       message: '반려 처리 중 오류가 발생했습니다.',
+      detail: error.message || 'unknown error',
+    });
+  }
+});
+
+
+app.post('/api/admin/users/:uid/delete', async function (req, res) {
+  try {
+    const actor = await verifyAdminRequest(req, res);
+    if (!actor) return;
+
+    const targetUid = safeString(req.params.uid);
+    const reason = safeString(req.body && req.body.reason);
+
+    if (!targetUid) {
+      return res.status(400).json({
+        code: 'INVALID_UID',
+        message: '유효한 uid가 필요합니다.',
+      });
+    }
+
+    const userDocRef = firestore.collection('users').doc(targetUid);
+    const userSnap = await userDocRef.get();
+
+    if (!userSnap.exists) {
+      return res.status(404).json({
+        code: 'USER_NOT_FOUND',
+        message: '사용자 문서를 찾을 수 없습니다.',
+      });
+    }
+
+    const userData = userSnap.data() || {};
+    const userEmail = safeString(userData.email);
+    const fromStatus = getUserStatus(userData);
+
+    await firestore.runTransaction(async function (transaction) {
+      const txUserSnap = await transaction.get(userDocRef);
+      if (!txUserSnap.exists) {
+        throw new Error('USER_NOT_FOUND');
+      }
+
+      transaction.delete(userDocRef);
+
+      const logDocRef = firestore.collection('admin_audit_logs').doc();
+      transaction.set(logDocRef, {
+        action: 'delete_user',
+        targetUid,
+        targetEmail: userEmail,
+        actorUid: actor.uid,
+        actorRole: actor.role,
+        reason,
+        fromStatus,
+        toStatus: 'deleted',
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    });
+
+    try {
+      await admin.auth().deleteUser(targetUid);
+    } catch (error) {
+      if (error && error.code !== 'auth/user-not-found') {
+        throw error;
+      }
+    }
+
+    await enqueueStatusEmail('deleted', userEmail, {
+      uid: targetUid,
+      actorUid: actor.uid,
+      actorRole: actor.role,
+      reason,
+    });
+
+    return res.json({
+      ok: true,
+      uid: targetUid,
+      status: 'deleted',
+    });
+  } catch (error) {
+    if (error.message === 'USER_NOT_FOUND') {
+      return res.status(404).json({
+        code: 'USER_NOT_FOUND',
+        message: '사용자 문서를 찾을 수 없습니다.',
+      });
+    }
+
+    logger.error('delete user error', error);
+    return res.status(500).json({
+      code: 'INTERNAL_ERROR',
+      message: '계정 삭제 처리 중 오류가 발생했습니다.',
       detail: error.message || 'unknown error',
     });
   }

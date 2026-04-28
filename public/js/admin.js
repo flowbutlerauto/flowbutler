@@ -119,6 +119,7 @@ function renderRows(users) {
           <div class="admin-actions">
             <button class="primary-btn admin-action-btn" data-action="approve">승인</button>
             <button class="secondary-btn admin-action-btn" data-action="reject">반려</button>
+            <button class="secondary-btn admin-action-btn admin-delete-btn" data-action="delete">계정 삭제</button>
           </div>
         </td>
       </tr>
@@ -193,6 +194,31 @@ async function handleReject(uid) {
   setStatus("반려 처리 완료");
 }
 
+
+async function handleDelete(uid) {
+  const reason = window.prompt("계정 삭제 사유를 입력하세요. (선택)") ?? "";
+  const shouldDelete = window.confirm("정말 이 계정을 삭제할까요? 삭제 후 사용자는 다시 회원가입해야 합니다.");
+
+  if (!shouldDelete) {
+    setStatus("계정 삭제를 취소했습니다.");
+    return;
+  }
+
+  setStatus("계정 삭제 처리 중...");
+
+  const response = await fetchWithAuth(`/api/admin/users/${uid}/delete`, {
+    method: "POST",
+    body: JSON.stringify({ reason: safeText(reason) }),
+  });
+
+  const payload = await response.json();
+
+  if (!response.ok) {
+    throw new Error(payload?.message || "계정 삭제에 실패했습니다.");
+  }
+
+  setStatus("계정 삭제 완료");
+}
 tableBodyEl?.addEventListener("click", async (event) => {
   const button = event.target.closest("button[data-action]");
   if (!button) return;
@@ -212,6 +238,10 @@ tableBodyEl?.addEventListener("click", async (event) => {
 
     if (action === "reject") {
       await handleReject(uid);
+    }
+
+    if (action === "delete") {
+      await handleDelete(uid);
     }
 
     await loadPendingUsers();

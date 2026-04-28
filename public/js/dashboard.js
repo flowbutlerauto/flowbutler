@@ -188,8 +188,8 @@ function updatePaymentButtonUi() {
     if (!paymentBtn) return;
 
     const hasPaidPlan = hasPaidFeatureAccess();
-    paymentBtn.disabled = hasPaidPlan;
-    paymentBtn.textContent = hasPaidPlan ? "유료 플랜 이용중" : "결제하기";
+    paymentBtn.disabled = false;
+    paymentBtn.textContent = hasPaidPlan ? "기간 연장 결제" : "결제하기";
 }
 
 function createTossOrderId() {
@@ -198,11 +198,6 @@ function createTossOrderId() {
 }
 
 async function requestTossPayment() {
-    if (hasPaidFeatureAccess()) {
-        window.alert("이미 유료 플랜을 이용 중입니다.");
-        return;
-    }
-
     if (typeof window.TossPayments !== "function") {
         window.alert("결제 모듈을 불러오지 못했습니다. 잠시 후 다시 시도해주세요.");
         return;
@@ -217,11 +212,14 @@ async function requestTossPayment() {
     const tossPayments = window.TossPayments(clientKey);
     const customerEmail = currentUserEmail || auth.currentUser?.email || "";
     const customerName = customerEmail ? customerEmail.split("@")[0] : "FlowButler 사용자";
+    const orderName = hasPaidFeatureAccess()
+        ? `${tossConfig.orderName} 기간 연장`
+        : tossConfig.orderName;
 
     await tossPayments.requestPayment("카드", {
         amount: tossConfig.amount,
         orderId: createTossOrderId(),
-        orderName: tossConfig.orderName,
+        orderName,
         customerName,
         customerEmail,
         successUrl: `${window.location.origin}${tossConfig.successPath}`,

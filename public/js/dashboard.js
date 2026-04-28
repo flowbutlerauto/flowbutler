@@ -58,6 +58,7 @@ const viewTitleEl = document.getElementById("view-title");
 const viewSubtitleEl = document.getElementById("view-subtitle");
 const headerActionsEl = document.getElementById("header-actions");
 const headerQuickViewButtons = document.querySelectorAll("[data-quick-view]");
+const paidFeatureButtons = document.querySelectorAll('[data-paid-feature="true"]');
 
 const trackingModeButtons = document.querySelectorAll(".tracking-mode-btn");
 const trackingModePanels = document.querySelectorAll(".tracking-mode-panel");
@@ -154,9 +155,29 @@ let kurlyParsedFileName = "";
 const SKU_IMAGE_FIELD_KEY = "productImageUrl";
 const SKU_IMAGE_MAX_BYTES = 2 * 1024 * 1024;
 let draggingSkuHeaderKey = "";
+let currentUserPlan = "free";
 
 function clampProgress(value) {
     return Math.max(0, Math.min(100, Number(value) || 0));
+}
+
+function hasPaidFeatureAccess() {
+    return (currentUserPlan ?? "free") !== "free";
+}
+
+function showPaidAccessRequiredMessage(featureName) {
+    const message = `${featureName} 기능은 유료 플랜에서만 사용할 수 있습니다.`;
+    setTrackingResult(message);
+    setManualTrackingResult(message);
+    setKurlyLabelResult(message);
+    window.alert(message);
+}
+
+function updatePaidFeatureLockUi() {
+    const locked = !hasPaidFeatureAccess();
+    paidFeatureButtons.forEach((button) => {
+        button.classList.toggle("is-locked", locked);
+    });
 }
 
 function setTrackingResult(message) {
@@ -1224,6 +1245,12 @@ function escapeHtml(value) {
 
 
 function showView(viewName) {
+    const isPaidOnlyView = viewName === "tracking" || viewName === "kurly-label";
+    if (isPaidOnlyView && !hasPaidFeatureAccess()) {
+        showPaidAccessRequiredMessage(viewName === "tracking" ? "송장번호 Tracking" : "컬리 라벨 생성");
+        viewName = "home";
+    }
+
     topLevelNavButtons.forEach((button) => {
         const isHome = viewName === "home" && button.dataset.view === "home";
         const isSettings = viewName === "settings" && button.dataset.view === "settings";
@@ -1656,6 +1683,11 @@ async function setKurlyFileSelectedState(file) {
 }
 
 async function handleGenerateKurlyLabels() {
+    if (!hasPaidFeatureAccess()) {
+        showPaidAccessRequiredMessage("컬리 라벨 생성");
+        return;
+    }
+
     if (!kurlyRows.length) {
         setKurlyLabelResult("먼저 컬리 라벨 파일을 업로드해주세요.");
         return;
@@ -1685,6 +1717,11 @@ async function handleGenerateKurlyLabels() {
 }
 
 async function handleTrackingRun() {
+    if (!hasPaidFeatureAccess()) {
+        showPaidAccessRequiredMessage("송장번호 Tracking");
+        return;
+    }
+
     trackingExecuted = false;
     updateDownloadButtonState();
 
@@ -1774,6 +1811,11 @@ function handleTrackingDownload() {
 }
 
 async function handleManualTrackingSearch() {
+    if (!hasPaidFeatureAccess()) {
+        showPaidAccessRequiredMessage("송장번호 Tracking");
+        return;
+    }
+
     const courierName = courierNameInput?.value.trim() ?? "";
     const rawValue = trackingNumberInput?.value.trim() ?? "";
 
@@ -1847,16 +1889,20 @@ async function loadApprovedUser(user) {
 
     const userData = userSnap.data();
 
-    if (userData.approved !== true) {
+    const status = String(userData.status ?? "").trim().toLowerCase() || (userData.approved === true ? "approved" : "pending");
+
+    if (status !== "approved") {
         window.location.href = "./pending.html";
         return;
     }
 
     const plan = userData.plan ?? "free";
     const role = userData.role ?? "user";
+    currentUserPlan = plan;
+    updatePaidFeatureLockUi();
 
     const planLabel = plan === "paid" ? "유료" : "무료";
-    const roleLabel = role === "admin" ? "관리자" : "일반 사용자";
+    const roleLabel = role === "admin" ? "관리자" : (role === "manager" ? "매니저" : "일반 사용자");
 
     dashboardUserInfoEl.textContent = `계정: ${user.email}`;
     dashboardPlanInfoEl.textContent = `플랜: ${planLabel}`;
@@ -2048,6 +2094,7 @@ async function loadSkuWorkspace(userId) {
 
 function initializeDashboard() {
     setToolGroupOpenState(false);
+    updatePaidFeatureLockUi();
     showView("home");
     showTrackingMode("excel");
     initializeTrackingUi();
@@ -2060,6 +2107,8 @@ onAuthStateChanged(auth, async (user) => {
     if (!user) {
         skuWorkspaceUserId = null;
         skuLabelTemplates = [];
+        currentUserPlan = "free";
+        updatePaidFeatureLockUi();
         window.location.href = "./login.html";
         return;
     }

@@ -8,6 +8,7 @@ import { validateSkuRows } from "./sku-utils.js";
 import { SKU_FIELDS, SKU_REQUIRED_KEYS } from "./sku-schema.js";
 import { parseKurlyLabelFile } from "./kurly-label-file.js";
 import { buildKurlyLabelItems, validateKurlyRows } from "./kurly-label-utils.js";
+import { tossConfig } from "./toss-config.js";
 
 import {
     applyTrackingResults,
@@ -159,11 +160,6 @@ let draggingSkuHeaderKey = "";
 let currentUserPlan = "free";
 let currentUserEmail = "";
 
-const TOSS_PAYMENT_AMOUNT = 39000;
-const TOSS_PAYMENT_ORDER_NAME = "FlowButler 유료 플랜";
-const TOSS_PAYMENT_SUCCESS_PATH = "/dashboard.html?payment=success";
-const TOSS_PAYMENT_FAIL_PATH = "/dashboard.html?payment=fail";
-
 function clampProgress(value) {
     return Math.max(0, Math.min(100, Number(value) || 0));
 }
@@ -212,9 +208,9 @@ async function requestTossPayment() {
         return;
     }
 
-    const clientKey = window.FLOWBUTLER_TOSS_CLIENT_KEY;
+    const clientKey = tossConfig.clientKey?.trim();
     if (!clientKey || typeof clientKey !== "string") {
-        window.alert("토스페이먼츠 클라이언트 키가 설정되지 않았습니다.");
+        window.alert("toss-config.js 파일에 토스 클라이언트 키를 입력해주세요.");
         return;
     }
 
@@ -223,13 +219,13 @@ async function requestTossPayment() {
     const customerName = customerEmail ? customerEmail.split("@")[0] : "FlowButler 사용자";
 
     await tossPayments.requestPayment("카드", {
-        amount: TOSS_PAYMENT_AMOUNT,
+        amount: tossConfig.amount,
         orderId: createTossOrderId(),
-        orderName: TOSS_PAYMENT_ORDER_NAME,
+        orderName: tossConfig.orderName,
         customerName,
         customerEmail,
-        successUrl: `${window.location.origin}${TOSS_PAYMENT_SUCCESS_PATH}`,
-        failUrl: `${window.location.origin}${TOSS_PAYMENT_FAIL_PATH}`,
+        successUrl: `${window.location.origin}${tossConfig.successPath}`,
+        failUrl: `${window.location.origin}${tossConfig.failPath}`,
     });
 }
 

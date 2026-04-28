@@ -173,23 +173,44 @@ app.get('/api/admin/users/pending', async function (req, res) {
     const actor = await verifyAdminRequest(req, res);
     if (!actor) return;
 
-    const pendingQuerySnapshot = await firestore.collection('users')
-        .where('status', '==', 'pending')
-        .orderBy('createdAt', 'desc')
-        .limit(200)
-        .get();
+    const usersCollection = firestore.collection('users');
 
-    const users = pendingQuerySnapshot.docs.map(function (docSnap) {
-      const data = docSnap.data() || {};
-      return {
-        uid: docSnap.id,
-        email: safeString(data.email),
-        plan: safeString(data.plan) || 'free',
-        role: safeString(data.role) || 'user',
-        status: getUserStatus(data),
-        createdAt: data.createdAt || null,
-      };
+    const [statusPendingSnapshot, approvedFalseSnapshot] = await Promise.all([
+      usersCollection.where('status', '==', 'pending').limit(400).get(),
+      usersCollection.where('approved', '==', false).limit(400).get(),
+    ]);
+
+    const userMap = new Map();
+
+    statusPendingSnapshot.docs.forEach(function (docSnap) {
+      userMap.set(docSnap.id, docSnap);
     });
+
+    approvedFalseSnapshot.docs.forEach(function (docSnap) {
+      userMap.set(docSnap.id, docSnap);
+    });
+
+    const users = Array.from(userMap.values())
+        .map(function (docSnap) {
+          const data = docSnap.data() || {};
+          return {
+            uid: docSnap.id,
+            email: safeString(data.email),
+            plan: safeString(data.plan) || 'free',
+            role: safeString(data.role) || 'user',
+            status: getUserStatus(data),
+            createdAt: data.createdAt || null,
+          };
+        })
+        .filter(function (user) {
+          return user.status === 'pending';
+        })
+        .sort(function (a, b) {
+          const aMillis = a.createdAt && typeof a.createdAt.toMillis === 'function' ? a.createdAt.toMillis() : 0;
+          const bMillis = b.createdAt && typeof b.createdAt.toMillis === 'function' ? b.createdAt.toMillis() : 0;
+          return bMillis - aMillis;
+        })
+        .slice(0, 200);
 
     res.json({
       requestedBy: actor.uid,

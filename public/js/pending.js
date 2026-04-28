@@ -5,6 +5,22 @@ import { auth, db } from "./firebase-config.js";
 const pendingMessageEl = document.getElementById("pending-message");
 const logoutBtn = document.getElementById("logout-btn");
 
+function safeText(value) {
+  return String(value ?? "").trim();
+}
+
+function getUserStatus(userData) {
+  if (safeText(userData?.status)) {
+    return safeText(userData.status).toLowerCase();
+  }
+
+  return userData?.approved === true ? "approved" : "pending";
+}
+
+function isManagerOrAdmin(role) {
+  return role === "manager" || role === "admin";
+}
+
 logoutBtn.addEventListener("click", async () => {
   try {
     await signOut(auth);
@@ -31,9 +47,11 @@ onAuthStateChanged(auth, async (user) => {
     }
 
     const userData = userSnap.data();
+    const status = getUserStatus(userData);
+    const role = safeText(userData?.role).toLowerCase() || "user";
 
-    if (userData.approved === true) {
-      window.location.href = "/dashboard.html";
+    if (status === "approved") {
+      window.location.href = isManagerOrAdmin(role) ? "/admin.html" : "/dashboard.html";
       return;
     }
 

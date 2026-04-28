@@ -6,6 +6,13 @@ const statusEl = document.getElementById("admin-status");
 const tableBodyEl = document.getElementById("pending-users-body");
 const refreshBtn = document.getElementById("refresh-btn");
 const logoutBtn = document.getElementById("logout-btn");
+const reviewModeBtn = document.getElementById("review-mode-btn");
+const deleteModeBtn = document.getElementById("delete-mode-btn");
+const searchInput = document.getElementById("search-input");
+const searchBtn = document.getElementById("search-btn");
+
+let currentMode = "review";
+let currentSearchQuery = "";
 
 function safeText(value) {
   return String(value ?? "").trim();
@@ -38,8 +45,21 @@ function getUserStatus(userData) {
   return userData?.approved === true ? "approved" : "pending";
 }
 
+function getStatusLabel(status) {
+  if (status === "approved") return "승인";
+  if (status === "rejected") return "반려";
+  if (status === "deleted") return "삭제";
+  return "대기";
+}
+
 function isManagerOrAdmin(role) {
   return role === "manager" || role === "admin";
+}
+
+function setMode(mode) {
+  currentMode = mode === "delete" ? "delete" : "review";
+  reviewModeBtn?.classList.toggle("is-active", currentMode === "review");
+  deleteModeBtn?.classList.toggle("is-active", currentMode === "delete");
 }
 
 async function ensureAdminAccess(user) {
@@ -67,7 +87,7 @@ async function ensureAdminAccess(user) {
 
   if (!isManagerOrAdmin(role)) {
     setStatus("관리자 계정만 접근할 수 있습니다.");
-    tableBodyEl.innerHTML = '<tr><td colspan="5" class="admin-empty">관리자 권한이 없습니다.</td></tr>';
+    tableBodyEl.innerHTML = '<tr><td colspan="6" class="admin-empty">관리자 권한이 없습니다.</td></tr>';
     return false;
   }
 
@@ -93,12 +113,31 @@ async function fetchWithAuth(url, options = {}) {
 }
 
 function renderEmpty(message) {
-  tableBodyEl.innerHTML = `<tr><td colspan="5" class="admin-empty">${message}</td></tr>`;
+  tableBodyEl.innerHTML = `<tr><td colspan="6" class="admin-empty">${message}</td></tr>`;
+}
+
+function renderActionButtons(status, uid) {
+  if (currentMode === "delete") {
+    return `<button class="secondary-btn admin-action-btn admin-delete-btn" data-action="delete" data-uid="${uid}">계정 삭제</button>`;
+  }
+
+  if (status === "pending") {
+    return `
+      <button class="primary-btn admin-action-btn" data-action="approve" data-uid="${uid}">승인</button>
+      <button class="secondary-btn admin-action-btn" data-action="reject" data-uid="${uid}">반려</button>
+    `;
+  }
+
+  if (status === "rejected") {
+    return `<button class="primary-btn admin-action-btn" data-action="approve" data-uid="${uid}">재승인</button>`;
+  }
+
+  return "<span class=\"admin-row-meta\">처리 완료</span>";
 }
 
 function renderRows(users) {
   if (!Array.isArray(users) || users.length === 0) {
-    renderEmpty("승인 대기 계정이 없습니다.");
+    renderEmpty("조건에 맞는 계정이 없습니다.");
     return;
   }
 
@@ -108,40 +147,52 @@ function renderRows(users) {
     const plan = safeText(user.plan) || "free";
     const role = safeText(user.role) || "user";
     const createdAt = toDisplayDate(user.createdAt);
+    const status = safeText(user.status).toLowerCase() || "pending";
 
     return `
-      <tr data-uid="${uid}">
+      <tr>
         <td>${email}</td>
+        <td>${getStatusLabel(status)}</td>
         <td>${plan}</td>
         <td>${role}</td>
         <td>${createdAt}</td>
-        <td>
-          <div class="admin-actions">
-            <button class="primary-btn admin-action-btn" data-action="approve">승인</button>
-            <button class="secondary-btn admin-action-btn" data-action="reject">반려</button>
-            <button class="secondary-btn admin-action-btn admin-delete-btn" data-action="delete">계정 삭제</button>
-          </div>
-        </td>
+        <td><div class="admin-actions">${renderActionButtons(status, uid)}</div></td>
       </tr>
     `;
   }).join("");
 }
 
-async function loadPendingUsers() {
-  setStatus("승인 대기 목록을 불러오는 중입니다...");
-  renderEmpty("승인 대기 목록을 불러오는 중입니다...");
+function getListEndpoint() {
+  const queryString = new URLSearchParams();
+
+  if (currentSearchQuery) {
+    queryString.set("q", currentSearchQuery);
+  }
+
+  if (currentMode === "review") {
+    return `/api/admin/users/pending?${queryString.toString()}`;
+  }
+
+  queryString.set("scope", "all");
+  return `/api/admin/users?${queryString.toString()}`;
+}
+
+async function loadUsers() {
+  const modeLabel = currentMode === "review" ? "가입 승인/반려" : "계정 삭제";
+  setStatus(`${modeLabel} 목록을 불러오는 중입니다...`);
+  renderEmpty("목록을 불러오는 중입니다...");
 
   try {
-    const response = await fetchWithAuth("/api/admin/users/pending");
+    const response = await fetchWithAuth(getListEndpoint());
     const payload = await response.json();
 
     if (!response.ok) {
-      throw new Error(payload?.message || "승인 대기 목록 조회에 실패했습니다.");
+      throw new Error(payload?.message || "계정 목록 조회에 실패했습니다.");
     }
 
     const users = Array.isArray(payload.users) ? payload.users : [];
     renderRows(users);
-    setStatus(`승인 대기 ${users.length}건`);
+    setStatus(`${modeLabel} 대상 ${users.length}건`);
   } catch (error) {
     console.error(error);
     setStatus(error.message || "목록 조회 중 오류가 발생했습니다.");
@@ -194,7 +245,6 @@ async function handleReject(uid) {
   setStatus("반려 처리 완료");
 }
 
-
 async function handleDelete(uid) {
   const reason = window.prompt("계정 삭제 사유를 입력하세요. (선택)") ?? "";
   const shouldDelete = window.confirm("정말 이 계정을 삭제할까요? 삭제 후 사용자는 다시 회원가입해야 합니다.");
@@ -219,32 +269,22 @@ async function handleDelete(uid) {
 
   setStatus("계정 삭제 완료");
 }
+
 tableBodyEl?.addEventListener("click", async (event) => {
   const button = event.target.closest("button[data-action]");
   if (!button) return;
 
-  const row = button.closest("tr[data-uid]");
-  const uid = safeText(row?.dataset?.uid);
+  const uid = safeText(button.dataset.uid);
   const action = safeText(button.dataset.action);
-
   if (!uid || !action) return;
 
   button.disabled = true;
 
   try {
-    if (action === "approve") {
-      await handleApprove(uid);
-    }
-
-    if (action === "reject") {
-      await handleReject(uid);
-    }
-
-    if (action === "delete") {
-      await handleDelete(uid);
-    }
-
-    await loadPendingUsers();
+    if (action === "approve") await handleApprove(uid);
+    if (action === "reject") await handleReject(uid);
+    if (action === "delete") await handleDelete(uid);
+    await loadUsers();
   } catch (error) {
     console.error(error);
     setStatus(error.message || "처리 중 오류가 발생했습니다.");
@@ -253,8 +293,30 @@ tableBodyEl?.addEventListener("click", async (event) => {
   }
 });
 
-refreshBtn?.addEventListener("click", () => {
-  void loadPendingUsers();
+reviewModeBtn?.addEventListener("click", async () => {
+  setMode("review");
+  await loadUsers();
+});
+
+deleteModeBtn?.addEventListener("click", async () => {
+  setMode("delete");
+  await loadUsers();
+});
+
+searchBtn?.addEventListener("click", async () => {
+  currentSearchQuery = safeText(searchInput?.value);
+  await loadUsers();
+});
+
+searchInput?.addEventListener("keydown", async (event) => {
+  if (event.key !== "Enter") return;
+  currentSearchQuery = safeText(searchInput.value);
+  await loadUsers();
+});
+
+refreshBtn?.addEventListener("click", async () => {
+  currentSearchQuery = safeText(searchInput?.value);
+  await loadUsers();
 });
 
 logoutBtn?.addEventListener("click", async () => {
@@ -272,7 +334,8 @@ onAuthStateChanged(auth, async (user) => {
     const allowed = await ensureAdminAccess(user);
     if (!allowed) return;
 
-    await loadPendingUsers();
+    setMode("review");
+    await loadUsers();
   } catch (error) {
     console.error(error);
     setStatus("권한 확인 중 오류가 발생했습니다.");

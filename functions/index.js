@@ -149,6 +149,29 @@ async function enqueueStatusEmail(type, userEmail, payload) {
   });
 }
 
+function mapUserDocToItem(docSnap) {
+  const data = docSnap.data() || {};
+  return {
+    uid: docSnap.id,
+    email: safeString(data.email),
+    plan: safeString(data.plan) || 'free',
+    role: safeString(data.role) || 'user',
+    status: getUserStatus(data),
+    createdAt: data.createdAt || null,
+  };
+}
+
+function filterUsersByQuery(users, query) {
+  const normalizedQuery = safeString(query).toLowerCase();
+  if (!normalizedQuery) {
+    return users;
+  }
+
+  return users.filter(function (user) {
+    return safeString(user.email).toLowerCase().includes(normalizedQuery);
+  });
+}
+
 async function verifyAdminRequest(req, res) {
   const authHeader = safeString(req.headers.authorization);
 
@@ -220,6 +243,7 @@ app.get('/api/admin/users/pending', async function (req, res) {
   try {
     const actor = await verifyAdminRequest(req, res);
     if (!actor) return;
+    const query = safeString(req.query && req.query.q);
 
     const usersCollection = firestore.collection('users');
 
@@ -238,18 +262,9 @@ app.get('/api/admin/users/pending', async function (req, res) {
       userMap.set(docSnap.id, docSnap);
     });
 
-    const users = Array.from(userMap.values())
-        .map(function (docSnap) {
-          const data = docSnap.data() || {};
-          return {
-            uid: docSnap.id,
-            email: safeString(data.email),
-            plan: safeString(data.plan) || 'free',
-            role: safeString(data.role) || 'user',
-            status: getUserStatus(data),
-            createdAt: data.createdAt || null,
-          };
-        })
+    const users = filterUsersByQuery(
+        Array.from(userMap.values())
+            .map(mapUserDocToItem)
         .filter(function (user) {
           return user.status === 'pending';
         })
@@ -258,7 +273,9 @@ app.get('/api/admin/users/pending', async function (req, res) {
           const bMillis = b.createdAt && typeof b.createdAt.toMillis === 'function' ? b.createdAt.toMillis() : 0;
           return bMillis - aMillis;
         })
-        .slice(0, 200);
+        .slice(0, 200),
+        query,
+    );
 
     res.json({
       requestedBy: actor.uid,
@@ -270,6 +287,51 @@ app.get('/api/admin/users/pending', async function (req, res) {
     res.status(500).json({
       code: 'INTERNAL_ERROR',
       message: '승인 대기 목록 조회 중 오류가 발생했습니다.',
+      detail: error.message || 'unknown error',
+    });
+  }
+});
+
+app.get('/api/admin/users', async function (req, res) {
+  try {
+    const actor = await verifyAdminRequest(req, res);
+    if (!actor) return;
+
+    const scope = safeString(req.query && req.query.scope).toLowerCase() || 'all';
+    const query = safeString(req.query && req.query.q);
+    const usersCollection = firestore.collection('users');
+
+    let users = [];
+
+    if (scope === 'pending') {
+      const pendingSnapshot = await usersCollection.where('status', '==', 'pending').limit(600).get();
+      users = pendingSnapshot.docs.map(mapUserDocToItem).filter(function (user) {
+        return user.status === 'pending';
+      });
+    } else {
+      const allSnapshot = await usersCollection.limit(1200).get();
+      users = allSnapshot.docs.map(mapUserDocToItem);
+    }
+
+    users = filterUsersByQuery(users, query)
+        .sort(function (a, b) {
+          const aMillis = a.createdAt && typeof a.createdAt.toMillis === 'function' ? a.createdAt.toMillis() : 0;
+          const bMillis = b.createdAt && typeof b.createdAt.toMillis === 'function' ? b.createdAt.toMillis() : 0;
+          return bMillis - aMillis;
+        })
+        .slice(0, 300);
+
+    res.json({
+      requestedBy: actor.uid,
+      scope,
+      count: users.length,
+      users,
+    });
+  } catch (error) {
+    logger.error('get users error', error);
+    res.status(500).json({
+      code: 'INTERNAL_ERROR',
+      message: '계정 목록 조회 중 오류가 발생했습니다.',
       detail: error.message || 'unknown error',
     });
   }

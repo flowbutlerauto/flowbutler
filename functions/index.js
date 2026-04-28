@@ -158,6 +158,7 @@ function mapUserDocToItem(docSnap) {
     role: safeString(data.role) || 'user',
     status: getUserStatus(data),
     createdAt: data.createdAt || null,
+    paidUntil: data.paidUntil || null,
   };
 }
 
@@ -170,6 +171,15 @@ function filterUsersByQuery(users, query) {
   return users.filter(function (user) {
     return safeString(user.email).toLowerCase().includes(normalizedQuery);
   });
+}
+
+function toPositiveGrantDays(rawValue) {
+  const parsed = Number(rawValue);
+  if (!Number.isFinite(parsed)) {
+    return 0;
+  }
+
+  return Math.floor(parsed);
 }
 
 async function verifyAdminRequest(req, res) {
@@ -526,6 +536,113 @@ app.post('/api/admin/users/:uid/reject', async function (req, res) {
     return res.status(500).json({
       code: 'INTERNAL_ERROR',
       message: '반려 처리 중 오류가 발생했습니다.',
+      detail: error.message || 'unknown error',
+    });
+  }
+});
+
+
+app.post('/api/admin/users/:uid/grant-paid', async function (req, res) {
+  try {
+    const actor = await verifyAdminRequest(req, res);
+    if (!actor) return;
+
+    const targetUid = safeString(req.params.uid);
+    const reason = safeString(req.body && req.body.reason);
+    const days = toPositiveGrantDays(req.body && req.body.days);
+
+    if (!targetUid) {
+      return res.status(400).json({
+        code: 'INVALID_UID',
+        message: '유효한 uid가 필요합니다.',
+      });
+    }
+
+    if (days <= 0) {
+      return res.status(400).json({
+        code: 'INVALID_GRANT_DAYS',
+        message: '부여 일수는 1일 이상이어야 합니다.',
+      });
+    }
+
+    const userDocRef = firestore.collection('users').doc(targetUid);
+    const userSnap = await userDocRef.get();
+
+    if (!userSnap.exists) {
+      return res.status(404).json({
+        code: 'USER_NOT_FOUND',
+        message: '사용자 문서를 찾을 수 없습니다.',
+      });
+    }
+
+    let nextPaidUntilDate = null;
+    let fromPaidUntilDate = null;
+
+    await firestore.runTransaction(async function (transaction) {
+      const txUserSnap = await transaction.get(userDocRef);
+      if (!txUserSnap.exists) {
+        throw new Error('USER_NOT_FOUND');
+      }
+
+      const txUserData = txUserSnap.data() || {};
+      const currentPaidUntil = txUserData.paidUntil;
+      const nowDate = new Date();
+
+      let baseDate = nowDate;
+      if (currentPaidUntil && typeof currentPaidUntil.toDate === 'function') {
+        const currentDate = currentPaidUntil.toDate();
+        fromPaidUntilDate = currentDate;
+        if (currentDate.getTime() > nowDate.getTime()) {
+          baseDate = currentDate;
+        }
+      }
+
+      nextPaidUntilDate = new Date(baseDate.getTime() + (days * 24 * 60 * 60 * 1000));
+
+      transaction.update(userDocRef, {
+        plan: 'paid',
+        paidUntil: admin.firestore.Timestamp.fromDate(nextPaidUntilDate),
+        billingSource: 'admin_grant',
+        paidGrantedAt: admin.firestore.FieldValue.serverTimestamp(),
+        paidGrantedBy: actor.uid,
+        paidGrantReason: reason || null,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      const logDocRef = firestore.collection('admin_audit_logs').doc();
+      transaction.set(logDocRef, {
+        action: 'grant_paid_plan',
+        targetUid,
+        actorUid: actor.uid,
+        actorRole: actor.role,
+        reason,
+        grantDays: days,
+        fromPaidUntil: currentPaidUntil || null,
+        toPaidUntil: admin.firestore.Timestamp.fromDate(nextPaidUntilDate),
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    });
+
+    return res.json({
+      ok: true,
+      uid: targetUid,
+      grantDays: days,
+      fromPaidUntil: fromPaidUntilDate ? fromPaidUntilDate.toISOString() : null,
+      paidUntil: nextPaidUntilDate ? nextPaidUntilDate.toISOString() : null,
+      plan: 'paid',
+    });
+  } catch (error) {
+    if (error.message === 'USER_NOT_FOUND') {
+      return res.status(404).json({
+        code: 'USER_NOT_FOUND',
+        message: '사용자 문서를 찾을 수 없습니다.',
+      });
+    }
+
+    logger.error('grant paid plan error', error);
+    return res.status(500).json({
+      code: 'INTERNAL_ERROR',
+      message: '유료권 부여 처리 중 오류가 발생했습니다.',
       detail: error.message || 'unknown error',
     });
   }

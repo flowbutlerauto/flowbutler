@@ -87,7 +87,7 @@ async function ensureAdminAccess(user) {
 
   if (!isManagerOrAdmin(role)) {
     setStatus("관리자 계정만 접근할 수 있습니다.");
-    tableBodyEl.innerHTML = '<tr><td colspan="6" class="admin-empty">관리자 권한이 없습니다.</td></tr>';
+    tableBodyEl.innerHTML = '<tr><td colspan="7" class="admin-empty">관리자 권한이 없습니다.</td></tr>';
     return false;
   }
 
@@ -113,12 +113,15 @@ async function fetchWithAuth(url, options = {}) {
 }
 
 function renderEmpty(message) {
-  tableBodyEl.innerHTML = `<tr><td colspan="6" class="admin-empty">${message}</td></tr>`;
+  tableBodyEl.innerHTML = `<tr><td colspan="7" class="admin-empty">${message}</td></tr>`;
 }
 
 function renderActionButtons(status, uid) {
   if (currentMode === "delete") {
-    return `<button class="secondary-btn admin-action-btn admin-delete-btn" data-action="delete" data-uid="${uid}">계정 삭제</button>`;
+    return `
+      <button class="primary-btn admin-action-btn" data-action="grant-paid" data-uid="${uid}">유료권 부여</button>
+      <button class="secondary-btn admin-action-btn admin-delete-btn" data-action="delete" data-uid="${uid}">계정 삭제</button>
+    `;
   }
 
   if (status === "pending") {
@@ -145,6 +148,7 @@ function renderRows(users) {
     const uid = safeText(user.uid);
     const email = safeText(user.email) || "-";
     const plan = safeText(user.plan) || "free";
+    const paidUntil = toDisplayDate(user.paidUntil);
     const role = safeText(user.role) || "user";
     const createdAt = toDisplayDate(user.createdAt);
     const status = safeText(user.status).toLowerCase() || "pending";
@@ -154,6 +158,7 @@ function renderRows(users) {
         <td>${email}</td>
         <td>${getStatusLabel(status)}</td>
         <td>${plan}</td>
+        <td>${paidUntil}</td>
         <td>${role}</td>
         <td>${createdAt}</td>
         <td><div class="admin-actions">${renderActionButtons(status, uid)}</div></td>
@@ -270,6 +275,36 @@ async function handleDelete(uid) {
   setStatus("계정 삭제 완료");
 }
 
+async function handleGrantPaid(uid) {
+  const daysInput = window.prompt("유료권 일수를 입력하세요. (예: 30)", "30");
+  if (daysInput === null) {
+    setStatus("유료권 부여를 취소했습니다.");
+    return;
+  }
+
+  const days = Number(daysInput);
+  if (!Number.isFinite(days) || days < 1) {
+    setStatus("유료권 일수는 1 이상의 숫자여야 합니다.");
+    return;
+  }
+
+  const reason = window.prompt("부여 사유를 입력하세요. (선택)") ?? "";
+
+  setStatus("유료권 부여 처리 중...");
+
+  const response = await fetchWithAuth(`/api/admin/users/${uid}/grant-paid`, {
+    method: "POST",
+    body: JSON.stringify({ days: Math.floor(days), reason: safeText(reason) }),
+  });
+
+  const payload = await response.json();
+  if (!response.ok) {
+    throw new Error(payload?.message || "유료권 부여에 실패했습니다.");
+  }
+
+  setStatus(`유료권 ${Math.floor(days)}일 부여 완료`);
+}
+
 tableBodyEl?.addEventListener("click", async (event) => {
   const button = event.target.closest("button[data-action]");
   if (!button) return;
@@ -283,6 +318,7 @@ tableBodyEl?.addEventListener("click", async (event) => {
   try {
     if (action === "approve") await handleApprove(uid);
     if (action === "reject") await handleReject(uid);
+    if (action === "grant-paid") await handleGrantPaid(uid);
     if (action === "delete") await handleDelete(uid);
     await loadUsers();
   } catch (error) {

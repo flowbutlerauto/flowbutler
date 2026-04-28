@@ -636,11 +636,11 @@ a {
   vertical-align: middle;
 }
 
-[data-paid-feature=\"true\"].is-locked .paid-lock-icon {
+[data-paid-feature="true"].is-locked .paid-lock-icon {
   display: inline;
 }
 
-[data-paid-feature=\"true\"].is-locked .sidebar-nav-desc {
+[data-paid-feature="true"].is-locked .sidebar-nav-desc {
   color: #94a3b8;
 }
 

@@ -17,33 +17,35 @@ const firestore = admin.firestore();
 app.use(cors({origin: true}));
 app.use(express.json());
 
-const COURIER_ALIASES = {
-  CJ: ['CJ', 'CJ대한통운'],
-  LOTTE: ['LOTTE', '롯데택배', '롯데글로벌로지스'],
-  DOOBALHERO: ['DOOBALHERO', '두발히어로', '체인로지스'],
-  EPOST: ['EPOST', '우체국', '우체국택배', '우편', 'POST'],
-};
-
-const COURIER_DISPLAY_NAMES = {
-  CJ: 'CJ대한통운',
-  LOTTE: '롯데택배',
-  DOOBALHERO: '두발히어로',
-  EPOST: '우체국택배',
-};
-
-const TRACKING_HANDLER_MAP = {
-  CJ: getCjTrackingResults,
-  LOTTE: getLotteTrackingResults,
-  DOOBALHERO: getDoobalHeroTrackingResults,
-  EPOST: getEpostTrackingResults,
-};
+const COURIER_CONFIG = Object.freeze({
+  CJ: Object.freeze({
+    aliases: Object.freeze(['CJ', 'CJ대한통운']),
+    displayName: 'CJ대한통운',
+    getResults: getCjTrackingResults,
+  }),
+  LOTTE: Object.freeze({
+    aliases: Object.freeze(['LOTTE', '롯데택배', '롯데글로벌로지스']),
+    displayName: '롯데택배',
+    getResults: getLotteTrackingResults,
+  }),
+  DOOBALHERO: Object.freeze({
+    aliases: Object.freeze(['DOOBALHERO', '두발히어로', '체인로지스']),
+    displayName: '두발히어로',
+    getResults: getDoobalHeroTrackingResults,
+  }),
+  EPOST: Object.freeze({
+    aliases: Object.freeze(['EPOST', '우체국', '우체국택배', '우편', 'POST']),
+    displayName: '우체국택배',
+    getResults: getEpostTrackingResults,
+  }),
+});
 
 const COURIER_CODE_BY_ALIAS = Object.freeze(
-    Object.entries(COURIER_ALIASES).reduce(function (acc, entry) {
+    Object.entries(COURIER_CONFIG).reduce(function (acc, entry) {
       const courierCode = entry[0];
-      const aliasList = entry[1];
+      const courierConfig = entry[1];
 
-      aliasList.forEach(function (alias) {
+      courierConfig.aliases.forEach(function (alias) {
         acc[String(alias).toUpperCase()] = courierCode;
       });
 
@@ -70,19 +72,23 @@ function normalizeTrackingNumbers(values) {
     return [];
   }
 
-  return Array.from(
-      new Set(
-          values
-              .map(function (value) {
-                return safeString(value).replace(/\D/g, '');
-              })
-              .filter(Boolean),
-      ),
-  );
+  const normalized = values
+      .map(function (value) {
+        return safeString(value).replace(/\D/g, '');
+      })
+      .filter(Boolean);
+
+  return Array.from(new Set(normalized));
 }
 
 function getCourierDisplayName(courierCode) {
-  return COURIER_DISPLAY_NAMES[courierCode] || '';
+  const courierConfig = COURIER_CONFIG[courierCode];
+  return courierConfig ? courierConfig.displayName : '';
+}
+
+function getCourierHandler(courierCode) {
+  const courierConfig = COURIER_CONFIG[courierCode];
+  return courierConfig ? courierConfig.getResults : null;
 }
 
 function getUserStatus(userData) {
@@ -785,7 +791,7 @@ app.post('/api/tracking', async function (req, res) {
       });
     }
 
-    const trackingHandler = TRACKING_HANDLER_MAP[normalizedCourier];
+    const trackingHandler = getCourierHandler(normalizedCourier);
     if (!trackingHandler) {
       return res.status(500).json({
         code: 'COURIER_HANDLER_NOT_CONFIGURED',

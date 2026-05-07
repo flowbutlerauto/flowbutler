@@ -2185,6 +2185,12 @@ a {
   text-align: left;
 }
 
+
+.milkrun-total-row td {
+  background: #e5e7eb;
+  font-weight: 800;
+}
+
 .milkrun-center-select {
   min-width: 128px;
   height: 34px;

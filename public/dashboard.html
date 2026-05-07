@@ -653,7 +653,7 @@
                                     <h2 class="section-title">쿠팡 밀크런 도우미</h2>
                                     <p class="workspace-text">
                                         발주번호 단위로 센터를 변경하면서 같은 센터끼리 자동 정렬하고,
-                                        센터별 PLT·SKU·수량 요약을 확인하는 테트리스 작업판입니다.
+                                        센터별 박스·PT·SKU·중량 요약을 확인하는 테트리스 작업판입니다.
                                     </p>
                                 </div>
                             </div>
@@ -675,9 +675,9 @@
                                     <div class="summary-desc">발주번호별 SKU 수 합계</div>
                                 </div>
                                 <div class="summary-card">
-                                    <div class="summary-label">총 수량</div>
-                                    <div id="milkrun-total-qty" class="summary-value">0</div>
-                                    <div class="summary-desc">확정수량 합계</div>
+                                    <div class="summary-label">총 중량</div>
+                                    <div id="milkrun-total-weight" class="summary-value">0</div>
+                                    <div class="summary-desc">센터별 중량 합계</div>
                                 </div>
                             </div>
 
@@ -707,18 +707,17 @@
                                         <table class="tracking-table milkrun-summary-table">
                                             <thead>
                                                 <tr>
-                                                    <th>센터</th>
-                                                    <th>발주</th>
-                                                    <th>SKU</th>
-                                                    <th>수량</th>
-                                                    <th>박스</th>
-                                                    <th>PT</th>
-                                                    <th>PLT</th>
+                                                    <th>물류센터</th>
+                                                    <th>박스 수</th>
+                                                    <th>PT 수</th>
+                                                    <th>SKU 수</th>
+                                                    <th>중량</th>
+                                                    <th>납품지</th>
                                                 </tr>
                                             </thead>
                                             <tbody id="milkrun-center-summary-body">
                                                 <tr class="tracking-empty-row">
-                                                    <td colspan="7">샘플 데이터를 불러오면 센터별 요약이 표시됩니다.</td>
+                                                    <td colspan="6">샘플 데이터를 불러오면 센터별 요약이 표시됩니다.</td>
                                                 </tr>
                                             </tbody>
                                         </table>
@@ -739,12 +738,13 @@
                                                     <th>수량</th>
                                                     <th>박스</th>
                                                     <th>PT</th>
+                                                    <th>중량</th>
                                                     <th>상태</th>
                                                 </tr>
                                             </thead>
                                             <tbody id="milkrun-order-body">
                                                 <tr class="tracking-empty-row">
-                                                    <td colspan="9">샘플 데이터를 불러오면 발주번호 단위 작업판이 표시됩니다.</td>
+                                                    <td colspan="10">샘플 데이터를 불러오면 발주번호 단위 작업판이 표시됩니다.</td>
                                                 </tr>
                                             </tbody>
                                         </table>

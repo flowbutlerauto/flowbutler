@@ -117,7 +117,7 @@ const kurlyProgressPercentEl = document.getElementById("kurly-progress-percent")
 const milkrunCenterCountEl = document.getElementById("milkrun-center-count");
 const milkrunTotalPltEl = document.getElementById("milkrun-total-plt");
 const milkrunTotalSkuEl = document.getElementById("milkrun-total-sku");
-const milkrunTotalQtyEl = document.getElementById("milkrun-total-qty");
+const milkrunTotalWeightEl = document.getElementById("milkrun-total-weight");
 const milkrunCenterSummaryBody = document.getElementById("milkrun-center-summary-body");
 const milkrunOrderBody = document.getElementById("milkrun-order-body");
 const milkrunLoadSampleBtn = document.getElementById("milkrun-load-sample-btn");
@@ -186,6 +186,14 @@ const COUPANG_CENTER_OPTIONS = [
     "창원1",
     "천안8(RC)",
 ];
+const DEFAULT_MILKRUN_DESTINATION = "남양주시_1-1";
+
+function createMilkrunSampleRow(row) {
+    return {
+        destination: DEFAULT_MILKRUN_DESTINATION,
+        ...row,
+    };
+}
 const MILKRUN_SAMPLE_ROWS = [
     {
         orderId: "129596226",
@@ -196,6 +204,7 @@ const MILKRUN_SAMPLE_ROWS = [
         qty: 36,
         boxCount: 3,
         ptCount: 0.06,
+        weight: 18,
     },
     {
         orderId: "130312561",
@@ -206,6 +215,7 @@ const MILKRUN_SAMPLE_ROWS = [
         qty: 320,
         boxCount: 32,
         ptCount: 1,
+        weight: 438.4,
     },
     {
         orderId: "130312651",
@@ -216,6 +226,7 @@ const MILKRUN_SAMPLE_ROWS = [
         qty: 320,
         boxCount: 32,
         ptCount: 1,
+        weight: 438.4,
     },
     {
         orderId: "130312746",
@@ -226,6 +237,7 @@ const MILKRUN_SAMPLE_ROWS = [
         qty: 320,
         boxCount: 32,
         ptCount: 1,
+        weight: 438.4,
     },
     {
         orderId: "130313951",
@@ -236,6 +248,7 @@ const MILKRUN_SAMPLE_ROWS = [
         qty: 320,
         boxCount: 32,
         ptCount: 1,
+        weight: 438.4,
     },
     {
         orderId: "130349486",
@@ -246,6 +259,7 @@ const MILKRUN_SAMPLE_ROWS = [
         qty: 6,
         boxCount: 0.25,
         ptCount: 0.01,
+        weight: 2.52,
     },
     {
         orderId: "130349661",
@@ -256,6 +270,7 @@ const MILKRUN_SAMPLE_ROWS = [
         qty: 438,
         boxCount: 18.25,
         ptCount: 0.45,
+        weight: 192.06,
     },
     {
         orderId: "130350194",
@@ -266,6 +281,7 @@ const MILKRUN_SAMPLE_ROWS = [
         qty: 194,
         boxCount: 31.75,
         ptCount: 1.34,
+        weight: 418.94,
     },
     {
         orderId: "130351175",
@@ -276,6 +292,7 @@ const MILKRUN_SAMPLE_ROWS = [
         qty: 24,
         boxCount: 1,
         ptCount: 0.03,
+        weight: 14.4,
     },
     {
         orderId: "130351402",
@@ -286,6 +303,7 @@ const MILKRUN_SAMPLE_ROWS = [
         qty: 670,
         boxCount: 56.83,
         ptCount: 1.66,
+        weight: 717.64,
     },
     {
         orderId: "130351787",
@@ -296,8 +314,10 @@ const MILKRUN_SAMPLE_ROWS = [
         qty: 12,
         boxCount: 1,
         ptCount: 0.03,
+        weight: 10.44,
     },
-];
+]
+    .map(createMilkrunSampleRow);
 const SKU_IMAGE_FIELD_KEY = "productImageUrl";
 const SKU_IMAGE_MAX_BYTES = 2 * 1024 * 1024;
 let draggingSkuHeaderKey = "";
@@ -1487,6 +1507,8 @@ function getMilkrunCenterSummaries() {
                 qty: 0,
                 boxCount: 0,
                 ptCount: 0,
+                weight: 0,
+                destination: row.destination || "",
             });
         }
 
@@ -1496,6 +1518,8 @@ function getMilkrunCenterSummaries() {
         summary.qty += Number(row.qty) || 0;
         summary.boxCount += Number(row.boxCount) || 0;
         summary.ptCount += Number(row.ptCount) || 0;
+        summary.weight += Number(row.weight) || 0;
+        if (!summary.destination && row.destination) summary.destination = row.destination;
     });
 
     return Array.from(summaryMap.values()).sort((a, b) => a.center.localeCompare(b.center, "ko-KR"));
@@ -1505,18 +1529,18 @@ function renderMilkrunSummary() {
     const summaries = getMilkrunCenterSummaries();
     const totalPlt = summaries.reduce((sum, item) => sum + Math.ceil(item.ptCount), 0);
     const totalSku = milkrunRows.reduce((sum, row) => sum + (Number(row.skuCount) || 0), 0);
-    const totalQty = milkrunRows.reduce((sum, row) => sum + (Number(row.qty) || 0), 0);
+    const totalWeight = summaries.reduce((sum, item) => sum + (Number(item.weight) || 0), 0);
 
     if (milkrunCenterCountEl) milkrunCenterCountEl.textContent = formatMilkrunNumber(summaries.length);
     if (milkrunTotalPltEl) milkrunTotalPltEl.textContent = formatMilkrunNumber(totalPlt);
     if (milkrunTotalSkuEl) milkrunTotalSkuEl.textContent = formatMilkrunNumber(totalSku);
-    if (milkrunTotalQtyEl) milkrunTotalQtyEl.textContent = formatMilkrunNumber(totalQty);
+    if (milkrunTotalWeightEl) milkrunTotalWeightEl.textContent = formatMilkrunNumber(totalWeight, 1);
 
     if (!milkrunCenterSummaryBody) return;
     if (!summaries.length) {
         milkrunCenterSummaryBody.innerHTML = `
             <tr class="tracking-empty-row">
-                <td colspan="7">샘플 데이터를 불러오면 센터별 요약이 표시됩니다.</td>
+                <td colspan="6">샘플 데이터를 불러오면 센터별 요약이 표시됩니다.</td>
             </tr>
         `;
         return;
@@ -1525,14 +1549,22 @@ function renderMilkrunSummary() {
     milkrunCenterSummaryBody.innerHTML = summaries.map((item) => `
         <tr>
             <td><strong>${escapeHtml(item.center)}</strong></td>
-            <td>${formatMilkrunNumber(item.orderCount)}</td>
-            <td>${formatMilkrunNumber(item.skuCount)}</td>
-            <td>${formatMilkrunNumber(item.qty)}</td>
             <td>${formatMilkrunNumber(item.boxCount, 2)}</td>
             <td>${formatMilkrunNumber(item.ptCount, 2)}</td>
-            <td>${formatMilkrunNumber(Math.ceil(item.ptCount))}</td>
+            <td>${formatMilkrunNumber(item.skuCount)}</td>
+            <td>${formatMilkrunNumber(item.weight, 1)}</td>
+            <td>${escapeHtml(item.destination || "-")}</td>
         </tr>
-    `).join("");
+    `).join("") + `
+        <tr class="milkrun-total-row">
+            <td><strong>총계</strong></td>
+            <td>${formatMilkrunNumber(summaries.reduce((sum, item) => sum + item.boxCount, 0), 2)}</td>
+            <td>${formatMilkrunNumber(summaries.reduce((sum, item) => sum + item.ptCount, 0), 2)}</td>
+            <td>${formatMilkrunNumber(summaries.reduce((sum, item) => sum + item.skuCount, 0))}</td>
+            <td>${formatMilkrunNumber(summaries.reduce((sum, item) => sum + item.weight, 0), 1)}</td>
+            <td>-</td>
+        </tr>
+    `;
 }
 
 function renderMilkrunOrders() {
@@ -1540,7 +1572,7 @@ function renderMilkrunOrders() {
     if (!milkrunRows.length) {
         milkrunOrderBody.innerHTML = `
             <tr class="tracking-empty-row">
-                <td colspan="9">샘플 데이터를 불러오면 발주번호 단위 작업판이 표시됩니다.</td>
+                <td colspan="10">샘플 데이터를 불러오면 발주번호 단위 작업판이 표시됩니다.</td>
             </tr>
         `;
         return;
@@ -1564,6 +1596,7 @@ function renderMilkrunOrders() {
                 <td>${formatMilkrunNumber(row.qty)}</td>
                 <td>${formatMilkrunNumber(row.boxCount, 2)}</td>
                 <td>${formatMilkrunNumber(row.ptCount, 2)}</td>
+                <td>${formatMilkrunNumber(row.weight, 1)}</td>
                 <td><span class="milkrun-status ${statusClass}">${statusText}</span></td>
             </tr>
         `;

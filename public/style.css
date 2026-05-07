@@ -2144,3 +2144,99 @@ a {
   font-size: 12px;
   color: #64748b;
 }
+
+
+/* 쿠팡 밀크런 도우미 */
+.milkrun-summary-grid {
+  margin-top: 18px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.milkrun-toolbar-card,
+.milkrun-summary-panel,
+.milkrun-order-panel {
+  margin-top: 18px;
+}
+
+.milkrun-grid {
+  display: grid;
+  grid-template-columns: minmax(360px, 0.8fr) minmax(520px, 1.4fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.milkrun-summary-scroll,
+.milkrun-order-scroll {
+  max-height: 520px;
+}
+
+.milkrun-summary-table th,
+.milkrun-summary-table td,
+.milkrun-order-table th,
+.milkrun-order-table td {
+  white-space: nowrap;
+  text-align: center;
+}
+
+.milkrun-order-table th:nth-child(1),
+.milkrun-order-table td:nth-child(1),
+.milkrun-summary-table th:nth-child(1),
+.milkrun-summary-table td:nth-child(1) {
+  text-align: left;
+}
+
+
+.milkrun-total-row td {
+  background: #e5e7eb;
+  font-weight: 800;
+}
+
+.milkrun-center-select {
+  width: 148px;
+  height: 34px;
+  border: 1px solid var(--border-default);
+  border-radius: 10px;
+  padding: 0 10px;
+  background: #fff;
+  color: var(--text-primary);
+  font-size: 13px;
+  outline: none;
+}
+
+.milkrun-center-select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(79, 110, 247, 0.12);
+}
+
+.milkrun-center-select.is-invalid {
+  border-color: var(--error);
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.10);
+}
+
+.milkrun-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 68px;
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.milkrun-status-keep {
+  color: var(--success);
+  background: var(--success-bg);
+}
+
+.milkrun-status-changed {
+  color: var(--warning);
+  background: var(--warning-bg);
+}
+
+@media (max-width: 1180px) {
+  .milkrun-summary-grid,
+  .milkrun-grid {
+    grid-template-columns: 1fr;
+  }
+}

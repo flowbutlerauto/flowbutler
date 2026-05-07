@@ -120,6 +120,7 @@ const milkrunTotalSkuEl = document.getElementById("milkrun-total-sku");
 const milkrunTotalWeightEl = document.getElementById("milkrun-total-weight");
 const milkrunCenterSummaryBody = document.getElementById("milkrun-center-summary-body");
 const milkrunOrderBody = document.getElementById("milkrun-order-body");
+const milkrunCenterOptionsEl = document.getElementById("milkrun-center-options");
 const milkrunLoadSampleBtn = document.getElementById("milkrun-load-sample-btn");
 const milkrunSortCenterBtn = document.getElementById("milkrun-sort-center-btn");
 
@@ -1480,11 +1481,15 @@ function formatMilkrunNumber(value, digits = 0) {
     });
 }
 
-function buildMilkrunCenterOptions(selectedCenter) {
-    return COUPANG_CENTER_OPTIONS.map((center) => {
-        const selected = center === selectedCenter ? " selected" : "";
-        return `<option value="${escapeHtml(center)}"${selected}>${escapeHtml(center)}</option>`;
-    }).join("");
+function buildMilkrunCenterOptions() {
+    return COUPANG_CENTER_OPTIONS.map((center) => (
+        `<option value="${escapeHtml(center)}">${escapeHtml(center)}</option>`
+    )).join("");
+}
+
+function renderMilkrunCenterOptions() {
+    if (!milkrunCenterOptionsEl) return;
+    milkrunCenterOptionsEl.innerHTML = buildMilkrunCenterOptions();
 }
 
 function getMilkrunSortedRows() {
@@ -1588,9 +1593,14 @@ function renderMilkrunOrders() {
                 <td>${escapeHtml(row.dueDate)}</td>
                 <td>${escapeHtml(row.originalCenter)}</td>
                 <td>
-                    <select class="milkrun-center-select" data-milkrun-order-id="${escapeHtml(row.orderId)}">
-                        ${buildMilkrunCenterOptions(row.assignedCenter)}
-                    </select>
+                    <input
+                        class="milkrun-center-select"
+                        data-milkrun-order-id="${escapeHtml(row.orderId)}"
+                        list="milkrun-center-options"
+                        type="text"
+                        value="${escapeHtml(row.assignedCenter)}"
+                        placeholder="센터 검색/선택"
+                    />
                 </td>
                 <td>${formatMilkrunNumber(row.skuCount)}</td>
                 <td>${formatMilkrunNumber(row.qty)}</td>
@@ -1615,13 +1625,26 @@ function loadMilkrunSampleRows() {
 
 function handleMilkrunCenterChange(event) {
     const target = event.target;
-    if (!(target instanceof HTMLSelectElement)) return;
+    if (!(target instanceof HTMLInputElement)) return;
+    if (!target.classList.contains("milkrun-center-select")) return;
+
     const orderId = target.getAttribute("data-milkrun-order-id");
+    const nextCenter = target.value.trim();
     if (!orderId) return;
 
+    if (!COUPANG_CENTER_OPTIONS.includes(nextCenter)) {
+        if (event.type === "change") {
+            target.classList.add("is-invalid");
+            target.title = "쿠팡 센터 목록에서 센터를 선택해주세요.";
+        }
+        return;
+    }
+
+    target.classList.remove("is-invalid");
+    target.title = "";
     milkrunRows = milkrunRows.map((row) => (
         row.orderId === orderId
-            ? { ...row, assignedCenter: target.value }
+            ? { ...row, assignedCenter: nextCenter }
             : row
     ));
     renderMilkrunDashboard();
@@ -2404,6 +2427,7 @@ function bindEvents() {
     kurlyLabelGenerateBtn?.addEventListener("click", handleGenerateKurlyLabels);
     milkrunLoadSampleBtn?.addEventListener("click", loadMilkrunSampleRows);
     milkrunSortCenterBtn?.addEventListener("click", renderMilkrunDashboard);
+    milkrunOrderBody?.addEventListener("input", handleMilkrunCenterChange);
     milkrunOrderBody?.addEventListener("change", handleMilkrunCenterChange);
     skuHeaderModal?.addEventListener("click", (event) => {
         if (event.target === skuHeaderModal) {
@@ -2459,6 +2483,7 @@ function initializeKurlyLabelUi() {
 }
 
 function initializeMilkrunUi() {
+    renderMilkrunCenterOptions();
     loadMilkrunSampleRows();
 }
 

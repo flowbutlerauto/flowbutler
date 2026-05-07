@@ -114,6 +114,14 @@ const kurlyProgressMessageEl = document.getElementById("kurly-progress-message")
 const kurlyProgressDetailEl = document.getElementById("kurly-progress-detail");
 const kurlyProgressBarEl = document.getElementById("kurly-progress-bar");
 const kurlyProgressPercentEl = document.getElementById("kurly-progress-percent");
+const milkrunCenterCountEl = document.getElementById("milkrun-center-count");
+const milkrunTotalPltEl = document.getElementById("milkrun-total-plt");
+const milkrunTotalSkuEl = document.getElementById("milkrun-total-sku");
+const milkrunTotalWeightEl = document.getElementById("milkrun-total-weight");
+const milkrunCenterSummaryBody = document.getElementById("milkrun-center-summary-body");
+const milkrunOrderBody = document.getElementById("milkrun-order-body");
+const milkrunLoadSampleBtn = document.getElementById("milkrun-load-sample-btn");
+const milkrunSortCenterBtn = document.getElementById("milkrun-sort-center-btn");
 
 const viewMeta = {
     home: {
@@ -136,6 +144,10 @@ const viewMeta = {
         title: "컬리 라벨 생성",
         subtitle: "",
     },
+    "coupang-milkrun": {
+        title: "쿠팡 밀크런 도우미",
+        subtitle: "발주번호 단위 센터 변경과 센터별 PLT 요약을 확인합니다.",
+    },
     settings: {
         title: "설정",
         subtitle: "계정, 플랜, 권한과 같은 기본 정보를 확인할 수 있습니다.",
@@ -154,6 +166,158 @@ let skuLabelTemplates = [];
 let printingSkuRowId = null;
 let kurlyRows = [];
 let kurlyParsedFileName = "";
+let milkrunRows = [];
+const COUPANG_CENTER_OPTIONS = [
+    "서울",
+    "고양1",
+    "동탄1",
+    "대구7(RC)",
+    "인천4",
+    "경기광주3",
+    "대구3",
+    "이천2",
+    "전라광주2",
+    "창원4",
+    "인천14",
+    "인천28",
+    "양산1",
+    "대전1",
+    "대전2",
+    "창원1",
+    "천안8(RC)",
+];
+const DEFAULT_MILKRUN_DESTINATION = "남양주시_1-1";
+
+function createMilkrunSampleRow(row) {
+    return {
+        destination: DEFAULT_MILKRUN_DESTINATION,
+        ...row,
+    };
+}
+const MILKRUN_SAMPLE_ROWS = [
+    {
+        orderId: "129596226",
+        dueDate: "20260512",
+        originalCenter: "서울",
+        assignedCenter: "서울",
+        skuCount: 1,
+        qty: 36,
+        boxCount: 3,
+        ptCount: 0.06,
+        weight: 18,
+    },
+    {
+        orderId: "130312561",
+        dueDate: "20260512",
+        originalCenter: "고양1",
+        assignedCenter: "고양1",
+        skuCount: 1,
+        qty: 320,
+        boxCount: 32,
+        ptCount: 1,
+        weight: 438.4,
+    },
+    {
+        orderId: "130312651",
+        dueDate: "20260512",
+        originalCenter: "동탄1",
+        assignedCenter: "동탄1",
+        skuCount: 1,
+        qty: 320,
+        boxCount: 32,
+        ptCount: 1,
+        weight: 438.4,
+    },
+    {
+        orderId: "130312746",
+        dueDate: "20260512",
+        originalCenter: "대구7(RC)",
+        assignedCenter: "대구7(RC)",
+        skuCount: 1,
+        qty: 320,
+        boxCount: 32,
+        ptCount: 1,
+        weight: 438.4,
+    },
+    {
+        orderId: "130313951",
+        dueDate: "20260512",
+        originalCenter: "인천4",
+        assignedCenter: "인천4",
+        skuCount: 1,
+        qty: 320,
+        boxCount: 32,
+        ptCount: 1,
+        weight: 438.4,
+    },
+    {
+        orderId: "130349486",
+        dueDate: "20260512",
+        originalCenter: "경기광주3",
+        assignedCenter: "경기광주3",
+        skuCount: 1,
+        qty: 6,
+        boxCount: 0.25,
+        ptCount: 0.01,
+        weight: 2.52,
+    },
+    {
+        orderId: "130349661",
+        dueDate: "20260512",
+        originalCenter: "대구3",
+        assignedCenter: "대구3",
+        skuCount: 2,
+        qty: 438,
+        boxCount: 18.25,
+        ptCount: 0.45,
+        weight: 192.06,
+    },
+    {
+        orderId: "130350194",
+        dueDate: "20260512",
+        originalCenter: "이천2",
+        assignedCenter: "이천2",
+        skuCount: 4,
+        qty: 194,
+        boxCount: 31.75,
+        ptCount: 1.34,
+        weight: 418.94,
+    },
+    {
+        orderId: "130351175",
+        dueDate: "20260512",
+        originalCenter: "전라광주2",
+        assignedCenter: "전라광주2",
+        skuCount: 1,
+        qty: 24,
+        boxCount: 1,
+        ptCount: 0.03,
+        weight: 14.4,
+    },
+    {
+        orderId: "130351402",
+        dueDate: "20260512",
+        originalCenter: "고양1",
+        assignedCenter: "고양1",
+        skuCount: 5,
+        qty: 670,
+        boxCount: 56.83,
+        ptCount: 1.66,
+        weight: 717.64,
+    },
+    {
+        orderId: "130351787",
+        dueDate: "20260512",
+        originalCenter: "창원4",
+        assignedCenter: "창원4",
+        skuCount: 1,
+        qty: 12,
+        boxCount: 1,
+        ptCount: 0.03,
+        weight: 10.44,
+    },
+]
+    .map(createMilkrunSampleRow);
 const SKU_IMAGE_FIELD_KEY = "productImageUrl";
 const SKU_IMAGE_MAX_BYTES = 2 * 1024 * 1024;
 let draggingSkuHeaderKey = "";
@@ -316,7 +480,7 @@ function setToolGroupOpenState(isOpen) {
 }
 
 function isToolView(viewName) {
-    return viewName === "tracking" || viewName === "label" || viewName === "sku" || viewName === "kurly-label";
+    return ["tracking", "label", "sku", "kurly-label", "coupang-milkrun"].includes(viewName);
 }
 
 function setSkuResult(message) {
@@ -1309,11 +1473,169 @@ function escapeHtml(value) {
         .replaceAll("'", "&#39;");
 }
 
+function formatMilkrunNumber(value, digits = 0) {
+    return Number(value || 0).toLocaleString("ko-KR", {
+        maximumFractionDigits: digits,
+        minimumFractionDigits: digits,
+    });
+}
+
+function buildMilkrunCenterOptions(selectedCenter) {
+    return COUPANG_CENTER_OPTIONS.map((center) => {
+        const selected = center === selectedCenter ? " selected" : "";
+        return `<option value="${escapeHtml(center)}"${selected}>${escapeHtml(center)}</option>`;
+    }).join("");
+}
+
+function getMilkrunSortedRows() {
+    return [...milkrunRows].sort((a, b) => {
+        const centerCompare = a.assignedCenter.localeCompare(b.assignedCenter, "ko-KR");
+        if (centerCompare !== 0) return centerCompare;
+        return a.orderId.localeCompare(b.orderId, "ko-KR");
+    });
+}
+
+function getMilkrunCenterSummaries() {
+    const summaryMap = new Map();
+    milkrunRows.forEach((row) => {
+        const center = row.assignedCenter || row.originalCenter;
+        if (!summaryMap.has(center)) {
+            summaryMap.set(center, {
+                center,
+                orderCount: 0,
+                skuCount: 0,
+                qty: 0,
+                boxCount: 0,
+                ptCount: 0,
+                weight: 0,
+                destination: row.destination || "",
+            });
+        }
+
+        const summary = summaryMap.get(center);
+        summary.orderCount += 1;
+        summary.skuCount += Number(row.skuCount) || 0;
+        summary.qty += Number(row.qty) || 0;
+        summary.boxCount += Number(row.boxCount) || 0;
+        summary.ptCount += Number(row.ptCount) || 0;
+        summary.weight += Number(row.weight) || 0;
+        if (!summary.destination && row.destination) summary.destination = row.destination;
+    });
+
+    return Array.from(summaryMap.values()).sort((a, b) => a.center.localeCompare(b.center, "ko-KR"));
+}
+
+function renderMilkrunSummary() {
+    const summaries = getMilkrunCenterSummaries();
+    const totalPlt = summaries.reduce((sum, item) => sum + Math.ceil(item.ptCount), 0);
+    const totalSku = milkrunRows.reduce((sum, row) => sum + (Number(row.skuCount) || 0), 0);
+    const totalWeight = summaries.reduce((sum, item) => sum + (Number(item.weight) || 0), 0);
+
+    if (milkrunCenterCountEl) milkrunCenterCountEl.textContent = formatMilkrunNumber(summaries.length);
+    if (milkrunTotalPltEl) milkrunTotalPltEl.textContent = formatMilkrunNumber(totalPlt);
+    if (milkrunTotalSkuEl) milkrunTotalSkuEl.textContent = formatMilkrunNumber(totalSku);
+    if (milkrunTotalWeightEl) milkrunTotalWeightEl.textContent = formatMilkrunNumber(totalWeight, 1);
+
+    if (!milkrunCenterSummaryBody) return;
+    if (!summaries.length) {
+        milkrunCenterSummaryBody.innerHTML = `
+            <tr class="tracking-empty-row">
+                <td colspan="6">샘플 데이터를 불러오면 센터별 요약이 표시됩니다.</td>
+            </tr>
+        `;
+        return;
+    }
+
+    milkrunCenterSummaryBody.innerHTML = summaries.map((item) => `
+        <tr>
+            <td><strong>${escapeHtml(item.center)}</strong></td>
+            <td>${formatMilkrunNumber(item.boxCount, 2)}</td>
+            <td>${formatMilkrunNumber(item.ptCount, 2)}</td>
+            <td>${formatMilkrunNumber(item.skuCount)}</td>
+            <td>${formatMilkrunNumber(item.weight, 1)}</td>
+            <td>${escapeHtml(item.destination || "-")}</td>
+        </tr>
+    `).join("") + `
+        <tr class="milkrun-total-row">
+            <td><strong>총계</strong></td>
+            <td>${formatMilkrunNumber(summaries.reduce((sum, item) => sum + item.boxCount, 0), 2)}</td>
+            <td>${formatMilkrunNumber(summaries.reduce((sum, item) => sum + item.ptCount, 0), 2)}</td>
+            <td>${formatMilkrunNumber(summaries.reduce((sum, item) => sum + item.skuCount, 0))}</td>
+            <td>${formatMilkrunNumber(summaries.reduce((sum, item) => sum + item.weight, 0), 1)}</td>
+            <td>-</td>
+        </tr>
+    `;
+}
+
+function renderMilkrunOrders() {
+    if (!milkrunOrderBody) return;
+    if (!milkrunRows.length) {
+        milkrunOrderBody.innerHTML = `
+            <tr class="tracking-empty-row">
+                <td colspan="10">샘플 데이터를 불러오면 발주번호 단위 작업판이 표시됩니다.</td>
+            </tr>
+        `;
+        return;
+    }
+
+    milkrunOrderBody.innerHTML = getMilkrunSortedRows().map((row) => {
+        const changed = row.assignedCenter !== row.originalCenter;
+        const statusClass = changed ? "milkrun-status-changed" : "milkrun-status-keep";
+        const statusText = changed ? "센터 변경" : "유지";
+        return `
+            <tr data-milkrun-order-row="${escapeHtml(row.orderId)}">
+                <td><strong>${escapeHtml(row.orderId)}</strong></td>
+                <td>${escapeHtml(row.dueDate)}</td>
+                <td>${escapeHtml(row.originalCenter)}</td>
+                <td>
+                    <select class="milkrun-center-select" data-milkrun-order-id="${escapeHtml(row.orderId)}">
+                        ${buildMilkrunCenterOptions(row.assignedCenter)}
+                    </select>
+                </td>
+                <td>${formatMilkrunNumber(row.skuCount)}</td>
+                <td>${formatMilkrunNumber(row.qty)}</td>
+                <td>${formatMilkrunNumber(row.boxCount, 2)}</td>
+                <td>${formatMilkrunNumber(row.ptCount, 2)}</td>
+                <td>${formatMilkrunNumber(row.weight, 1)}</td>
+                <td><span class="milkrun-status ${statusClass}">${statusText}</span></td>
+            </tr>
+        `;
+    }).join("");
+}
+
+function renderMilkrunDashboard() {
+    renderMilkrunSummary();
+    renderMilkrunOrders();
+}
+
+function loadMilkrunSampleRows() {
+    milkrunRows = MILKRUN_SAMPLE_ROWS.map((row) => ({ ...row }));
+    renderMilkrunDashboard();
+}
+
+function handleMilkrunCenterChange(event) {
+    const target = event.target;
+    if (!(target instanceof HTMLSelectElement)) return;
+    const orderId = target.getAttribute("data-milkrun-order-id");
+    if (!orderId) return;
+
+    milkrunRows = milkrunRows.map((row) => (
+        row.orderId === orderId
+            ? { ...row, assignedCenter: target.value }
+            : row
+    ));
+    renderMilkrunDashboard();
+}
+
 
 function showView(viewName) {
-    const isPaidOnlyView = viewName === "tracking" || viewName === "kurly-label";
-    if (isPaidOnlyView && !hasPaidFeatureAccess()) {
-        showPaidAccessRequiredMessage(viewName === "tracking" ? "송장번호 Tracking" : "컬리 라벨 생성");
+    const paidOnlyViewNames = {
+        tracking: "송장번호 Tracking",
+        "kurly-label": "컬리 라벨 생성",
+        "coupang-milkrun": "쿠팡 밀크런 도우미",
+    };
+    if (paidOnlyViewNames[viewName] && !hasPaidFeatureAccess()) {
+        showPaidAccessRequiredMessage(paidOnlyViewNames[viewName]);
         viewName = "home";
     }
 
@@ -2080,6 +2402,9 @@ function bindEvents() {
     skuLabelPrintRunBtn?.addEventListener("click", handleRunSkuLabelPrint);
     skuLabelPrintCancelBtn?.addEventListener("click", closeSkuLabelPrintModal);
     kurlyLabelGenerateBtn?.addEventListener("click", handleGenerateKurlyLabels);
+    milkrunLoadSampleBtn?.addEventListener("click", loadMilkrunSampleRows);
+    milkrunSortCenterBtn?.addEventListener("click", renderMilkrunDashboard);
+    milkrunOrderBody?.addEventListener("change", handleMilkrunCenterChange);
     skuHeaderModal?.addEventListener("click", (event) => {
         if (event.target === skuHeaderModal) {
             closeSkuHeaderModal();
@@ -2133,6 +2458,10 @@ function initializeKurlyLabelUi() {
     resetKurlyProgress();
 }
 
+function initializeMilkrunUi() {
+    loadMilkrunSampleRows();
+}
+
 async function loadSkuWorkspace(userId) {
     skuWorkspaceUserId = userId ?? null;
     if (!skuWorkspaceUserId) return;
@@ -2177,6 +2506,7 @@ function initializeDashboard() {
     initializeTrackingUi();
     initializeSkuUi();
     initializeKurlyLabelUi();
+    initializeMilkrunUi();
     bindEvents();
 }
 

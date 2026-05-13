@@ -455,6 +455,7 @@ const SKU_IMAGE_MAX_BYTES = 2 * 1024 * 1024;
 let draggingSkuHeaderKey = "";
 let currentUserPlan = "free";
 let currentUserEmail = "";
+let navigationEventsBound = false;
 
 function clampProgress(value) {
     return Math.max(0, Math.min(100, Number(value) || 0));
@@ -2594,7 +2595,34 @@ async function loadApprovedUser(user) {
     if (settingsUserRoleEl) settingsUserRoleEl.textContent = roleLabel;
 }
 
+function bindNavigationEvents() {
+    if (navigationEventsBound) return;
+    navigationEventsBound = true;
+
+    toolGroupToggleEl?.addEventListener("click", () => {
+        const isOpen = toolGroupEl?.classList.contains("is-open");
+        setToolGroupOpenState(!isOpen);
+    });
+
+    navButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+            const viewName = button.dataset.view;
+            if (!viewName) return;
+            showView(viewName);
+        });
+    });
+
+    headerQuickViewButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+            const viewName = button.dataset.quickView;
+            if (!viewName) return;
+            showView(viewName);
+        });
+    });
+}
+
 function bindEvents() {
+    bindNavigationEvents();
     trackingNumberInput?.addEventListener("input", updateManualCountInfo);
 
     manualClearBtn?.addEventListener("click", () => {
@@ -2621,27 +2649,6 @@ function bindEvents() {
             console.error(error);
             window.alert("결제 요청 중 오류가 발생했습니다.");
         }
-    });
-
-    toolGroupToggleEl?.addEventListener("click", () => {
-        const isOpen = toolGroupEl?.classList.contains("is-open");
-        setToolGroupOpenState(!isOpen);
-    });
-
-    navButtons.forEach((button) => {
-        button.addEventListener("click", () => {
-            const viewName = button.dataset.view;
-            if (!viewName) return;
-            showView(viewName);
-        });
-    });
-
-    headerQuickViewButtons.forEach((button) => {
-        button.addEventListener("click", () => {
-            const viewName = button.dataset.quickView;
-            if (!viewName) return;
-            showView(viewName);
-        });
     });
 
     trackingModeButtons.forEach((button) => {
@@ -2825,6 +2832,15 @@ function initializeDashboard() {
     initializeMilkrunUi();
 }
 
+function safelyInitializeDashboard() {
+    bindNavigationEvents();
+    try {
+        initializeDashboard();
+    } catch (error) {
+        console.error("대시보드 초기화 중 오류가 발생했습니다.", error);
+    }
+}
+
 onAuthStateChanged(auth, async (user) => {
     if (!user) {
         skuWorkspaceUserId = null;
@@ -2848,4 +2864,4 @@ onAuthStateChanged(auth, async (user) => {
     }
 });
 
-initializeDashboard();
+safelyInitializeDashboard();

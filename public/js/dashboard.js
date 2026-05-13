@@ -1626,13 +1626,27 @@ function getUniqueMilkrunCenters(centers) {
     return [...new Set((centers ?? []).map(normalizeMilkrunCenterName).filter(Boolean))];
 }
 
+function getMilkrunStorage() {
+    try {
+        return typeof window !== "undefined" ? window.localStorage : null;
+    } catch (error) {
+        console.warn("브라우저 저장소를 사용할 수 없습니다.", error);
+        return null;
+    }
+}
+
 function saveMilkrunCenterOptions() {
-    localStorage.setItem(COUPANG_CENTER_STORAGE_KEY, JSON.stringify(coupangCenterOptions));
+    try {
+        getMilkrunStorage()?.setItem(COUPANG_CENTER_STORAGE_KEY, JSON.stringify(coupangCenterOptions));
+    } catch (error) {
+        console.warn("쿠팡 센터 목록을 저장하지 못했습니다.", error);
+    }
 }
 
 function loadMilkrunCenterOptions() {
     try {
-        const savedCenters = JSON.parse(localStorage.getItem(COUPANG_CENTER_STORAGE_KEY) || "[]");
+        const storage = getMilkrunStorage();
+        const savedCenters = storage ? JSON.parse(storage.getItem(COUPANG_CENTER_STORAGE_KEY) || "[]") : [];
         const loadedCenters = getUniqueMilkrunCenters(savedCenters);
         coupangCenterOptions = loadedCenters.length
             ? loadedCenters
@@ -2745,9 +2759,21 @@ function initializeKurlyLabelUi() {
 }
 
 function initializeMilkrunUi() {
-    loadMilkrunCenterOptions();
-    refreshMilkrunCenterUi();
-    loadMilkrunSampleRows();
+    try {
+        loadMilkrunCenterOptions();
+        refreshMilkrunCenterUi();
+        loadMilkrunSampleRows();
+    } catch (error) {
+        console.error("쿠팡 밀크런 도우미 초기화 중 오류가 발생했습니다.", error);
+        coupangCenterOptions = [...DEFAULT_COUPANG_CENTER_OPTIONS];
+        milkrunRows = [];
+        try {
+            refreshMilkrunCenterUi();
+            renderMilkrunDashboard();
+        } catch (fallbackError) {
+            console.error("쿠팡 밀크런 도우미 기본 화면 복구에 실패했습니다.", fallbackError);
+        }
+    }
 }
 
 async function loadSkuWorkspace(userId) {
@@ -2796,6 +2822,7 @@ function initializeDashboard() {
     initializeKurlyLabelUi();
     initializeMilkrunUi();
     bindEvents();
+    initializeMilkrunUi();
 }
 
 onAuthStateChanged(auth, async (user) => {

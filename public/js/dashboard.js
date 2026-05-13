@@ -2833,6 +2833,7 @@ function initializeDashboard() {
 }
 
 function safelyInitializeDashboard() {
+    window.__flowbutlerDashboardModuleReady = true;
     bindNavigationEvents();
     try {
         initializeDashboard();

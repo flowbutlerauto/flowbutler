@@ -809,12 +809,83 @@
         </div>
     </main>
 
+
+    <script>
+        window.__flowbutlerDashboardModuleReady = false;
+        (function () {
+            const toolViews = new Set(["tracking", "label", "sku", "kurly-label", "coupang-milkrun"]);
+            const fallbackMeta = {
+                home: ["홈", "지금 필요한 물류 자동화 작업을 빠르게 시작하세요."],
+                tracking: ["송장번호 Tracking", ""],
+                label: ["라벨 양식 설정", ""],
+                sku: ["SKU 관리", ""],
+                "kurly-label": ["컬리 라벨 생성", ""],
+                "coupang-milkrun": ["쿠팡 밀크런 도우미", "발주번호 단위 센터 변경과 센터별 PLT 요약을 확인합니다."],
+                settings: ["설정", "계정, 플랜, 권한과 같은 기본 정보를 확인할 수 있습니다."],
+            };
+
+            function setToolGroupOpen(isOpen) {
+                const group = document.querySelector('[data-nav-group="tools"]');
+                const toggle = document.querySelector('.sidebar-nav-group-toggle');
+                const menu = document.getElementById('sidebar-tools-menu');
+                if (!group || !toggle || !menu) return;
+                group.classList.toggle('is-open', isOpen);
+                toggle.setAttribute('aria-expanded', String(isOpen));
+                menu.hidden = !isOpen;
+            }
+
+            function showFallbackView(viewName) {
+                if (window.__flowbutlerDashboardModuleReady || !viewName) return;
+
+                document.querySelectorAll('.sidebar-nav-item').forEach((button) => {
+                    const isHome = viewName === 'home' && button.dataset.view === 'home';
+                    const isSettings = viewName === 'settings' && button.dataset.view === 'settings';
+                    button.classList.toggle('is-active', isHome || isSettings);
+                });
+                document.querySelectorAll('.sidebar-subnav-item').forEach((button) => {
+                    button.classList.toggle('is-active', button.dataset.view === viewName);
+                });
+                document.querySelectorAll('.workspace-view').forEach((view) => {
+                    view.classList.toggle('is-visible', view.id === `view-${viewName}`);
+                });
+
+                if (toolViews.has(viewName)) setToolGroupOpen(true);
+
+                const meta = fallbackMeta[viewName];
+                const title = document.getElementById('view-title');
+                const subtitle = document.getElementById('view-subtitle');
+                const actions = document.getElementById('header-actions');
+                if (meta && title) title.textContent = meta[0];
+                if (meta && subtitle) subtitle.textContent = meta[1];
+                if (actions) actions.hidden = viewName !== 'home';
+            }
+
+            document.addEventListener('click', function (event) {
+                if (window.__flowbutlerDashboardModuleReady) return;
+
+                const groupToggle = event.target.closest('.sidebar-nav-group-toggle');
+                if (groupToggle) {
+                    const group = document.querySelector('[data-nav-group="tools"]');
+                    setToolGroupOpen(!group?.classList.contains('is-open'));
+                    return;
+                }
+
+                const navButton = event.target.closest('[data-view], [data-quick-view]');
+                if (!navButton) return;
+                const viewName = navButton.dataset.view || navButton.dataset.quickView;
+                if (!viewName) return;
+                event.preventDefault();
+                showFallbackView(viewName);
+            });
+        }());
+    </script>
+
     <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
     <script src="https://js.tosspayments.com/v1/payment"></script>
-    <script type="module" src="./js/dashboard.js?v=20260421-7"></script>
+    <script type="module" src="./js/dashboard.js?v=20260513-1"></script>
 </body>
 
 </html>

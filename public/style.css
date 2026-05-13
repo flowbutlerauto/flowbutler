@@ -2170,6 +2170,14 @@ a {
   align-items: flex-start;
 }
 
+.milkrun-center-manager-head-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+  align-items: center;
+}
+
 .milkrun-center-count-label {
   flex: 0 0 auto;
   border-radius: 999px;
@@ -2178,6 +2186,10 @@ a {
   color: var(--nav-active-text);
   font-size: 12px;
   font-weight: 800;
+}
+
+.milkrun-center-manager-panel {
+  margin-top: 16px;
 }
 
 .milkrun-center-manager-actions {

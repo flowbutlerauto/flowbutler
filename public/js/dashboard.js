@@ -122,6 +122,8 @@ const milkrunCenterSummaryBody = document.getElementById("milkrun-center-summary
 const milkrunOrderBody = document.getElementById("milkrun-order-body");
 const milkrunCenterOptionsEl = document.getElementById("milkrun-center-options");
 const milkrunCenterCountLabelEl = document.getElementById("milkrun-center-count-label");
+const milkrunCenterToggleBtn = document.getElementById("milkrun-center-toggle-btn");
+const milkrunCenterManagerPanel = document.getElementById("milkrun-center-manager-panel");
 const milkrunCenterAddInput = document.getElementById("milkrun-center-add-input");
 const milkrunCenterAddBtn = document.getElementById("milkrun-center-add-btn");
 const milkrunCenterResetBtn = document.getElementById("milkrun-center-reset-btn");
@@ -1663,6 +1665,14 @@ function renderMilkrunCenterOptions() {
     milkrunCenterOptionsEl.innerHTML = buildMilkrunCenterOptions();
 }
 
+function setMilkrunCenterManagerOpen(isOpen) {
+    if (milkrunCenterManagerPanel) milkrunCenterManagerPanel.hidden = !isOpen;
+    if (milkrunCenterToggleBtn) {
+        milkrunCenterToggleBtn.setAttribute("aria-expanded", String(isOpen));
+        milkrunCenterToggleBtn.textContent = isOpen ? "센터 목록 닫기" : "센터 목록 관리";
+    }
+}
+
 function renderMilkrunCenterManager() {
     if (milkrunCenterCountLabelEl) {
         milkrunCenterCountLabelEl.textContent = `${coupangCenterOptions.length}개 센터`;
@@ -2703,6 +2713,9 @@ function bindEvents() {
     kurlyLabelGenerateBtn?.addEventListener("click", handleGenerateKurlyLabels);
     milkrunLoadSampleBtn?.addEventListener("click", loadMilkrunSampleRows);
     milkrunSortCenterBtn?.addEventListener("click", renderMilkrunDashboard);
+    milkrunCenterToggleBtn?.addEventListener("click", () => {
+        setMilkrunCenterManagerOpen(milkrunCenterManagerPanel?.hidden !== false);
+    });
     milkrunCenterAddBtn?.addEventListener("click", handleAddMilkrunCenter);
     milkrunCenterResetBtn?.addEventListener("click", handleResetMilkrunCenters);
     milkrunCenterAddInput?.addEventListener("keydown", (event) => {
@@ -2768,6 +2781,7 @@ function initializeKurlyLabelUi() {
 function initializeMilkrunUi() {
     try {
         loadMilkrunCenterOptions();
+        setMilkrunCenterManagerOpen(false);
         refreshMilkrunCenterUi();
         loadMilkrunSampleRows();
     } catch (error) {

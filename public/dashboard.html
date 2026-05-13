@@ -49,6 +49,10 @@
                                     <span class="sidebar-nav-title">컬리 라벨 생성 <span class="paid-lock-icon" aria-hidden="true">🔒</span></span>
                                     <span class="sidebar-nav-desc">엑셀 업로드 기반 라벨 출력</span>
                                 </button>
+                                <button class="sidebar-subnav-item" data-view="coupang-milkrun" data-paid-feature="true" type="button">
+                                    <span class="sidebar-nav-title">쿠팡 밀크런 도우미 <span class="paid-lock-icon" aria-hidden="true">🔒</span></span>
+                                    <span class="sidebar-nav-desc">PO/SKU 기반 적재리스트 자동화</span>
+                                </button>
                             </div>
                         </div>
 
@@ -636,6 +640,135 @@
                                     </div>
                                     <div class="tracking-progress-wrap">
                                         <div id="kurly-progress-bar" class="tracking-progress-bar"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+
+                    <div id="view-coupang-milkrun" class="workspace-view">
+                        <section class="workspace-card">
+                            <div class="section-head">
+                                <div>
+                                    <h2 class="section-title">쿠팡 밀크런 도우미</h2>
+                                    <p class="workspace-text">
+                                        발주번호 단위로 센터를 변경하면서 같은 센터끼리 자동 정렬하고,
+                                        센터별 박스·PT·SKU·중량 요약을 확인하는 테트리스 작업판입니다.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="summary-grid milkrun-summary-grid">
+                                <div class="summary-card">
+                                    <div class="summary-label">센터 수</div>
+                                    <div id="milkrun-center-count" class="summary-value">0</div>
+                                    <div class="summary-desc">센터 변경 후 물량이 남아있는 센터</div>
+                                </div>
+                                <div class="summary-card">
+                                    <div class="summary-label">총 PLT</div>
+                                    <div id="milkrun-total-plt" class="summary-value">0</div>
+                                    <div class="summary-desc">센터별 PT를 올림 처리한 예상 팔레트</div>
+                                </div>
+                                <div class="summary-card">
+                                    <div class="summary-label">총 SKU 수</div>
+                                    <div id="milkrun-total-sku" class="summary-value">0</div>
+                                    <div class="summary-desc">발주번호별 SKU 수 합계</div>
+                                </div>
+                                <div class="summary-card">
+                                    <div class="summary-label">총 중량</div>
+                                    <div id="milkrun-total-weight" class="summary-value">0</div>
+                                    <div class="summary-desc">센터별 중량 합계</div>
+                                </div>
+                            </div>
+
+                            <div class="workspace-subcard milkrun-toolbar-card">
+                                <div class="tracking-toolbar">
+                                    <div class="tracking-toolbar-left">
+                                        <div>
+                                            <h3 class="subcard-title">센터 변경 작업판</h3>
+                                            <p class="subcard-text">
+                                                각 발주번호의 센터를 쿠팡 센터 목록에서 선택하면 즉시 같은 센터끼리 모이고 요약이 갱신됩니다.
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div class="tracking-toolbar-right">
+                                        <div class="tracking-action-buttons">
+                                            <button id="milkrun-load-sample-btn" class="secondary-btn" type="button">샘플 데이터 불러오기</button>
+                                            <button id="milkrun-sort-center-btn" class="primary-btn" type="button">센터순 정렬</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+
+                            <div class="workspace-subcard milkrun-center-manager-card">
+                                <div class="milkrun-center-manager-head">
+                                    <div>
+                                        <h3 class="subcard-title">쿠팡 센터 목록 관리</h3>
+                                        <p class="subcard-text">
+                                            변경센터 검색 목록에 사용할 센터명을 추가·수정·삭제할 수 있습니다.
+                                        </p>
+                                    </div>
+                                    <div id="milkrun-center-count-label" class="milkrun-center-count-label">0개 센터</div>
+                                </div>
+                                <div class="milkrun-center-manager-actions">
+                                    <input id="milkrun-center-add-input" class="milkrun-center-add-input" type="text"
+                                        placeholder="추가할 센터명 입력" />
+                                    <button id="milkrun-center-add-btn" class="secondary-btn" type="button">센터 추가</button>
+                                    <button id="milkrun-center-reset-btn" class="ghost-btn" type="button">기본 목록 복원</button>
+                                </div>
+                                <div id="milkrun-center-list" class="milkrun-center-list" aria-label="쿠팡 센터 목록"></div>
+                            </div>
+
+                            <div class="milkrun-grid">
+                                <div class="workspace-subcard milkrun-summary-panel">
+                                    <h3 class="subcard-title">센터별 요약</h3>
+                                    <div class="tracking-table-scroll milkrun-summary-scroll">
+                                        <table class="tracking-table milkrun-summary-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>물류센터</th>
+                                                    <th>박스 수</th>
+                                                    <th>PT 수</th>
+                                                    <th>SKU 수</th>
+                                                    <th>중량</th>
+                                                    <th>납품지</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="milkrun-center-summary-body">
+                                                <tr class="tracking-empty-row">
+                                                    <td colspan="6">샘플 데이터를 불러오면 센터별 요약이 표시됩니다.</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                <div class="workspace-subcard milkrun-order-panel">
+                                    <h3 class="subcard-title">발주번호별 센터 변경</h3>
+                                    <datalist id="milkrun-center-options"></datalist>
+                                    <div class="tracking-table-scroll milkrun-order-scroll">
+                                        <table class="tracking-table milkrun-order-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>발주번호</th>
+                                                    <th>입고예정일</th>
+                                                    <th>기존센터</th>
+                                                    <th>변경센터</th>
+                                                    <th>SKU</th>
+                                                    <th>수량</th>
+                                                    <th>박스</th>
+                                                    <th>PT</th>
+                                                    <th>중량</th>
+                                                    <th>상태</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="milkrun-order-body">
+                                                <tr class="tracking-empty-row">
+                                                    <td colspan="10">샘플 데이터를 불러오면 발주번호 단위 작업판이 표시됩니다.</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
                                     </div>
                                 </div>
                             </div>

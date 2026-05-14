@@ -2849,6 +2849,7 @@ function initializeDashboard() {
     initializeTrackingUi();
     initializeSkuUi();
     initializeKurlyLabelUi();
+    initializeMilkrunUi();
     bindEvents();
     initializeMilkrunUi();
 }

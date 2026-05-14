@@ -123,7 +123,8 @@ const milkrunOrderBody = document.getElementById("milkrun-order-body");
 const milkrunCenterOptionsEl = document.getElementById("milkrun-center-options");
 const milkrunCenterCountLabelEl = document.getElementById("milkrun-center-count-label");
 const milkrunCenterToggleBtn = document.getElementById("milkrun-center-toggle-btn");
-const milkrunCenterManagerPanel = document.getElementById("milkrun-center-manager-panel");
+const milkrunCenterModal = document.getElementById("milkrun-center-modal");
+const milkrunCenterCloseBtn = document.getElementById("milkrun-center-close-btn");
 const milkrunCenterAddInput = document.getElementById("milkrun-center-add-input");
 const milkrunCenterAddBtn = document.getElementById("milkrun-center-add-btn");
 const milkrunCenterResetBtn = document.getElementById("milkrun-center-reset-btn");
@@ -1665,12 +1666,17 @@ function renderMilkrunCenterOptions() {
     milkrunCenterOptionsEl.innerHTML = buildMilkrunCenterOptions();
 }
 
-function setMilkrunCenterManagerOpen(isOpen) {
-    if (milkrunCenterManagerPanel) milkrunCenterManagerPanel.hidden = !isOpen;
-    if (milkrunCenterToggleBtn) {
-        milkrunCenterToggleBtn.setAttribute("aria-expanded", String(isOpen));
-        milkrunCenterToggleBtn.textContent = isOpen ? "센터 목록 닫기" : "센터 목록 관리";
-    }
+function openMilkrunCenterModal() {
+    if (!milkrunCenterModal) return;
+    refreshMilkrunCenterUi();
+    milkrunCenterModal.classList.remove("is-hidden");
+    milkrunCenterModal.setAttribute("aria-hidden", "false");
+}
+
+function closeMilkrunCenterModal() {
+    if (!milkrunCenterModal) return;
+    milkrunCenterModal.classList.add("is-hidden");
+    milkrunCenterModal.setAttribute("aria-hidden", "true");
 }
 
 function renderMilkrunCenterManager() {
@@ -2713,9 +2719,8 @@ function bindEvents() {
     kurlyLabelGenerateBtn?.addEventListener("click", handleGenerateKurlyLabels);
     milkrunLoadSampleBtn?.addEventListener("click", loadMilkrunSampleRows);
     milkrunSortCenterBtn?.addEventListener("click", renderMilkrunDashboard);
-    milkrunCenterToggleBtn?.addEventListener("click", () => {
-        setMilkrunCenterManagerOpen(milkrunCenterManagerPanel?.hidden !== false);
-    });
+    milkrunCenterToggleBtn?.addEventListener("click", openMilkrunCenterModal);
+    milkrunCenterCloseBtn?.addEventListener("click", closeMilkrunCenterModal);
     milkrunCenterAddBtn?.addEventListener("click", handleAddMilkrunCenter);
     milkrunCenterResetBtn?.addEventListener("click", handleResetMilkrunCenters);
     milkrunCenterAddInput?.addEventListener("keydown", (event) => {
@@ -2723,6 +2728,9 @@ function bindEvents() {
     });
     milkrunCenterListEl?.addEventListener("change", handleMilkrunCenterListInput);
     milkrunCenterListEl?.addEventListener("click", handleMilkrunCenterListClick);
+    milkrunCenterModal?.addEventListener("click", (event) => {
+        if (event.target === milkrunCenterModal) closeMilkrunCenterModal();
+    });
     milkrunOrderBody?.addEventListener("input", handleMilkrunCenterChange);
     milkrunOrderBody?.addEventListener("change", handleMilkrunCenterChange);
     skuHeaderModal?.addEventListener("click", (event) => {
@@ -2781,7 +2789,7 @@ function initializeKurlyLabelUi() {
 function initializeMilkrunUi() {
     try {
         loadMilkrunCenterOptions();
-        setMilkrunCenterManagerOpen(false);
+        closeMilkrunCenterModal();
         refreshMilkrunCenterUi();
         loadMilkrunSampleRows();
     } catch (error) {

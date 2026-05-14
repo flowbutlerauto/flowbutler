@@ -2159,8 +2159,8 @@ a {
 }
 
 
-.milkrun-center-manager-card {
-  margin-top: 18px;
+.milkrun-center-modal-card {
+  width: min(960px, 100%);
 }
 
 .milkrun-center-manager-head {
@@ -2186,10 +2186,6 @@ a {
   color: var(--nav-active-text);
   font-size: 12px;
   font-weight: 800;
-}
-
-.milkrun-center-manager-panel {
-  margin-top: 16px;
 }
 
 .milkrun-center-manager-actions {

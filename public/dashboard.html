@@ -693,36 +693,11 @@
                                     </div>
                                     <div class="tracking-toolbar-right">
                                         <div class="tracking-action-buttons">
+                                            <button id="milkrun-center-toggle-btn" class="secondary-btn" type="button">센터 목록 관리</button>
                                             <button id="milkrun-load-sample-btn" class="secondary-btn" type="button">샘플 데이터 불러오기</button>
                                             <button id="milkrun-sort-center-btn" class="primary-btn" type="button">센터순 정렬</button>
                                         </div>
                                     </div>
-                                </div>
-                            </div>
-
-
-                            <div class="workspace-subcard milkrun-center-manager-card">
-                                <div class="milkrun-center-manager-head">
-                                    <div>
-                                        <h3 class="subcard-title">쿠팡 센터 목록 관리</h3>
-                                        <p class="subcard-text">
-                                            필요할 때만 목록을 열어 변경센터 검색 후보를 추가·수정·삭제할 수 있습니다.
-                                        </p>
-                                    </div>
-                                    <div class="milkrun-center-manager-head-actions">
-                                        <div id="milkrun-center-count-label" class="milkrun-center-count-label">0개 센터</div>
-                                        <button id="milkrun-center-toggle-btn" class="secondary-btn" type="button"
-                                            aria-expanded="false" aria-controls="milkrun-center-manager-panel">센터 목록 관리</button>
-                                    </div>
-                                </div>
-                                <div id="milkrun-center-manager-panel" class="milkrun-center-manager-panel" hidden>
-                                    <div class="milkrun-center-manager-actions">
-                                        <input id="milkrun-center-add-input" class="milkrun-center-add-input" type="text"
-                                            placeholder="추가할 센터명 입력" />
-                                        <button id="milkrun-center-add-btn" class="secondary-btn" type="button">센터 추가</button>
-                                        <button id="milkrun-center-reset-btn" class="ghost-btn" type="button">기본 목록 복원</button>
-                                    </div>
-                                    <div id="milkrun-center-list" class="milkrun-center-list" aria-label="쿠팡 센터 목록"></div>
                                 </div>
                             </div>
 
@@ -779,6 +754,31 @@
                                 </div>
                             </div>
                         </section>
+                    </div>
+
+
+                    <div id="milkrun-center-modal" class="sku-header-modal is-hidden" aria-hidden="true">
+                        <div class="sku-header-modal-card milkrun-center-modal-card">
+                            <div class="milkrun-center-manager-head">
+                                <div>
+                                    <h3 class="subcard-title">쿠팡 센터 목록 관리</h3>
+                                    <p class="subcard-text">
+                                        변경센터 검색 목록에 사용할 센터명을 추가·수정·삭제할 수 있습니다.
+                                    </p>
+                                </div>
+                                <div id="milkrun-center-count-label" class="milkrun-center-count-label">0개 센터</div>
+                            </div>
+                            <div class="milkrun-center-manager-actions">
+                                <input id="milkrun-center-add-input" class="milkrun-center-add-input" type="text"
+                                    placeholder="추가할 센터명 입력" />
+                                <button id="milkrun-center-add-btn" class="secondary-btn" type="button">센터 추가</button>
+                                <button id="milkrun-center-reset-btn" class="ghost-btn" type="button">기본 목록 복원</button>
+                            </div>
+                            <div id="milkrun-center-list" class="milkrun-center-list" aria-label="쿠팡 센터 목록"></div>
+                            <div class="label-tool-actions">
+                                <button id="milkrun-center-close-btn" class="primary-btn" type="button">닫기</button>
+                            </div>
+                        </div>
                     </div>
 
                     <div id="view-settings" class="workspace-view">

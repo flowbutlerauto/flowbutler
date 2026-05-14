@@ -866,7 +866,35 @@
                 if (actions) actions.hidden = viewName !== 'home';
             }
 
+            function openMilkrunCenterModalFallback() {
+                const modal = document.getElementById('milkrun-center-modal');
+                if (!modal) return;
+                modal.classList.remove('is-hidden');
+                modal.setAttribute('aria-hidden', 'false');
+            }
+
+            function closeMilkrunCenterModalFallback() {
+                const modal = document.getElementById('milkrun-center-modal');
+                if (!modal) return;
+                modal.classList.add('is-hidden');
+                modal.setAttribute('aria-hidden', 'true');
+            }
+
             document.addEventListener('click', function (event) {
+                const centerToggle = event.target.closest('#milkrun-center-toggle-btn');
+                if (centerToggle) {
+                    event.preventDefault();
+                    openMilkrunCenterModalFallback();
+                    return;
+                }
+
+                const centerClose = event.target.closest('#milkrun-center-close-btn');
+                if (centerClose || event.target.id === 'milkrun-center-modal') {
+                    event.preventDefault();
+                    closeMilkrunCenterModalFallback();
+                    return;
+                }
+
                 if (window.__flowbutlerDashboardModuleReady) return;
 
                 const groupToggle = event.target.closest('.sidebar-nav-group-toggle');
@@ -891,7 +919,7 @@
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
     <script src="https://js.tosspayments.com/v1/payment"></script>
-    <script type="module" src="./js/dashboard.js?v=20260513-1"></script>
+    <script type="module" src="./js/dashboard.js?v=20260514-1"></script>
 </body>
 
 </html>

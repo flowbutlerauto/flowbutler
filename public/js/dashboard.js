@@ -1779,8 +1779,10 @@ function addMilkrunCenters(centerNames) {
         return false;
     }
 
-    setMilkrunCenterOptions([...coupangCenterOptions, ...addedCenters]);
-    setMilkrunCenterStatus(`${addedCenters.length}개 센터를 추가했습니다.${duplicateCenters.length ? ` (${duplicateCenters.length}개 중복 제외)` : ""}`, "success");
+    milkrunCenterSearchTerm = "";
+    setMilkrunCenterOptions([...addedCenters, ...coupangCenterOptions]);
+    if (milkrunCenterListEl) milkrunCenterListEl.scrollTop = 0;
+    setMilkrunCenterStatus(`${addedCenters.length}개 센터를 추가했습니다. 새 센터는 목록 맨 위에 표시됩니다.${duplicateCenters.length ? ` (${duplicateCenters.length}개 중복 제외)` : ""}`, "success");
     return true;
 }
 
@@ -2821,7 +2823,16 @@ function bindEvents() {
     milkrunCenterSearchInput?.addEventListener("input", handleMilkrunCenterSearch);
     milkrunCenterBulkAddBtn?.addEventListener("click", handleBulkAddMilkrunCenters);
     milkrunCenterAddInput?.addEventListener("keydown", (event) => {
-        if (event.key === "Enter") handleAddMilkrunCenter();
+        if (event.key === "Enter") {
+            event.preventDefault();
+            handleAddMilkrunCenter();
+        }
+    });
+    milkrunCenterBulkInput?.addEventListener("keydown", (event) => {
+        if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+            event.preventDefault();
+            handleBulkAddMilkrunCenters();
+        }
     });
     milkrunCenterBulkInput?.addEventListener("keydown", (event) => {
         if ((event.ctrlKey || event.metaKey) && event.key === "Enter") handleBulkAddMilkrunCenters();

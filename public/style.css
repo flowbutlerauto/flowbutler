@@ -2196,7 +2196,26 @@ a {
   margin-top: 16px;
 }
 
+.milkrun-center-manager-tools {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.8fr) minmax(260px, 1.2fr) auto;
+  gap: 10px;
+  align-items: end;
+  margin-top: 12px;
+}
+
+.milkrun-center-search-wrap,
+.milkrun-center-bulk-wrap {
+  display: grid;
+  gap: 6px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .milkrun-center-add-input,
+.milkrun-center-search-input,
+.milkrun-center-bulk-input,
 .milkrun-center-name-input {
   height: 36px;
   border: 1px solid var(--border-default);
@@ -2212,7 +2231,19 @@ a {
   min-width: 220px;
 }
 
+.milkrun-center-search-input {
+  min-width: 180px;
+}
+
+.milkrun-center-bulk-input {
+  min-height: 72px;
+  padding: 10px;
+  resize: vertical;
+}
+
 .milkrun-center-add-input:focus,
+.milkrun-center-search-input:focus,
+.milkrun-center-bulk-input:focus,
 .milkrun-center-name-input:focus {
   border-color: var(--primary);
   box-shadow: 0 0 0 3px rgba(79, 110, 247, 0.12);
@@ -2221,6 +2252,34 @@ a {
 .milkrun-center-name-input.is-invalid {
   border-color: var(--error);
   box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.10);
+}
+
+.milkrun-center-status {
+  display: none;
+  margin-top: 12px;
+  border-radius: 10px;
+  padding: 9px 12px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.milkrun-center-status.is-visible {
+  display: block;
+}
+
+.milkrun-center-status.is-success {
+  background: var(--success-bg);
+  color: var(--success);
+}
+
+.milkrun-center-status.is-warning {
+  background: var(--warning-bg);
+  color: var(--warning);
+}
+
+.milkrun-center-status.is-info {
+  background: var(--nav-active-bg);
+  color: var(--nav-active-text);
 }
 
 .milkrun-center-list {
@@ -2242,9 +2301,30 @@ a {
   align-items: center;
 }
 
+.milkrun-center-empty {
+  grid-column: 1 / -1;
+  border: 1px dashed var(--border-default);
+  border-radius: 12px;
+  padding: 18px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+}
+
 .milkrun-center-name-input {
   width: 100%;
   min-width: 0;
+}
+
+.milkrun-center-usage-badge {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  padding: 5px 8px;
+  background: #eef2ff;
+  color: #4338ca;
+  font-size: 11px;
+  font-weight: 800;
 }
 
 .milkrun-center-remove-btn {
@@ -2342,7 +2422,8 @@ a {
 
 @media (max-width: 1180px) {
   .milkrun-summary-grid,
-  .milkrun-grid {
+  .milkrun-grid,
+  .milkrun-center-manager-tools {
     grid-template-columns: 1fr;
   }
 }

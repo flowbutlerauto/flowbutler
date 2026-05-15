@@ -2834,6 +2834,9 @@ function bindEvents() {
             handleBulkAddMilkrunCenters();
         }
     });
+    milkrunCenterBulkInput?.addEventListener("keydown", (event) => {
+        if ((event.ctrlKey || event.metaKey) && event.key === "Enter") handleBulkAddMilkrunCenters();
+    });
     milkrunCenterListEl?.addEventListener("change", handleMilkrunCenterListInput);
     milkrunCenterListEl?.addEventListener("click", handleMilkrunCenterListClick);
     milkrunCenterModal?.addEventListener("click", (event) => {

@@ -127,7 +127,12 @@ const milkrunCenterModal = document.getElementById("milkrun-center-modal");
 const milkrunCenterCloseBtn = document.getElementById("milkrun-center-close-btn");
 const milkrunCenterAddInput = document.getElementById("milkrun-center-add-input");
 const milkrunCenterAddBtn = document.getElementById("milkrun-center-add-btn");
+const milkrunCenterSortBtn = document.getElementById("milkrun-center-sort-btn");
 const milkrunCenterResetBtn = document.getElementById("milkrun-center-reset-btn");
+const milkrunCenterSearchInput = document.getElementById("milkrun-center-search-input");
+const milkrunCenterBulkInput = document.getElementById("milkrun-center-bulk-input");
+const milkrunCenterBulkAddBtn = document.getElementById("milkrun-center-bulk-add-btn");
+const milkrunCenterStatusEl = document.getElementById("milkrun-center-status");
 const milkrunCenterListEl = document.getElementById("milkrun-center-list");
 const milkrunLoadSampleBtn = document.getElementById("milkrun-load-sample-btn");
 const milkrunSortCenterBtn = document.getElementById("milkrun-sort-center-btn");
@@ -176,6 +181,7 @@ let printingSkuRowId = null;
 let kurlyRows = [];
 let kurlyParsedFileName = "";
 let milkrunRows = [];
+let milkrunCenterSearchTerm = "";
 const DEFAULT_COUPANG_CENTER_OPTIONS = [
     "안성4",
     "안성5",
@@ -1630,6 +1636,30 @@ function getUniqueMilkrunCenters(centers) {
     return [...new Set((centers ?? []).map(normalizeMilkrunCenterName).filter(Boolean))];
 }
 
+function sortMilkrunCenters(centers) {
+    return [...centers].sort((a, b) => a.localeCompare(b, "ko-KR", { numeric: true }));
+}
+
+function splitMilkrunCenterNames(value) {
+    return getUniqueMilkrunCenters(String(value ?? "").split(/[\n,]+/));
+}
+
+function getMilkrunCenterUsageMap() {
+    const usageMap = new Map();
+    milkrunRows.forEach((row) => {
+        const center = row.assignedCenter || row.originalCenter;
+        if (!center) return;
+        usageMap.set(center, (usageMap.get(center) || 0) + 1);
+    });
+    return usageMap;
+}
+
+function setMilkrunCenterStatus(message = "", type = "info") {
+    if (!milkrunCenterStatusEl) return;
+    milkrunCenterStatusEl.textContent = message;
+    milkrunCenterStatusEl.className = `milkrun-center-status ${message ? "is-visible" : ""} ${type ? `is-${type}` : ""}`.trim();
+}
+
 function getMilkrunStorage() {
     try {
         return typeof window !== "undefined" ? window.localStorage : null;
@@ -1650,7 +1680,8 @@ function saveMilkrunCenterOptions() {
 function loadMilkrunCenterOptions() {
     try {
         const storage = getMilkrunStorage();
-        const savedCenters = storage ? JSON.parse(storage.getItem(COUPANG_CENTER_STORAGE_KEY) || "[]") : [];
+        const parsedCenters = storage ? JSON.parse(storage.getItem(COUPANG_CENTER_STORAGE_KEY) || "[]") : [];
+        const savedCenters = Array.isArray(parsedCenters) ? parsedCenters : [];
         const loadedCenters = getUniqueMilkrunCenters(savedCenters);
         coupangCenterOptions = loadedCenters.length
             ? loadedCenters
@@ -1680,12 +1711,29 @@ function closeMilkrunCenterModal() {
 }
 
 function renderMilkrunCenterManager() {
+    const usageMap = getMilkrunCenterUsageMap();
+    const searchTerm = normalizeMilkrunCenterName(milkrunCenterSearchTerm).toLocaleLowerCase("ko-KR");
+    const filteredCenters = coupangCenterOptions
+        .map((center, index) => ({ center, index, usageCount: usageMap.get(center) || 0 }))
+        .filter(({ center }) => !searchTerm || center.toLocaleLowerCase("ko-KR").includes(searchTerm));
+
     if (milkrunCenterCountLabelEl) {
-        milkrunCenterCountLabelEl.textContent = `${coupangCenterOptions.length}개 센터`;
+        const filteredLabel = searchTerm ? ` · ${filteredCenters.length}개 표시` : "";
+        milkrunCenterCountLabelEl.textContent = `${coupangCenterOptions.length}개 센터${filteredLabel}`;
+    }
+    if (milkrunCenterSearchInput && milkrunCenterSearchInput.value !== milkrunCenterSearchTerm) {
+        milkrunCenterSearchInput.value = milkrunCenterSearchTerm;
     }
     if (!milkrunCenterListEl) return;
 
-    milkrunCenterListEl.innerHTML = coupangCenterOptions.map((center, index) => `
+    if (!filteredCenters.length) {
+        milkrunCenterListEl.innerHTML = `
+            <div class="milkrun-center-empty">검색 조건에 맞는 센터가 없습니다.</div>
+        `;
+        return;
+    }
+
+    milkrunCenterListEl.innerHTML = filteredCenters.map(({ center, index, usageCount }) => `
         <div class="milkrun-center-item">
             <input
                 class="milkrun-center-name-input"
@@ -1694,6 +1742,7 @@ function renderMilkrunCenterManager() {
                 value="${escapeHtml(center)}"
                 aria-label="센터명 수정"
             />
+            <span class="milkrun-center-usage-badge" title="현재 작업판에서 배정된 발주 수">${usageCount}건</span>
             <button class="milkrun-center-remove-btn" data-milkrun-center-remove="${index}" type="button">삭제</button>
         </div>
     `).join("");
@@ -1711,22 +1760,64 @@ function setMilkrunCenterOptions(nextCenters) {
     renderMilkrunOrders();
 }
 
-function handleAddMilkrunCenter() {
-    const centerName = normalizeMilkrunCenterName(milkrunCenterAddInput?.value);
-    if (!centerName) return;
-    if (coupangCenterOptions.includes(centerName)) {
-        window.alert("이미 등록된 센터명입니다.");
-        return;
+function addMilkrunCenters(centerNames) {
+    const existingCenters = new Set(coupangCenterOptions);
+    const duplicateCenters = [];
+    const addedCenters = [];
+
+    centerNames.forEach((centerName) => {
+        if (existingCenters.has(centerName)) {
+            duplicateCenters.push(centerName);
+            return;
+        }
+        existingCenters.add(centerName);
+        addedCenters.push(centerName);
+    });
+
+    if (!addedCenters.length) {
+        setMilkrunCenterStatus(duplicateCenters.length ? "이미 등록된 센터만 입력되었습니다." : "추가할 센터명을 입력해주세요.", "warning");
+        return false;
     }
-    setMilkrunCenterOptions([...coupangCenterOptions, centerName]);
-    if (milkrunCenterAddInput) milkrunCenterAddInput.value = "";
+
+    setMilkrunCenterOptions([...coupangCenterOptions, ...addedCenters]);
+    setMilkrunCenterStatus(`${addedCenters.length}개 센터를 추가했습니다.${duplicateCenters.length ? ` (${duplicateCenters.length}개 중복 제외)` : ""}`, "success");
+    return true;
+}
+
+function handleAddMilkrunCenter() {
+    const centerNames = splitMilkrunCenterNames(milkrunCenterAddInput?.value);
+    if (addMilkrunCenters(centerNames) && milkrunCenterAddInput) {
+        milkrunCenterAddInput.value = "";
+        milkrunCenterAddInput.focus();
+    }
+}
+
+function handleBulkAddMilkrunCenters() {
+    const centerNames = splitMilkrunCenterNames(milkrunCenterBulkInput?.value);
+    if (addMilkrunCenters(centerNames) && milkrunCenterBulkInput) {
+        milkrunCenterBulkInput.value = "";
+    }
+}
+
+function handleSortMilkrunCenters() {
+    setMilkrunCenterOptions(sortMilkrunCenters(coupangCenterOptions));
+    setMilkrunCenterStatus("센터 목록을 가나다순으로 정렬했습니다.", "success");
 }
 
 function handleResetMilkrunCenters() {
+    const shouldReset = window.confirm("쿠팡 센터 목록을 기본값으로 복원할까요? 직접 추가한 센터 목록은 초기화됩니다.");
+    if (!shouldReset) return;
     coupangCenterOptions = [...DEFAULT_COUPANG_CENTER_OPTIONS];
+    milkrunCenterSearchTerm = "";
     saveMilkrunCenterOptions();
     refreshMilkrunCenterUi();
     renderMilkrunOrders();
+    setMilkrunCenterStatus("기본 쿠팡 센터 목록으로 복원했습니다.", "success");
+}
+
+function handleMilkrunCenterSearch() {
+    milkrunCenterSearchTerm = normalizeMilkrunCenterName(milkrunCenterSearchInput?.value);
+    renderMilkrunCenterManager();
 }
 
 function handleMilkrunCenterListInput(event) {
@@ -1745,6 +1836,7 @@ function handleMilkrunCenterListInput(event) {
     if (coupangCenterOptions.some((center, centerIndex) => center === nextCenter && centerIndex !== index)) {
         target.classList.add("is-invalid");
         target.title = "이미 등록된 센터명입니다.";
+        setMilkrunCenterStatus("이미 등록된 센터명입니다.", "warning");
         return;
     }
 
@@ -1759,6 +1851,7 @@ function handleMilkrunCenterListInput(event) {
     target.title = "";
     setMilkrunCenterOptions(nextCenters);
     renderMilkrunDashboard();
+    setMilkrunCenterStatus(`센터명을 ${oldCenter}에서 ${nextCenter}(으)로 변경했습니다.`, "success");
 }
 
 function handleMilkrunCenterListClick(event) {
@@ -1770,12 +1863,13 @@ function handleMilkrunCenterListClick(event) {
     const index = Number(removeButton.getAttribute("data-milkrun-center-remove"));
     if (!Number.isInteger(index)) return;
     const centerName = coupangCenterOptions[index];
-    const isCenterInUse = milkrunRows.some((row) => row.assignedCenter === centerName || row.originalCenter === centerName);
+    const isCenterInUse = milkrunRows.some((row) => (row.assignedCenter || row.originalCenter) === centerName);
     if (isCenterInUse) {
-        window.alert("현재 발주 데이터에서 사용 중인 센터는 삭제할 수 없습니다.");
+        setMilkrunCenterStatus("현재 작업판에 배정된 센터는 삭제할 수 없습니다.", "warning");
         return;
     }
     setMilkrunCenterOptions(coupangCenterOptions.filter((_, centerIndex) => centerIndex !== index));
+    setMilkrunCenterStatus(`${centerName} 센터를 삭제했습니다.`, "success");
 }
 
 function getMilkrunSortedRows() {
@@ -2722,9 +2816,15 @@ function bindEvents() {
     milkrunCenterToggleBtn?.addEventListener("click", openMilkrunCenterModal);
     milkrunCenterCloseBtn?.addEventListener("click", closeMilkrunCenterModal);
     milkrunCenterAddBtn?.addEventListener("click", handleAddMilkrunCenter);
+    milkrunCenterSortBtn?.addEventListener("click", handleSortMilkrunCenters);
     milkrunCenterResetBtn?.addEventListener("click", handleResetMilkrunCenters);
+    milkrunCenterSearchInput?.addEventListener("input", handleMilkrunCenterSearch);
+    milkrunCenterBulkAddBtn?.addEventListener("click", handleBulkAddMilkrunCenters);
     milkrunCenterAddInput?.addEventListener("keydown", (event) => {
         if (event.key === "Enter") handleAddMilkrunCenter();
+    });
+    milkrunCenterBulkInput?.addEventListener("keydown", (event) => {
+        if ((event.ctrlKey || event.metaKey) && event.key === "Enter") handleBulkAddMilkrunCenters();
     });
     milkrunCenterListEl?.addEventListener("change", handleMilkrunCenterListInput);
     milkrunCenterListEl?.addEventListener("click", handleMilkrunCenterListClick);

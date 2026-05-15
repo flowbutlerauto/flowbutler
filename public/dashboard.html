@@ -772,8 +772,23 @@
                                 <input id="milkrun-center-add-input" class="milkrun-center-add-input" type="text"
                                     placeholder="추가할 센터명 입력" />
                                 <button id="milkrun-center-add-btn" class="secondary-btn" type="button">센터 추가</button>
+                                <button id="milkrun-center-sort-btn" class="secondary-btn" type="button">가나다순 정렬</button>
                                 <button id="milkrun-center-reset-btn" class="ghost-btn" type="button">기본 목록 복원</button>
                             </div>
+                            <div class="milkrun-center-manager-tools">
+                                <label class="milkrun-center-search-wrap" for="milkrun-center-search-input">
+                                    <span>센터 검색</span>
+                                    <input id="milkrun-center-search-input" class="milkrun-center-search-input" type="search"
+                                        placeholder="센터명으로 필터링" />
+                                </label>
+                                <label class="milkrun-center-bulk-wrap" for="milkrun-center-bulk-input">
+                                    <span>여러 센터 한번에 추가</span>
+                                    <textarea id="milkrun-center-bulk-input" class="milkrun-center-bulk-input" rows="3"
+                                        placeholder="줄바꿈 또는 쉼표로 구분해 입력"></textarea>
+                                </label>
+                                <button id="milkrun-center-bulk-add-btn" class="secondary-btn" type="button">일괄 추가</button>
+                            </div>
+                            <div id="milkrun-center-status" class="milkrun-center-status" role="status" aria-live="polite"></div>
                             <div id="milkrun-center-list" class="milkrun-center-list" aria-label="쿠팡 센터 목록"></div>
                             <div class="label-tool-actions">
                                 <button id="milkrun-center-close-btn" class="primary-btn" type="button">닫기</button>
@@ -919,7 +934,7 @@
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
     <script src="https://js.tosspayments.com/v1/payment"></script>
-    <script type="module" src="./js/dashboard.js?v=20260514-1"></script>
+    <script type="module" src="./js/dashboard.js?v=20260515-2"></script>
 </body>
 
 </html>

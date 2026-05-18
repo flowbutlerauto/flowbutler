@@ -818,6 +818,7 @@
     </main>
 
 
+    <script src="./js/coupang-centers-data.js?v=20260518-2"></script>
     <script>
         window.__flowbutlerDashboardModuleReady = false;
         (function () {
@@ -869,6 +870,10 @@
             }
 
             const milkrunFallbackStorageKey = 'flowbutler:coupang-center-options';
+            const milkrunFallbackDefaultVersionKey = `${milkrunFallbackStorageKey}:default-version`;
+            const milkrunFallbackDefaultVersion = window.__FLOWBUTLER_COUPANG_CENTER_DEFAULT_VERSION || '20260518-coupang-centers-v1';
+            const milkrunFallbackDefaultCenters = getUniqueMilkrunFallbackCenters(window.__FLOWBUTLER_DEFAULT_COUPANG_CENTERS || []);
+            const milkrunFallbackDefaultCenterSet = new Set(milkrunFallbackDefaultCenters);
             let milkrunFallbackCenters = [];
 
             function normalizeMilkrunFallbackCenter(value) {
@@ -881,17 +886,34 @@
 
             function loadMilkrunFallbackCenters() {
                 try {
-                    const parsed = JSON.parse(window.localStorage.getItem(milkrunFallbackStorageKey) || '[]');
-                    milkrunFallbackCenters = getUniqueMilkrunFallbackCenters(Array.isArray(parsed) ? parsed : []);
+                    const rawCenters = window.localStorage.getItem(milkrunFallbackStorageKey);
+                    const parsed = rawCenters ? JSON.parse(rawCenters) : [];
+                    const loadedCenters = getUniqueMilkrunFallbackCenters(Array.isArray(parsed) ? parsed : []);
+                    const storedVersion = window.localStorage.getItem(milkrunFallbackDefaultVersionKey) || '';
+
+                    if (rawCenters === null) {
+                        milkrunFallbackCenters = [...milkrunFallbackDefaultCenters];
+                        return;
+                    }
+
+                    if (storedVersion !== milkrunFallbackDefaultVersion) {
+                        const customCenters = loadedCenters.filter((center) => !milkrunFallbackDefaultCenterSet.has(center));
+                        milkrunFallbackCenters = getUniqueMilkrunFallbackCenters([...milkrunFallbackDefaultCenters, ...customCenters]);
+                        saveMilkrunFallbackCenters();
+                        return;
+                    }
+
+                    milkrunFallbackCenters = loadedCenters;
                 } catch (error) {
                     console.warn('쿠팡 센터 목록 fallback 로드에 실패했습니다.', error);
-                    milkrunFallbackCenters = [];
+                    milkrunFallbackCenters = [...milkrunFallbackDefaultCenters];
                 }
             }
 
             function saveMilkrunFallbackCenters() {
                 try {
                     window.localStorage.setItem(milkrunFallbackStorageKey, JSON.stringify(milkrunFallbackCenters));
+                    window.localStorage.setItem(milkrunFallbackDefaultVersionKey, milkrunFallbackDefaultVersion);
                 } catch (error) {
                     console.warn('쿠팡 센터 목록 fallback 저장에 실패했습니다.', error);
                 }
@@ -1021,6 +1043,18 @@
                         return;
                     }
 
+                    const resetButton = event.target.closest('#milkrun-center-reset-btn');
+                    if (resetButton) {
+                        event.preventDefault();
+                        const shouldReset = window.confirm('쿠팡 센터 목록을 기본값으로 복원할까요? 직접 추가한 센터 목록은 초기화됩니다.');
+                        if (!shouldReset) return;
+                        milkrunFallbackCenters = [...milkrunFallbackDefaultCenters];
+                        saveMilkrunFallbackCenters();
+                        renderMilkrunFallbackCenters();
+                        setMilkrunFallbackStatus('기본 쿠팡 센터 목록으로 복원했습니다.', 'success');
+                        return;
+                    }
+
                     const removeButton = event.target.closest('[data-fallback-center-remove]');
                     if (removeButton) {
                         event.preventDefault();
@@ -1060,7 +1094,7 @@
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
     <script src="https://js.tosspayments.com/v1/payment"></script>
-    <script type="module" src="./js/dashboard.js?v=20260518-1"></script>
+    <script type="module" src="./js/dashboard.js?v=20260518-3"></script>
 </body>
 
 </html>

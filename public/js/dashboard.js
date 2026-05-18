@@ -1876,6 +1876,8 @@ function getMilkrunCenterPickerPopover() {
     popover.className = "milkrun-center-picker-popover";
     popover.setAttribute("role", "dialog");
     popover.addEventListener("input", handleMilkrunCenterPickerInput);
+    popover.addEventListener("compositionstart", handleMilkrunCenterPickerCompositionStart);
+    popover.addEventListener("compositionend", handleMilkrunCenterPickerCompositionEnd);
     popover.addEventListener("click", handleMilkrunCenterPickerClick);
     popover.addEventListener("keydown", handleMilkrunCenterPickerKeydown);
     document.body.appendChild(popover);
@@ -1938,6 +1940,55 @@ function positionMilkrunCenterPicker() {
     popover.classList.toggle("is-above", openAbove);
 }
 
+function getMilkrunCenterPickerOptionList(row, options) {
+    if (!options.length) {
+        return '<div class="milkrun-center-picker-empty">일치하는 센터가 없습니다.</div>';
+    }
+
+    return options.map((center, index) => {
+        const selected = center === row.assignedCenter;
+        const highlighted = index === activeMilkrunCenterPicker.highlightedIndex;
+        const tag = selected ? "선택됨" : center === row.originalCenter ? "기존" : "";
+        return `
+            <button
+                class="milkrun-center-picker-option${selected ? " is-selected" : ""}${highlighted ? " is-active" : ""}"
+                data-milkrun-center-option="${escapeHtml(center)}"
+                type="button"
+                role="option"
+                aria-selected="${selected ? "true" : "false"}"
+            >
+                <span class="milkrun-center-picker-option-name">${escapeHtml(center)}</span>
+                ${tag ? `<span class="milkrun-center-picker-option-tag">${tag}</span>` : ""}
+            </button>
+        `;
+    }).join("");
+}
+
+function updateMilkrunCenterPickerResults() {
+    if (!activeMilkrunCenterPicker) return;
+
+    const popover = document.getElementById(MILKRUN_CENTER_PICKER_POPOVER_ID);
+    const row = getMilkrunRowByOrderId(activeMilkrunCenterPicker.orderId);
+    if (!popover || !row) {
+        closeMilkrunCenterPicker({ restoreFocus: false });
+        return;
+    }
+
+    const options = getMilkrunCenterPickerOptions(activeMilkrunCenterPicker.searchTerm);
+    if (activeMilkrunCenterPicker.highlightedIndex >= options.length) {
+        activeMilkrunCenterPicker.highlightedIndex = Math.max(0, options.length - 1);
+    }
+
+    const countEl = popover.querySelector("[data-milkrun-center-picker-count]");
+    if (countEl) countEl.textContent = `${options.length} / ${coupangCenterOptions.length}`;
+
+    const listEl = popover.querySelector("[data-milkrun-center-picker-list]");
+    if (listEl) listEl.innerHTML = getMilkrunCenterPickerOptionList(row, options);
+
+    positionMilkrunCenterPicker();
+    popover.querySelector(".milkrun-center-picker-option.is-active")?.scrollIntoView({ block: "nearest" });
+}
+
 function renderMilkrunCenterPicker() {
     if (!activeMilkrunCenterPicker) return;
 
@@ -1948,35 +1999,10 @@ function renderMilkrunCenterPicker() {
         return;
     }
 
-    const options = getMilkrunCenterPickerOptions(activeMilkrunCenterPicker.searchTerm);
-    if (activeMilkrunCenterPicker.highlightedIndex >= options.length) {
-        activeMilkrunCenterPicker.highlightedIndex = Math.max(0, options.length - 1);
-    }
-
-    const optionList = options.length
-        ? options.map((center, index) => {
-            const selected = center === row.assignedCenter;
-            const highlighted = index === activeMilkrunCenterPicker.highlightedIndex;
-            const tag = selected ? "선택됨" : center === row.originalCenter ? "기존" : "";
-            return `
-                <button
-                    class="milkrun-center-picker-option${selected ? " is-selected" : ""}${highlighted ? " is-active" : ""}"
-                    data-milkrun-center-option="${escapeHtml(center)}"
-                    type="button"
-                    role="option"
-                    aria-selected="${selected ? "true" : "false"}"
-                >
-                    <span class="milkrun-center-picker-option-name">${escapeHtml(center)}</span>
-                    ${tag ? `<span class="milkrun-center-picker-option-tag">${tag}</span>` : ""}
-                </button>
-            `;
-        }).join("")
-        : '<div class="milkrun-center-picker-empty">일치하는 센터가 없습니다.</div>';
-
     popover.innerHTML = `
         <div class="milkrun-center-picker-head">
             <strong>센터 선택</strong>
-            <span>${options.length} / ${coupangCenterOptions.length}</span>
+            <span data-milkrun-center-picker-count></span>
         </div>
         <input
             class="milkrun-center-picker-search"
@@ -1986,12 +2012,10 @@ function renderMilkrunCenterPicker() {
             placeholder="센터명 검색"
             autocomplete="off"
         />
-        <div class="milkrun-center-picker-list" role="listbox">
-            ${optionList}
-        </div>
+        <div class="milkrun-center-picker-list" data-milkrun-center-picker-list role="listbox"></div>
     `;
 
-    positionMilkrunCenterPicker();
+    updateMilkrunCenterPickerResults();
 
     const searchInput = popover.querySelector("[data-milkrun-center-picker-search]");
     if (searchInput instanceof HTMLInputElement) {
@@ -1999,7 +2023,6 @@ function renderMilkrunCenterPicker() {
         const caretPosition = searchInput.value.length;
         searchInput.setSelectionRange(caretPosition, caretPosition);
     }
-    popover.querySelector(".milkrun-center-picker-option.is-active")?.scrollIntoView({ block: "nearest" });
 }
 
 function openMilkrunCenterPicker(trigger) {
@@ -2017,6 +2040,7 @@ function openMilkrunCenterPicker(trigger) {
     activeMilkrunCenterPicker = {
         anchorEl: trigger,
         highlightedIndex: selectedIndex >= 0 ? selectedIndex : 0,
+        isComposing: false,
         orderId,
         searchTerm: "",
     };
@@ -2053,10 +2077,32 @@ function handleMilkrunCenterPickerInput(event) {
     if (!(target instanceof HTMLInputElement)) return;
     if (!target.matches("[data-milkrun-center-picker-search]")) return;
     if (!activeMilkrunCenterPicker) return;
+    if (event.isComposing || activeMilkrunCenterPicker.isComposing) return;
 
     activeMilkrunCenterPicker.searchTerm = target.value;
     activeMilkrunCenterPicker.highlightedIndex = 0;
-    renderMilkrunCenterPicker();
+    updateMilkrunCenterPickerResults();
+}
+
+function handleMilkrunCenterPickerCompositionStart(event) {
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement)) return;
+    if (!target.matches("[data-milkrun-center-picker-search]")) return;
+    if (!activeMilkrunCenterPicker) return;
+
+    activeMilkrunCenterPicker.isComposing = true;
+}
+
+function handleMilkrunCenterPickerCompositionEnd(event) {
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement)) return;
+    if (!target.matches("[data-milkrun-center-picker-search]")) return;
+    if (!activeMilkrunCenterPicker) return;
+
+    activeMilkrunCenterPicker.isComposing = false;
+    activeMilkrunCenterPicker.searchTerm = target.value;
+    activeMilkrunCenterPicker.highlightedIndex = 0;
+    updateMilkrunCenterPickerResults();
 }
 
 function handleMilkrunCenterPickerClick(event) {
@@ -2083,7 +2129,7 @@ function handleMilkrunCenterPickerKeydown(event) {
         activeMilkrunCenterPicker.highlightedIndex = options.length
             ? (activeMilkrunCenterPicker.highlightedIndex + 1) % options.length
             : 0;
-        renderMilkrunCenterPicker();
+        updateMilkrunCenterPickerResults();
         return;
     }
     if (event.key === "ArrowUp") {
@@ -2091,7 +2137,7 @@ function handleMilkrunCenterPickerKeydown(event) {
         activeMilkrunCenterPicker.highlightedIndex = options.length
             ? (activeMilkrunCenterPicker.highlightedIndex - 1 + options.length) % options.length
             : 0;
-        renderMilkrunCenterPicker();
+        updateMilkrunCenterPickerResults();
         return;
     }
     if (event.key === "Enter") {

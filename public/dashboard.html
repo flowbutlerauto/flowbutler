@@ -775,19 +775,6 @@
                                 <button id="milkrun-center-sort-btn" class="secondary-btn" type="button">가나다순 정렬</button>
                                 <button id="milkrun-center-reset-btn" class="ghost-btn" type="button">기본 목록 복원</button>
                             </div>
-                            <div class="milkrun-center-manager-tools">
-                                <label class="milkrun-center-search-wrap" for="milkrun-center-search-input">
-                                    <span>센터 검색</span>
-                                    <input id="milkrun-center-search-input" class="milkrun-center-search-input" type="search"
-                                        placeholder="센터명으로 필터링" />
-                                </label>
-                                <label class="milkrun-center-bulk-wrap" for="milkrun-center-bulk-input">
-                                    <span>여러 센터 한번에 추가</span>
-                                    <textarea id="milkrun-center-bulk-input" class="milkrun-center-bulk-input" rows="3"
-                                        placeholder="줄바꿈 또는 쉼표로 구분해 입력"></textarea>
-                                </label>
-                                <button id="milkrun-center-bulk-add-btn" class="secondary-btn" type="button">일괄 추가</button>
-                            </div>
                             <div id="milkrun-center-status" class="milkrun-center-status" role="status" aria-live="polite"></div>
                             <div id="milkrun-center-list" class="milkrun-center-list" aria-label="쿠팡 센터 목록"></div>
                             <div class="label-tool-actions">
@@ -883,7 +870,6 @@
 
             const milkrunFallbackStorageKey = 'flowbutler:coupang-center-options';
             let milkrunFallbackCenters = [];
-            let milkrunFallbackSearch = '';
 
             function normalizeMilkrunFallbackCenter(value) {
                 return String(value || '').trim();
@@ -921,23 +907,18 @@
             function renderMilkrunFallbackCenters() {
                 const list = document.getElementById('milkrun-center-list');
                 const count = document.getElementById('milkrun-center-count-label');
-                const searchInput = document.getElementById('milkrun-center-search-input');
-                if (searchInput && searchInput.value !== milkrunFallbackSearch) searchInput.value = milkrunFallbackSearch;
+                const centerItems = milkrunFallbackCenters
+                    .map((center, index) => ({ center, index }));
 
-                const query = normalizeMilkrunFallbackCenter(milkrunFallbackSearch).toLocaleLowerCase('ko-KR');
-                const filtered = milkrunFallbackCenters
-                    .map((center, index) => ({ center, index }))
-                    .filter(({ center }) => !query || center.toLocaleLowerCase('ko-KR').includes(query));
-
-                if (count) count.textContent = `${milkrunFallbackCenters.length}개 센터${query ? ` · ${filtered.length}개 표시` : ''}`;
+                if (count) count.textContent = `${milkrunFallbackCenters.length}개 센터`;
                 if (!list) return;
 
-                if (!filtered.length) {
+                if (!centerItems.length) {
                     list.innerHTML = '<div class="milkrun-center-empty">등록된 센터가 없습니다. 위 입력창에서 센터를 추가해주세요.</div>';
                     return;
                 }
 
-                list.innerHTML = filtered.map(({ center, index }) => `
+                list.innerHTML = centerItems.map(({ center, index }) => `
                     <div class="milkrun-center-item">
                         <input class="milkrun-center-name-input" data-fallback-center-index="${index}" type="text" value="${center.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('&quot;', '&amp;quot;').replaceAll('"', '&quot;')}" aria-label="센터명 수정" />
                         <button class="milkrun-center-remove-btn" data-fallback-center-remove="${index}" type="button">삭제</button>
@@ -946,7 +927,8 @@
             }
 
             function addMilkrunFallbackCenters(rawValue) {
-                const nextCenters = getUniqueMilkrunFallbackCenters(String(rawValue || '').split(/[\n,]+/));
+                const centerName = normalizeMilkrunFallbackCenter(rawValue);
+                const nextCenters = centerName ? [centerName] : [];
                 if (!nextCenters.length) {
                     setMilkrunFallbackStatus('추가할 센터명을 입력해주세요.', 'warning');
                     return false;
@@ -959,7 +941,6 @@
                     return false;
                 }
 
-                milkrunFallbackSearch = '';
                 milkrunFallbackCenters = getUniqueMilkrunFallbackCenters([...added, ...milkrunFallbackCenters]);
                 saveMilkrunFallbackCenters();
                 renderMilkrunFallbackCenters();
@@ -987,11 +968,6 @@
 
             document.addEventListener('input', function (event) {
                 if (window.__flowbutlerDashboardModuleReady) return;
-                if (event.target.id === 'milkrun-center-search-input') {
-                    milkrunFallbackSearch = normalizeMilkrunFallbackCenter(event.target.value);
-                    renderMilkrunFallbackCenters();
-                    return;
-                }
                 if (event.target.matches('[data-fallback-center-index]')) {
                     const index = Number(event.target.dataset.fallbackCenterIndex);
                     const nextCenter = normalizeMilkrunFallbackCenter(event.target.value);
@@ -1006,10 +982,6 @@
             document.addEventListener('keydown', function (event) {
                 if (window.__flowbutlerDashboardModuleReady) return;
                 if (event.target.id === 'milkrun-center-add-input' && event.key === 'Enter') {
-                    event.preventDefault();
-                    if (addMilkrunFallbackCenters(event.target.value)) event.target.value = '';
-                }
-                if (event.target.id === 'milkrun-center-bulk-input' && (event.ctrlKey || event.metaKey) && event.key === 'Enter') {
                     event.preventDefault();
                     if (addMilkrunFallbackCenters(event.target.value)) event.target.value = '';
                 }
@@ -1035,14 +1007,6 @@
                     if (addButton) {
                         event.preventDefault();
                         const input = document.getElementById('milkrun-center-add-input');
-                        if (addMilkrunFallbackCenters(input?.value)) input.value = '';
-                        return;
-                    }
-
-                    const bulkButton = event.target.closest('#milkrun-center-bulk-add-btn');
-                    if (bulkButton) {
-                        event.preventDefault();
-                        const input = document.getElementById('milkrun-center-bulk-input');
                         if (addMilkrunFallbackCenters(input?.value)) input.value = '';
                         return;
                     }
@@ -1096,7 +1060,7 @@
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
     <script src="https://js.tosspayments.com/v1/payment"></script>
-    <script type="module" src="./js/dashboard.js?v=20260515-3"></script>
+    <script type="module" src="./js/dashboard.js?v=20260518-1"></script>
 </body>
 
 </html>

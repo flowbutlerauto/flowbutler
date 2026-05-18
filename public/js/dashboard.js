@@ -129,9 +129,6 @@ const milkrunCenterAddInput = document.getElementById("milkrun-center-add-input"
 const milkrunCenterAddBtn = document.getElementById("milkrun-center-add-btn");
 const milkrunCenterSortBtn = document.getElementById("milkrun-center-sort-btn");
 const milkrunCenterResetBtn = document.getElementById("milkrun-center-reset-btn");
-const milkrunCenterSearchInput = document.getElementById("milkrun-center-search-input");
-const milkrunCenterBulkInput = document.getElementById("milkrun-center-bulk-input");
-const milkrunCenterBulkAddBtn = document.getElementById("milkrun-center-bulk-add-btn");
 const milkrunCenterStatusEl = document.getElementById("milkrun-center-status");
 const milkrunCenterListEl = document.getElementById("milkrun-center-list");
 const milkrunLoadSampleBtn = document.getElementById("milkrun-load-sample-btn");
@@ -181,7 +178,6 @@ let printingSkuRowId = null;
 let kurlyRows = [];
 let kurlyParsedFileName = "";
 let milkrunRows = [];
-let milkrunCenterSearchTerm = "";
 const DEFAULT_COUPANG_CENTER_OPTIONS = [
     "안성4",
     "안성5",
@@ -1640,10 +1636,6 @@ function sortMilkrunCenters(centers) {
     return [...centers].sort((a, b) => a.localeCompare(b, "ko-KR", { numeric: true }));
 }
 
-function splitMilkrunCenterNames(value) {
-    return getUniqueMilkrunCenters(String(value ?? "").split(/[\n,]+/));
-}
-
 function getMilkrunCenterUsageMap() {
     const usageMap = new Map();
     milkrunRows.forEach((row) => {
@@ -1712,28 +1704,22 @@ function closeMilkrunCenterModal() {
 
 function renderMilkrunCenterManager() {
     const usageMap = getMilkrunCenterUsageMap();
-    const searchTerm = normalizeMilkrunCenterName(milkrunCenterSearchTerm).toLocaleLowerCase("ko-KR");
-    const filteredCenters = coupangCenterOptions
-        .map((center, index) => ({ center, index, usageCount: usageMap.get(center) || 0 }))
-        .filter(({ center }) => !searchTerm || center.toLocaleLowerCase("ko-KR").includes(searchTerm));
+    const centerItems = coupangCenterOptions
+        .map((center, index) => ({ center, index, usageCount: usageMap.get(center) || 0 }));
 
     if (milkrunCenterCountLabelEl) {
-        const filteredLabel = searchTerm ? ` · ${filteredCenters.length}개 표시` : "";
-        milkrunCenterCountLabelEl.textContent = `${coupangCenterOptions.length}개 센터${filteredLabel}`;
-    }
-    if (milkrunCenterSearchInput && milkrunCenterSearchInput.value !== milkrunCenterSearchTerm) {
-        milkrunCenterSearchInput.value = milkrunCenterSearchTerm;
+        milkrunCenterCountLabelEl.textContent = `${coupangCenterOptions.length}개 센터`;
     }
     if (!milkrunCenterListEl) return;
 
-    if (!filteredCenters.length) {
+    if (!centerItems.length) {
         milkrunCenterListEl.innerHTML = `
-            <div class="milkrun-center-empty">검색 조건에 맞는 센터가 없습니다.</div>
+            <div class="milkrun-center-empty">등록된 센터가 없습니다. 위 입력창에서 센터를 추가해주세요.</div>
         `;
         return;
     }
 
-    milkrunCenterListEl.innerHTML = filteredCenters.map(({ center, index, usageCount }) => `
+    milkrunCenterListEl.innerHTML = centerItems.map(({ center, index, usageCount }) => `
         <div class="milkrun-center-item">
             <input
                 class="milkrun-center-name-input"
@@ -1779,7 +1765,6 @@ function addMilkrunCenters(centerNames) {
         return false;
     }
 
-    milkrunCenterSearchTerm = "";
     setMilkrunCenterOptions([...addedCenters, ...coupangCenterOptions]);
     if (milkrunCenterListEl) milkrunCenterListEl.scrollTop = 0;
     setMilkrunCenterStatus(`${addedCenters.length}개 센터를 추가했습니다. 새 센터는 목록 맨 위에 표시됩니다.${duplicateCenters.length ? ` (${duplicateCenters.length}개 중복 제외)` : ""}`, "success");
@@ -1787,17 +1772,11 @@ function addMilkrunCenters(centerNames) {
 }
 
 function handleAddMilkrunCenter() {
-    const centerNames = splitMilkrunCenterNames(milkrunCenterAddInput?.value);
+    const centerName = normalizeMilkrunCenterName(milkrunCenterAddInput?.value);
+    const centerNames = centerName ? [centerName] : [];
     if (addMilkrunCenters(centerNames) && milkrunCenterAddInput) {
         milkrunCenterAddInput.value = "";
         milkrunCenterAddInput.focus();
-    }
-}
-
-function handleBulkAddMilkrunCenters() {
-    const centerNames = splitMilkrunCenterNames(milkrunCenterBulkInput?.value);
-    if (addMilkrunCenters(centerNames) && milkrunCenterBulkInput) {
-        milkrunCenterBulkInput.value = "";
     }
 }
 
@@ -1810,16 +1789,10 @@ function handleResetMilkrunCenters() {
     const shouldReset = window.confirm("쿠팡 센터 목록을 기본값으로 복원할까요? 직접 추가한 센터 목록은 초기화됩니다.");
     if (!shouldReset) return;
     coupangCenterOptions = [...DEFAULT_COUPANG_CENTER_OPTIONS];
-    milkrunCenterSearchTerm = "";
     saveMilkrunCenterOptions();
     refreshMilkrunCenterUi();
     renderMilkrunOrders();
     setMilkrunCenterStatus("기본 쿠팡 센터 목록으로 복원했습니다.", "success");
-}
-
-function handleMilkrunCenterSearch() {
-    milkrunCenterSearchTerm = normalizeMilkrunCenterName(milkrunCenterSearchInput?.value);
-    renderMilkrunCenterManager();
 }
 
 function handleMilkrunCenterListInput(event) {
@@ -2820,18 +2793,10 @@ function bindEvents() {
     milkrunCenterAddBtn?.addEventListener("click", handleAddMilkrunCenter);
     milkrunCenterSortBtn?.addEventListener("click", handleSortMilkrunCenters);
     milkrunCenterResetBtn?.addEventListener("click", handleResetMilkrunCenters);
-    milkrunCenterSearchInput?.addEventListener("input", handleMilkrunCenterSearch);
-    milkrunCenterBulkAddBtn?.addEventListener("click", handleBulkAddMilkrunCenters);
     milkrunCenterAddInput?.addEventListener("keydown", (event) => {
         if (event.key === "Enter") {
             event.preventDefault();
             handleAddMilkrunCenter();
-        }
-    });
-    milkrunCenterBulkInput?.addEventListener("keydown", (event) => {
-        if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
-            event.preventDefault();
-            handleBulkAddMilkrunCenters();
         }
     });
     milkrunCenterListEl?.addEventListener("change", handleMilkrunCenterListInput);

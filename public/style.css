@@ -2161,6 +2161,7 @@ a {
 
 .milkrun-center-modal-card {
   width: min(960px, 100%);
+  max-height: 86vh;
 }
 
 .milkrun-center-manager-head {
@@ -2196,26 +2197,7 @@ a {
   margin-top: 16px;
 }
 
-.milkrun-center-manager-tools {
-  display: grid;
-  grid-template-columns: minmax(180px, 0.8fr) minmax(260px, 1.2fr) auto;
-  gap: 10px;
-  align-items: end;
-  margin-top: 12px;
-}
-
-.milkrun-center-search-wrap,
-.milkrun-center-bulk-wrap {
-  display: grid;
-  gap: 6px;
-  color: var(--text-secondary);
-  font-size: 12px;
-  font-weight: 800;
-}
-
 .milkrun-center-add-input,
-.milkrun-center-search-input,
-.milkrun-center-bulk-input,
 .milkrun-center-name-input {
   height: 36px;
   border: 1px solid var(--border-default);
@@ -2231,19 +2213,7 @@ a {
   min-width: 220px;
 }
 
-.milkrun-center-search-input {
-  min-width: 180px;
-}
-
-.milkrun-center-bulk-input {
-  min-height: 72px;
-  padding: 10px;
-  resize: vertical;
-}
-
 .milkrun-center-add-input:focus,
-.milkrun-center-search-input:focus,
-.milkrun-center-bulk-input:focus,
 .milkrun-center-name-input:focus {
   border-color: var(--primary);
   box-shadow: 0 0 0 3px rgba(79, 110, 247, 0.12);
@@ -2285,10 +2255,14 @@ a {
 .milkrun-center-list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  align-content: start;
   gap: 10px;
-  max-height: 260px;
-  overflow: auto;
-  margin-top: 16px;
+  max-height: min(42vh, 340px);
+  min-height: 56px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  margin-top: 12px;
   padding: 12px;
   border: 1px solid var(--border-default);
   border-radius: 14px;
@@ -2422,8 +2396,7 @@ a {
 
 @media (max-width: 1180px) {
   .milkrun-summary-grid,
-  .milkrun-grid,
-  .milkrun-center-manager-tools {
+  .milkrun-grid {
     grid-template-columns: 1fr;
   }
 }

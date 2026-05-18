@@ -881,9 +881,99 @@
                 if (actions) actions.hidden = viewName !== 'home';
             }
 
+            const milkrunFallbackStorageKey = 'flowbutler:coupang-center-options';
+            let milkrunFallbackCenters = [];
+            let milkrunFallbackSearch = '';
+
+            function normalizeMilkrunFallbackCenter(value) {
+                return String(value || '').trim();
+            }
+
+            function getUniqueMilkrunFallbackCenters(centers) {
+                return Array.from(new Set((centers || []).map(normalizeMilkrunFallbackCenter).filter(Boolean)));
+            }
+
+            function loadMilkrunFallbackCenters() {
+                try {
+                    const parsed = JSON.parse(window.localStorage.getItem(milkrunFallbackStorageKey) || '[]');
+                    milkrunFallbackCenters = getUniqueMilkrunFallbackCenters(Array.isArray(parsed) ? parsed : []);
+                } catch (error) {
+                    console.warn('쿠팡 센터 목록 fallback 로드에 실패했습니다.', error);
+                    milkrunFallbackCenters = [];
+                }
+            }
+
+            function saveMilkrunFallbackCenters() {
+                try {
+                    window.localStorage.setItem(milkrunFallbackStorageKey, JSON.stringify(milkrunFallbackCenters));
+                } catch (error) {
+                    console.warn('쿠팡 센터 목록 fallback 저장에 실패했습니다.', error);
+                }
+            }
+
+            function setMilkrunFallbackStatus(message, type) {
+                const status = document.getElementById('milkrun-center-status');
+                if (!status) return;
+                status.textContent = message || '';
+                status.className = `milkrun-center-status ${message ? 'is-visible' : ''} ${type ? `is-${type}` : ''}`.trim();
+            }
+
+            function renderMilkrunFallbackCenters() {
+                const list = document.getElementById('milkrun-center-list');
+                const count = document.getElementById('milkrun-center-count-label');
+                const searchInput = document.getElementById('milkrun-center-search-input');
+                if (searchInput && searchInput.value !== milkrunFallbackSearch) searchInput.value = milkrunFallbackSearch;
+
+                const query = normalizeMilkrunFallbackCenter(milkrunFallbackSearch).toLocaleLowerCase('ko-KR');
+                const filtered = milkrunFallbackCenters
+                    .map((center, index) => ({ center, index }))
+                    .filter(({ center }) => !query || center.toLocaleLowerCase('ko-KR').includes(query));
+
+                if (count) count.textContent = `${milkrunFallbackCenters.length}개 센터${query ? ` · ${filtered.length}개 표시` : ''}`;
+                if (!list) return;
+
+                if (!filtered.length) {
+                    list.innerHTML = '<div class="milkrun-center-empty">등록된 센터가 없습니다. 위 입력창에서 센터를 추가해주세요.</div>';
+                    return;
+                }
+
+                list.innerHTML = filtered.map(({ center, index }) => `
+                    <div class="milkrun-center-item">
+                        <input class="milkrun-center-name-input" data-fallback-center-index="${index}" type="text" value="${center.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('&quot;', '&amp;quot;').replaceAll('"', '&quot;')}" aria-label="센터명 수정" />
+                        <button class="milkrun-center-remove-btn" data-fallback-center-remove="${index}" type="button">삭제</button>
+                    </div>
+                `).join('');
+            }
+
+            function addMilkrunFallbackCenters(rawValue) {
+                const nextCenters = getUniqueMilkrunFallbackCenters(String(rawValue || '').split(/[\n,]+/));
+                if (!nextCenters.length) {
+                    setMilkrunFallbackStatus('추가할 센터명을 입력해주세요.', 'warning');
+                    return false;
+                }
+
+                const existing = new Set(milkrunFallbackCenters);
+                const added = nextCenters.filter((center) => !existing.has(center));
+                if (!added.length) {
+                    setMilkrunFallbackStatus('이미 등록된 센터만 입력되었습니다.', 'warning');
+                    return false;
+                }
+
+                milkrunFallbackSearch = '';
+                milkrunFallbackCenters = getUniqueMilkrunFallbackCenters([...added, ...milkrunFallbackCenters]);
+                saveMilkrunFallbackCenters();
+                renderMilkrunFallbackCenters();
+                setMilkrunFallbackStatus(`${added.length}개 센터를 추가했습니다.`, 'success');
+                return true;
+            }
+
             function openMilkrunCenterModalFallback() {
                 const modal = document.getElementById('milkrun-center-modal');
                 if (!modal) return;
+                if (!window.__flowbutlerDashboardModuleReady) {
+                    loadMilkrunFallbackCenters();
+                    renderMilkrunFallbackCenters();
+                }
                 modal.classList.remove('is-hidden');
                 modal.setAttribute('aria-hidden', 'false');
             }
@@ -894,6 +984,36 @@
                 modal.classList.add('is-hidden');
                 modal.setAttribute('aria-hidden', 'true');
             }
+
+            document.addEventListener('input', function (event) {
+                if (window.__flowbutlerDashboardModuleReady) return;
+                if (event.target.id === 'milkrun-center-search-input') {
+                    milkrunFallbackSearch = normalizeMilkrunFallbackCenter(event.target.value);
+                    renderMilkrunFallbackCenters();
+                    return;
+                }
+                if (event.target.matches('[data-fallback-center-index]')) {
+                    const index = Number(event.target.dataset.fallbackCenterIndex);
+                    const nextCenter = normalizeMilkrunFallbackCenter(event.target.value);
+                    if (!Number.isInteger(index) || !nextCenter) return;
+                    milkrunFallbackCenters[index] = nextCenter;
+                    milkrunFallbackCenters = getUniqueMilkrunFallbackCenters(milkrunFallbackCenters);
+                    saveMilkrunFallbackCenters();
+                    setMilkrunFallbackStatus('센터명을 수정했습니다.', 'success');
+                }
+            });
+
+            document.addEventListener('keydown', function (event) {
+                if (window.__flowbutlerDashboardModuleReady) return;
+                if (event.target.id === 'milkrun-center-add-input' && event.key === 'Enter') {
+                    event.preventDefault();
+                    if (addMilkrunFallbackCenters(event.target.value)) event.target.value = '';
+                }
+                if (event.target.id === 'milkrun-center-bulk-input' && (event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+                    event.preventDefault();
+                    if (addMilkrunFallbackCenters(event.target.value)) event.target.value = '';
+                }
+            });
 
             document.addEventListener('click', function (event) {
                 const centerToggle = event.target.closest('#milkrun-center-toggle-btn');
@@ -908,6 +1028,48 @@
                     event.preventDefault();
                     closeMilkrunCenterModalFallback();
                     return;
+                }
+
+                if (!window.__flowbutlerDashboardModuleReady) {
+                    const addButton = event.target.closest('#milkrun-center-add-btn');
+                    if (addButton) {
+                        event.preventDefault();
+                        const input = document.getElementById('milkrun-center-add-input');
+                        if (addMilkrunFallbackCenters(input?.value)) input.value = '';
+                        return;
+                    }
+
+                    const bulkButton = event.target.closest('#milkrun-center-bulk-add-btn');
+                    if (bulkButton) {
+                        event.preventDefault();
+                        const input = document.getElementById('milkrun-center-bulk-input');
+                        if (addMilkrunFallbackCenters(input?.value)) input.value = '';
+                        return;
+                    }
+
+                    const sortButton = event.target.closest('#milkrun-center-sort-btn');
+                    if (sortButton) {
+                        event.preventDefault();
+                        milkrunFallbackCenters.sort((a, b) => a.localeCompare(b, 'ko-KR', { numeric: true }));
+                        saveMilkrunFallbackCenters();
+                        renderMilkrunFallbackCenters();
+                        setMilkrunFallbackStatus('센터 목록을 가나다순으로 정렬했습니다.', 'success');
+                        return;
+                    }
+
+                    const removeButton = event.target.closest('[data-fallback-center-remove]');
+                    if (removeButton) {
+                        event.preventDefault();
+                        const index = Number(removeButton.dataset.fallbackCenterRemove);
+                        if (Number.isInteger(index)) {
+                            const removed = milkrunFallbackCenters[index];
+                            milkrunFallbackCenters.splice(index, 1);
+                            saveMilkrunFallbackCenters();
+                            renderMilkrunFallbackCenters();
+                            setMilkrunFallbackStatus(`${removed} 센터를 삭제했습니다.`, 'success');
+                        }
+                        return;
+                    }
                 }
 
                 if (window.__flowbutlerDashboardModuleReady) return;
@@ -934,7 +1096,7 @@
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
     <script src="https://js.tosspayments.com/v1/payment"></script>
-    <script type="module" src="./js/dashboard.js?v=20260515-2"></script>
+    <script type="module" src="./js/dashboard.js?v=20260515-3"></script>
 </body>
 
 </html>

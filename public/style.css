@@ -2351,26 +2351,181 @@ a {
   font-weight: 800;
 }
 
-.milkrun-center-select {
-  width: 148px;
-  height: 34px;
+.milkrun-order-table th:nth-child(4),
+.milkrun-order-table td:nth-child(4) {
+  min-width: 168px;
+}
+
+.milkrun-center-trigger {
+  width: 156px;
+  height: 36px;
+  border: 1px solid var(--border-default);
+  border-radius: 12px;
+  padding: 0 12px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 800;
+  outline: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.milkrun-center-trigger:hover {
+  border-color: #c7d2fe;
+  background: #ffffff;
+}
+
+.milkrun-center-trigger:focus,
+.milkrun-center-trigger.is-open {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(79, 110, 247, 0.12);
+}
+
+.milkrun-center-trigger.is-changed {
+  border-color: #fed7aa;
+  background: #fff7ed;
+  color: #9a3412;
+}
+
+.milkrun-center-trigger-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.milkrun-center-trigger-chev {
+  flex: 0 0 auto;
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  opacity: 0.7;
+  transform: rotate(45deg) translateY(-2px);
+  transition: transform 0.15s ease;
+}
+
+.milkrun-center-trigger.is-open .milkrun-center-trigger-chev {
+  transform: rotate(225deg) translateY(-2px);
+}
+
+.milkrun-center-picker-popover {
+  position: fixed;
+  z-index: 1400;
+  border: 1px solid #dbe3ef;
+  border-radius: 14px;
+  padding: 10px;
+  background: #ffffff;
+  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.18);
+}
+
+.milkrun-center-picker-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 2px 2px 8px;
+  color: var(--text-primary);
+  font-size: 12px;
+}
+
+.milkrun-center-picker-head span {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  padding: 4px 8px;
+  background: #f1f5f9;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.milkrun-center-picker-search {
+  width: 100%;
+  height: 36px;
   border: 1px solid var(--border-default);
   border-radius: 10px;
-  padding: 0 10px;
-  background: #fff;
+  padding: 0 11px;
+  background: #f8fafc;
   color: var(--text-primary);
   font-size: 13px;
   outline: none;
 }
 
-.milkrun-center-select:focus {
+.milkrun-center-picker-search:focus {
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(79, 110, 247, 0.12);
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(79, 110, 247, 0.10);
 }
 
-.milkrun-center-select.is-invalid {
-  border-color: var(--error);
-  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.10);
+.milkrun-center-picker-list {
+  display: grid;
+  gap: 4px;
+  max-height: var(--milkrun-picker-list-max, 220px);
+  margin-top: 8px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.milkrun-center-picker-option {
+  width: 100%;
+  min-height: 34px;
+  border: 0;
+  border-radius: 10px;
+  padding: 7px 9px;
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: left;
+}
+
+.milkrun-center-picker-option:hover,
+.milkrun-center-picker-option.is-active {
+  background: #eef2ff;
+  color: #3730a3;
+}
+
+.milkrun-center-picker-option.is-selected {
+  background: var(--primary);
+  color: #ffffff;
+}
+
+.milkrun-center-picker-option-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.milkrun-center-picker-option-tag {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  padding: 3px 7px;
+  background: rgba(255, 255, 255, 0.72);
+  color: inherit;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.milkrun-center-picker-empty {
+  border: 1px dashed var(--border-default);
+  border-radius: 10px;
+  padding: 14px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
 }
 
 .milkrun-status {

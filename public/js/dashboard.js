@@ -120,7 +120,6 @@ const milkrunTotalSkuEl = document.getElementById("milkrun-total-sku");
 const milkrunTotalWeightEl = document.getElementById("milkrun-total-weight");
 const milkrunCenterSummaryBody = document.getElementById("milkrun-center-summary-body");
 const milkrunOrderBody = document.getElementById("milkrun-order-body");
-const milkrunCenterOptionsEl = document.getElementById("milkrun-center-options");
 const milkrunCenterCountLabelEl = document.getElementById("milkrun-center-count-label");
 const milkrunCenterToggleBtn = document.getElementById("milkrun-center-toggle-btn");
 const milkrunCenterModal = document.getElementById("milkrun-center-modal");
@@ -178,6 +177,8 @@ let printingSkuRowId = null;
 let kurlyRows = [];
 let kurlyParsedFileName = "";
 let milkrunRows = [];
+let activeMilkrunCenterPicker = null;
+const MILKRUN_CENTER_PICKER_POPOVER_ID = "milkrun-center-picker-popover";
 const DEFAULT_COUPANG_CENTER_OPTIONS = Array.isArray(window.__FLOWBUTLER_DEFAULT_COUPANG_CENTERS)
     ? [...window.__FLOWBUTLER_DEFAULT_COUPANG_CENTERS]
     : [];
@@ -1481,12 +1482,6 @@ function formatMilkrunNumber(value, digits = 0) {
     });
 }
 
-function buildMilkrunCenterOptions() {
-    return coupangCenterOptions.map((center) => (
-        `<option value="${escapeHtml(center)}">${escapeHtml(center)}</option>`
-    )).join("");
-}
-
 function normalizeMilkrunCenterName(value) {
     return String(value ?? "").trim();
 }
@@ -1567,11 +1562,6 @@ function loadMilkrunCenterOptions() {
     }
 }
 
-function renderMilkrunCenterOptions() {
-    if (!milkrunCenterOptionsEl) return;
-    milkrunCenterOptionsEl.innerHTML = buildMilkrunCenterOptions();
-}
-
 function openMilkrunCenterModal() {
     if (!milkrunCenterModal) return;
     refreshMilkrunCenterUi();
@@ -1618,7 +1608,6 @@ function renderMilkrunCenterManager() {
 }
 
 function refreshMilkrunCenterUi() {
-    renderMilkrunCenterOptions();
     renderMilkrunCenterManager();
 }
 
@@ -1812,6 +1801,7 @@ function renderMilkrunSummary() {
 
 function renderMilkrunOrders() {
     if (!milkrunOrderBody) return;
+    closeMilkrunCenterPicker({ restoreFocus: false });
     if (!milkrunRows.length) {
         milkrunOrderBody.innerHTML = `
             <tr class="tracking-empty-row">
@@ -1825,20 +1815,24 @@ function renderMilkrunOrders() {
         const changed = row.assignedCenter !== row.originalCenter;
         const statusClass = changed ? "milkrun-status-changed" : "milkrun-status-keep";
         const statusText = changed ? "센터 변경" : "유지";
+        const triggerClass = changed ? "milkrun-center-trigger is-changed" : "milkrun-center-trigger";
         return `
             <tr data-milkrun-order-row="${escapeHtml(row.orderId)}">
                 <td><strong>${escapeHtml(row.orderId)}</strong></td>
                 <td>${escapeHtml(row.dueDate)}</td>
                 <td>${escapeHtml(row.originalCenter)}</td>
                 <td>
-                    <input
-                        class="milkrun-center-select"
+                    <button
+                        class="${triggerClass}"
                         data-milkrun-order-id="${escapeHtml(row.orderId)}"
-                        list="milkrun-center-options"
-                        type="text"
-                        value="${escapeHtml(row.assignedCenter)}"
-                        placeholder="센터 검색/선택"
-                    />
+                        data-milkrun-center-trigger
+                        type="button"
+                        aria-haspopup="listbox"
+                        aria-expanded="false"
+                    >
+                        <span class="milkrun-center-trigger-text">${escapeHtml(row.assignedCenter)}</span>
+                        <span class="milkrun-center-trigger-chev" aria-hidden="true"></span>
+                    </button>
                 </td>
                 <td>${formatMilkrunNumber(row.skuCount)}</td>
                 <td>${formatMilkrunNumber(row.qty)}</td>
@@ -1861,31 +1855,269 @@ function loadMilkrunSampleRows() {
     renderMilkrunDashboard();
 }
 
-function handleMilkrunCenterChange(event) {
-    const target = event.target;
-    if (!(target instanceof HTMLInputElement)) return;
-    if (!target.classList.contains("milkrun-center-select")) return;
+function getMilkrunRowByOrderId(orderId) {
+    return milkrunRows.find((row) => row.orderId === orderId) || null;
+}
 
-    const orderId = target.getAttribute("data-milkrun-order-id");
-    const nextCenter = target.value.trim();
-    if (!orderId) return;
+function getMilkrunCenterPickerOptions(searchTerm = "") {
+    const normalizedTerm = normalizeMilkrunCenterName(searchTerm).toLocaleLowerCase("ko-KR");
+    if (!normalizedTerm) return coupangCenterOptions;
+    return coupangCenterOptions.filter((center) => (
+        center.toLocaleLowerCase("ko-KR").includes(normalizedTerm)
+    ));
+}
 
-    if (!coupangCenterOptions.includes(nextCenter)) {
-        if (event.type === "change") {
-            target.classList.add("is-invalid");
-            target.title = "쿠팡 센터 목록에서 센터를 선택해주세요.";
+function getMilkrunCenterPickerPopover() {
+    let popover = document.getElementById(MILKRUN_CENTER_PICKER_POPOVER_ID);
+    if (popover) return popover;
+
+    popover = document.createElement("div");
+    popover.id = MILKRUN_CENTER_PICKER_POPOVER_ID;
+    popover.className = "milkrun-center-picker-popover";
+    popover.setAttribute("role", "dialog");
+    popover.addEventListener("input", handleMilkrunCenterPickerInput);
+    popover.addEventListener("click", handleMilkrunCenterPickerClick);
+    popover.addEventListener("keydown", handleMilkrunCenterPickerKeydown);
+    document.body.appendChild(popover);
+    return popover;
+}
+
+function closeMilkrunCenterPicker(options = {}) {
+    const { restoreFocus = true } = options;
+    const previousPicker = activeMilkrunCenterPicker;
+    const popover = document.getElementById(MILKRUN_CENTER_PICKER_POPOVER_ID);
+
+    if (previousPicker?.anchorEl) {
+        previousPicker.anchorEl.classList.remove("is-open");
+        previousPicker.anchorEl.setAttribute("aria-expanded", "false");
+        if (restoreFocus && previousPicker.anchorEl.isConnected) {
+            previousPicker.anchorEl.focus();
         }
+    }
+    popover?.remove();
+    activeMilkrunCenterPicker = null;
+}
+
+function positionMilkrunCenterPicker() {
+    if (!activeMilkrunCenterPicker?.anchorEl?.isConnected) {
+        closeMilkrunCenterPicker({ restoreFocus: false });
         return;
     }
 
-    target.classList.remove("is-invalid");
-    target.title = "";
+    const popover = document.getElementById(MILKRUN_CENTER_PICKER_POPOVER_ID);
+    if (!popover) return;
+
+    const anchorRect = activeMilkrunCenterPicker.anchorEl.getBoundingClientRect();
+    if (anchorRect.width === 0 || anchorRect.height === 0) {
+        closeMilkrunCenterPicker({ restoreFocus: false });
+        return;
+    }
+
+    const margin = 10;
+    const width = Math.min(320, Math.max(260, anchorRect.width + 84));
+    const availableBelow = window.innerHeight - anchorRect.bottom - margin;
+    const availableAbove = anchorRect.top - margin;
+    const openAbove = availableBelow < 250 && availableAbove > availableBelow;
+    const availableHeight = Math.max(168, Math.min(320, openAbove ? availableAbove : availableBelow));
+
+    popover.style.width = `${width}px`;
+    popover.style.setProperty("--milkrun-picker-list-max", `${Math.max(88, availableHeight - 100)}px`);
+
+    const adjustedLeft = Math.min(
+        Math.max(anchorRect.left, margin),
+        window.innerWidth - width - margin
+    );
+    popover.style.left = `${adjustedLeft}px`;
+
+    const popoverRect = popover.getBoundingClientRect();
+    const adjustedTop = openAbove
+        ? Math.max(margin, anchorRect.top - popoverRect.height - 6)
+        : Math.min(anchorRect.bottom + 6, window.innerHeight - popoverRect.height - margin);
+
+    popover.style.top = `${adjustedTop}px`;
+    popover.classList.toggle("is-above", openAbove);
+}
+
+function renderMilkrunCenterPicker() {
+    if (!activeMilkrunCenterPicker) return;
+
+    const popover = getMilkrunCenterPickerPopover();
+    const row = getMilkrunRowByOrderId(activeMilkrunCenterPicker.orderId);
+    if (!row) {
+        closeMilkrunCenterPicker({ restoreFocus: false });
+        return;
+    }
+
+    const options = getMilkrunCenterPickerOptions(activeMilkrunCenterPicker.searchTerm);
+    if (activeMilkrunCenterPicker.highlightedIndex >= options.length) {
+        activeMilkrunCenterPicker.highlightedIndex = Math.max(0, options.length - 1);
+    }
+
+    const optionList = options.length
+        ? options.map((center, index) => {
+            const selected = center === row.assignedCenter;
+            const highlighted = index === activeMilkrunCenterPicker.highlightedIndex;
+            const tag = selected ? "선택됨" : center === row.originalCenter ? "기존" : "";
+            return `
+                <button
+                    class="milkrun-center-picker-option${selected ? " is-selected" : ""}${highlighted ? " is-active" : ""}"
+                    data-milkrun-center-option="${escapeHtml(center)}"
+                    type="button"
+                    role="option"
+                    aria-selected="${selected ? "true" : "false"}"
+                >
+                    <span class="milkrun-center-picker-option-name">${escapeHtml(center)}</span>
+                    ${tag ? `<span class="milkrun-center-picker-option-tag">${tag}</span>` : ""}
+                </button>
+            `;
+        }).join("")
+        : '<div class="milkrun-center-picker-empty">일치하는 센터가 없습니다.</div>';
+
+    popover.innerHTML = `
+        <div class="milkrun-center-picker-head">
+            <strong>센터 선택</strong>
+            <span>${options.length} / ${coupangCenterOptions.length}</span>
+        </div>
+        <input
+            class="milkrun-center-picker-search"
+            data-milkrun-center-picker-search
+            type="search"
+            value="${escapeHtml(activeMilkrunCenterPicker.searchTerm)}"
+            placeholder="센터명 검색"
+            autocomplete="off"
+        />
+        <div class="milkrun-center-picker-list" role="listbox">
+            ${optionList}
+        </div>
+    `;
+
+    positionMilkrunCenterPicker();
+
+    const searchInput = popover.querySelector("[data-milkrun-center-picker-search]");
+    if (searchInput instanceof HTMLInputElement) {
+        searchInput.focus({ preventScroll: true });
+        const caretPosition = searchInput.value.length;
+        searchInput.setSelectionRange(caretPosition, caretPosition);
+    }
+    popover.querySelector(".milkrun-center-picker-option.is-active")?.scrollIntoView({ block: "nearest" });
+}
+
+function openMilkrunCenterPicker(trigger) {
+    const orderId = trigger.getAttribute("data-milkrun-order-id");
+    const row = orderId ? getMilkrunRowByOrderId(orderId) : null;
+    if (!orderId || !row) return;
+
+    if (activeMilkrunCenterPicker?.orderId === orderId) {
+        closeMilkrunCenterPicker();
+        return;
+    }
+
+    closeMilkrunCenterPicker({ restoreFocus: false });
+    const selectedIndex = coupangCenterOptions.indexOf(row.assignedCenter);
+    activeMilkrunCenterPicker = {
+        anchorEl: trigger,
+        highlightedIndex: selectedIndex >= 0 ? selectedIndex : 0,
+        orderId,
+        searchTerm: "",
+    };
+    trigger.classList.add("is-open");
+    trigger.setAttribute("aria-expanded", "true");
+    renderMilkrunCenterPicker();
+}
+
+function selectMilkrunCenterForOrder(orderId, nextCenter) {
+    if (!orderId || !coupangCenterOptions.includes(nextCenter)) return;
+
     milkrunRows = milkrunRows.map((row) => (
         row.orderId === orderId
             ? { ...row, assignedCenter: nextCenter }
             : row
     ));
+    closeMilkrunCenterPicker({ restoreFocus: false });
     renderMilkrunDashboard();
+}
+
+function handleMilkrunOrderClick(event) {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+
+    const trigger = target.closest("[data-milkrun-center-trigger]");
+    if (!(trigger instanceof HTMLButtonElement)) return;
+
+    event.preventDefault();
+    openMilkrunCenterPicker(trigger);
+}
+
+function handleMilkrunCenterPickerInput(event) {
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement)) return;
+    if (!target.matches("[data-milkrun-center-picker-search]")) return;
+    if (!activeMilkrunCenterPicker) return;
+
+    activeMilkrunCenterPicker.searchTerm = target.value;
+    activeMilkrunCenterPicker.highlightedIndex = 0;
+    renderMilkrunCenterPicker();
+}
+
+function handleMilkrunCenterPickerClick(event) {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+    const option = target.closest("[data-milkrun-center-option]");
+    if (!(option instanceof HTMLButtonElement) || !activeMilkrunCenterPicker) return;
+
+    const nextCenter = option.getAttribute("data-milkrun-center-option") || "";
+    selectMilkrunCenterForOrder(activeMilkrunCenterPicker.orderId, nextCenter);
+}
+
+function handleMilkrunCenterPickerKeydown(event) {
+    if (!activeMilkrunCenterPicker) return;
+
+    const options = getMilkrunCenterPickerOptions(activeMilkrunCenterPicker.searchTerm);
+    if (event.key === "Escape") {
+        event.preventDefault();
+        closeMilkrunCenterPicker();
+        return;
+    }
+    if (event.key === "ArrowDown") {
+        event.preventDefault();
+        activeMilkrunCenterPicker.highlightedIndex = options.length
+            ? (activeMilkrunCenterPicker.highlightedIndex + 1) % options.length
+            : 0;
+        renderMilkrunCenterPicker();
+        return;
+    }
+    if (event.key === "ArrowUp") {
+        event.preventDefault();
+        activeMilkrunCenterPicker.highlightedIndex = options.length
+            ? (activeMilkrunCenterPicker.highlightedIndex - 1 + options.length) % options.length
+            : 0;
+        renderMilkrunCenterPicker();
+        return;
+    }
+    if (event.key === "Enter") {
+        event.preventDefault();
+        const nextCenter = options[activeMilkrunCenterPicker.highlightedIndex];
+        if (nextCenter) selectMilkrunCenterForOrder(activeMilkrunCenterPicker.orderId, nextCenter);
+    }
+}
+
+function handleMilkrunCenterPickerOutsideClick(event) {
+    if (!activeMilkrunCenterPicker) return;
+    const target = event.target;
+    if (!(target instanceof Node)) return;
+
+    const popover = document.getElementById(MILKRUN_CENTER_PICKER_POPOVER_ID);
+    if (popover?.contains(target)) return;
+    if (target instanceof HTMLElement && target.closest("[data-milkrun-center-trigger]")) return;
+    closeMilkrunCenterPicker({ restoreFocus: false });
+}
+
+function handleMilkrunCenterPickerViewportChange(event) {
+    if (!activeMilkrunCenterPicker) return;
+    const target = event?.target;
+    const popover = document.getElementById(MILKRUN_CENTER_PICKER_POPOVER_ID);
+    if (target instanceof Node && popover?.contains(target)) return;
+    positionMilkrunCenterPicker();
 }
 
 
@@ -2687,8 +2919,10 @@ function bindEvents() {
     milkrunCenterModal?.addEventListener("click", (event) => {
         if (event.target === milkrunCenterModal) closeMilkrunCenterModal();
     });
-    milkrunOrderBody?.addEventListener("input", handleMilkrunCenterChange);
-    milkrunOrderBody?.addEventListener("change", handleMilkrunCenterChange);
+    milkrunOrderBody?.addEventListener("click", handleMilkrunOrderClick);
+    document.addEventListener("click", handleMilkrunCenterPickerOutsideClick);
+    document.addEventListener("scroll", handleMilkrunCenterPickerViewportChange, true);
+    window.addEventListener("resize", handleMilkrunCenterPickerViewportChange);
     skuHeaderModal?.addEventListener("click", (event) => {
         if (event.target === skuHeaderModal) {
             closeSkuHeaderModal();

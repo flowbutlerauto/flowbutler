@@ -8,6 +8,11 @@ import { validateSkuRows } from "./sku-utils.js";
 import { SKU_FIELDS, SKU_REQUIRED_KEYS } from "./sku-schema.js";
 import { parseKurlyLabelFile } from "./kurly-label-file.js";
 import { buildKurlyLabelItems, validateKurlyRows } from "./kurly-label-utils.js";
+import {
+    buildKurlyOrderRows,
+    buildMilkrunRowsFromOrderRows,
+    parseCoupangOrderFile,
+} from "./order-upload-file.js";
 import { tossConfig } from "./toss-config.js";
 
 import {
@@ -114,6 +119,18 @@ const kurlyProgressMessageEl = document.getElementById("kurly-progress-message")
 const kurlyProgressDetailEl = document.getElementById("kurly-progress-detail");
 const kurlyProgressBarEl = document.getElementById("kurly-progress-bar");
 const kurlyProgressPercentEl = document.getElementById("kurly-progress-percent");
+const orderUploadCoupangFileInput = document.getElementById("order-upload-coupang-file");
+const orderUploadKurlyFileInput = document.getElementById("order-upload-kurly-file");
+const orderUploadCoupangStatusEl = document.getElementById("order-upload-coupang-status");
+const orderUploadKurlyStatusEl = document.getElementById("order-upload-kurly-status");
+const orderMatchStatusEl = document.getElementById("order-match-status");
+const orderMatchListEl = document.getElementById("order-match-list");
+const orderMatchConfirmBtn = document.getElementById("order-match-confirm-btn");
+const orderMatchDeleteOpenBtn = document.getElementById("order-match-delete-open-btn");
+const orderMatchDeleteModal = document.getElementById("order-match-delete-modal");
+const orderMatchDeleteCloseBtn = document.getElementById("order-match-delete-close-btn");
+const orderMatchDeleteSearchInput = document.getElementById("order-match-delete-search-input");
+const orderMatchDeleteListEl = document.getElementById("order-match-delete-list");
 const milkrunCenterCountEl = document.getElementById("milkrun-center-count");
 const milkrunTotalPltEl = document.getElementById("milkrun-total-plt");
 const milkrunTotalSkuEl = document.getElementById("milkrun-total-sku");
@@ -150,6 +167,10 @@ const viewMeta = {
         title: "SKU 관리",
         subtitle: "",
     },
+    "order-upload": {
+        title: "발주서 업로드",
+        subtitle: "쿠팡(밀크런)과 컬리 발주서를 판매처별 양식으로 업로드합니다.",
+    },
     "kurly-label": {
         title: "컬리 라벨 생성",
         subtitle: "",
@@ -174,11 +195,17 @@ let editingSkuRowId = null;
 let skuWorkspaceUserId = null;
 let skuLabelTemplates = [];
 let printingSkuRowId = null;
+let orderUploadRows = [];
+let orderProductMatches = {};
+let orderMatchDraftComponents = {};
+let confirmedOrderMatchKeys = new Set();
 let kurlyRows = [];
 let kurlyParsedFileName = "";
 let milkrunRows = [];
+let activeOrderSkuPicker = null;
 let activeMilkrunCenterPicker = null;
 const MILKRUN_CENTER_PICKER_POPOVER_ID = "milkrun-center-picker-popover";
+const ORDER_SKU_PICKER_POPOVER_ID = "order-sku-picker-popover";
 const DEFAULT_COUPANG_CENTER_OPTIONS = Array.isArray(window.__FLOWBUTLER_DEFAULT_COUPANG_CENTERS)
     ? [...window.__FLOWBUTLER_DEFAULT_COUPANG_CENTERS]
     : [];
@@ -483,7 +510,7 @@ function setToolGroupOpenState(isOpen) {
 }
 
 function isToolView(viewName) {
-    return ["tracking", "label", "sku", "kurly-label", "coupang-milkrun"].includes(viewName);
+    return ["tracking", "label", "sku", "order-upload", "kurly-label", "coupang-milkrun"].includes(viewName);
 }
 
 function setSkuResult(message) {
@@ -532,6 +559,1156 @@ function resetKurlyProgress() {
         value: 0,
         visible: false,
     });
+}
+
+function getOrderUploadChannelLabel(channel) {
+    return channel === "coupang" ? "쿠팡(밀크런)" : "컬리";
+}
+
+function getOrderUploadChannelElements(channel) {
+    if (channel === "coupang") {
+        return {
+            statusEl: orderUploadCoupangStatusEl,
+        };
+    }
+
+    return {
+        statusEl: orderUploadKurlyStatusEl,
+    };
+}
+
+function setOrderUploadChannelStatus(channel, message, tone = "idle") {
+    const { statusEl } = getOrderUploadChannelElements(channel);
+
+    if (statusEl) {
+        const displayMessage = tone === "error" ? "실패" : (message ?? "");
+        statusEl.textContent = displayMessage;
+        statusEl.title = message ?? "";
+        statusEl.className = `order-upload-simple-status is-${tone}`;
+    }
+}
+
+function getOrderMatchStorageKey() {
+    const userKey = skuWorkspaceUserId || auth.currentUser?.uid || "local";
+    return `flowbutler:order-product-matches:${userKey}`;
+}
+
+function getOrderProductMatchesDocRef() {
+    const userId = skuWorkspaceUserId || auth.currentUser?.uid || "";
+    if (!userId) return null;
+    return doc(db, "users", userId, "preferences", "orderProductMatches");
+}
+
+function loadLocalOrderProductMatches() {
+    try {
+        const raw = window.localStorage.getItem(getOrderMatchStorageKey());
+        const parsed = raw ? JSON.parse(raw) : {};
+        orderProductMatches = parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+    } catch (error) {
+        console.warn("상품 매칭 정보를 불러오지 못했습니다.", error);
+        orderProductMatches = {};
+    }
+}
+
+function saveLocalOrderProductMatches() {
+    try {
+        window.localStorage.setItem(getOrderMatchStorageKey(), JSON.stringify(orderProductMatches));
+    } catch (error) {
+        console.warn("상품 매칭 정보를 저장하지 못했습니다.", error);
+    }
+}
+
+async function loadOrderProductMatches() {
+    loadLocalOrderProductMatches();
+
+    const matchDocRef = getOrderProductMatchesDocRef();
+    if (!matchDocRef) {
+        renderOrderMatchPanel();
+        return;
+    }
+
+    try {
+        const matchSnap = await getDoc(matchDocRef);
+        const firestoreMatches = matchSnap.data()?.matches;
+        if (firestoreMatches && typeof firestoreMatches === "object" && !Array.isArray(firestoreMatches)) {
+            orderProductMatches = firestoreMatches;
+            saveLocalOrderProductMatches();
+        }
+    } catch (error) {
+        console.warn("Firestore 상품 매칭 정보를 불러오지 못했습니다. 로컬 저장값을 사용합니다.", error);
+    }
+
+    renderOrderMatchPanel();
+}
+
+async function saveOrderProductMatches() {
+    saveLocalOrderProductMatches();
+
+    const matchDocRef = getOrderProductMatchesDocRef();
+    if (!matchDocRef) return false;
+
+    try {
+        await setDoc(
+            matchDocRef,
+            {
+                matches: orderProductMatches,
+                updatedAt: serverTimestamp(),
+            },
+            { merge: true },
+        );
+        return true;
+    } catch (error) {
+        console.warn("Firestore 상품 매칭 정보 저장에 실패했습니다. 로컬 저장값은 유지됩니다.", error);
+        return false;
+    }
+}
+
+function normalizeOrderProductName(value) {
+    return String(value ?? "")
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, "")
+        .replace(/[()[\]{}_\-./]/g, "");
+}
+
+function getSkuMatchKey(row) {
+    return String(row?.adminProductCode || row?.productName || row?.rowId || "").trim();
+}
+
+function getSkuDisplayLabel(row) {
+    const productName = String(row?.productName ?? "").trim();
+    const adminCode = String(row?.adminProductCode ?? "").trim();
+    return adminCode ? `${productName} · ${adminCode}` : productName;
+}
+
+function getMatchableSkuRows() {
+    return (skuRows ?? []).filter((row) => String(row?.productName ?? "").trim());
+}
+
+function getSkuByMatchKey(matchKey) {
+    const safeKey = String(matchKey ?? "").trim();
+    if (!safeKey) return null;
+    return getMatchableSkuRows().find((row) => getSkuMatchKey(row) === safeKey) || null;
+}
+
+function getExactSkuNameMatch(productName) {
+    const normalizedName = normalizeOrderProductName(productName);
+    if (!normalizedName) return null;
+    return getMatchableSkuRows().find((row) => normalizeOrderProductName(row.productName) === normalizedName) || null;
+}
+
+function getOrderProductNameByMatchKey(matchKey) {
+    const matchKeyText = String(matchKey ?? "");
+    const product = getUniqueOrderProducts().find((item) => item.matchKey === matchKeyText);
+    if (product?.productName) return product.productName;
+    const matchRecord = orderProductMatches[matchKeyText];
+    return matchRecord?.orderProductName || matchKeyText;
+}
+
+function normalizeOrderMatchQuantity(value) {
+    const numericValue = Number(value);
+    return Number.isFinite(numericValue) && numericValue > 0 ? numericValue : 1;
+}
+
+function createOrderMatchComponent(skuRow, quantity = 1) {
+    return {
+        skuKey: getSkuMatchKey(skuRow),
+        skuName: skuRow?.productName || "",
+        quantity: normalizeOrderMatchQuantity(quantity),
+    };
+}
+
+function normalizeOrderMatchComponents(matchRecord, { includeIncomplete = false } = {}) {
+    if (!matchRecord || typeof matchRecord !== "object") return [];
+
+    const rawComponents = Array.isArray(matchRecord.components)
+        ? matchRecord.components
+        : (matchRecord.skuKey ? [{
+            skuKey: matchRecord.skuKey,
+            skuName: matchRecord.skuName || "",
+            quantity: 1,
+        }] : []);
+
+    return rawComponents
+        .map((component) => {
+            const skuKey = String(component?.skuKey || "").trim();
+            const skuRow = getSkuByMatchKey(skuKey);
+            const skuName = String(skuRow?.productName || component?.skuName || "").trim();
+            const quantity = normalizeOrderMatchQuantity(component?.quantity);
+
+            return {
+                skuKey,
+                skuName,
+                quantity,
+            };
+        })
+        .filter((component) => includeIncomplete || (component.skuKey && component.quantity > 0));
+}
+
+function hasCompleteOrderComponents(components) {
+    return Array.isArray(components) &&
+        components.length > 0 &&
+        components.every((component) => (
+            component?.skuKey &&
+            getSkuByMatchKey(component.skuKey) &&
+            Number(component.quantity) > 0
+        ));
+}
+
+function getSavedOrderComponents(productName) {
+    const normalizedName = normalizeOrderProductName(productName);
+    return normalizeOrderMatchComponents(orderProductMatches[normalizedName]);
+}
+
+function findSkuByProductNameCandidate(productName) {
+    const normalizedName = normalizeOrderProductName(productName);
+    if (!normalizedName) return null;
+    return getMatchableSkuRows().find((row) => normalizeOrderProductName(row.productName) === normalizedName) || null;
+}
+
+function parseOrderProductSegment(segment) {
+    const rawName = String(segment ?? "").trim();
+    const quantityMatch = rawName.match(/\s*(\d+)\s*(?:개입|입|개|팩|세트)\s*$/i);
+    const quantity = quantityMatch ? Math.max(1, Number(quantityMatch[1]) || 1) : 1;
+    const baseName = quantityMatch
+        ? rawName.slice(0, quantityMatch.index).trim()
+        : rawName;
+
+    return {
+        productName: baseName || rawName,
+        quantity,
+    };
+}
+
+function getAutoOrderComponents(productName) {
+    const productNameText = String(productName ?? "").trim();
+    if (!productNameText) return [];
+
+    const bundleSegments = productNameText
+        .split(/\s*\+\s*/g)
+        .map((part) => part.trim())
+        .filter(Boolean);
+
+    if (bundleSegments.length > 1) {
+        const components = bundleSegments.map((segment) => {
+            const parsedSegment = parseOrderProductSegment(segment);
+            const skuRow = findSkuByProductNameCandidate(parsedSegment.productName);
+            return skuRow ? createOrderMatchComponent(skuRow, parsedSegment.quantity) : null;
+        });
+
+        return components.every(Boolean) ? components : [];
+    }
+
+    const parsedProduct = parseOrderProductSegment(productNameText);
+    const quantitySkuRow = parsedProduct.quantity > 1
+        ? findSkuByProductNameCandidate(parsedProduct.productName)
+        : null;
+
+    if (quantitySkuRow) {
+        return [createOrderMatchComponent(quantitySkuRow, parsedProduct.quantity)];
+    }
+
+    const exactSkuRow = getExactSkuNameMatch(productNameText);
+    return exactSkuRow ? [createOrderMatchComponent(exactSkuRow, 1)] : [];
+}
+
+function getEditableOrderComponents(productName) {
+    const matchKey = normalizeOrderProductName(productName);
+    if (Array.isArray(orderMatchDraftComponents[matchKey])) {
+        return orderMatchDraftComponents[matchKey];
+    }
+
+    const matchRecord = orderProductMatches[matchKey];
+    const savedComponents = normalizeOrderMatchComponents(matchRecord, { includeIncomplete: true });
+    if (savedComponents.length) return savedComponents;
+
+    const autoComponents = getAutoOrderComponents(productName);
+    if (autoComponents.length) return autoComponents;
+
+    return [{ skuKey: "", skuName: "", quantity: 1 }];
+}
+
+function getResolvedOrderComponents(productName) {
+    const matchKey = normalizeOrderProductName(productName);
+
+    if (Array.isArray(orderMatchDraftComponents[matchKey])) {
+        return orderMatchDraftComponents[matchKey];
+    }
+
+    const savedComponents = getSavedOrderComponents(productName);
+    if (savedComponents.length) return savedComponents;
+
+    return getAutoOrderComponents(productName);
+}
+
+function hasSavedOrderProductMatch(productName) {
+    return hasCompleteOrderComponents(getSavedOrderComponents(productName));
+}
+
+function hasCompleteOrderMatch(productName) {
+    return hasCompleteOrderComponents(getResolvedOrderComponents(productName));
+}
+
+function getOrderMatchStateText(productName) {
+    const components = getResolvedOrderComponents(productName);
+    if (!hasCompleteOrderComponents(components)) return "매칭 필요";
+
+    const prefix = hasSavedOrderProductMatch(productName) ? "저장된 매칭" : "자동 매칭";
+    return components.length > 1 ? `${prefix} ${components.length}개 구성` : prefix;
+}
+
+function getOrderMatchComponentSummary(components) {
+    return components
+        .filter((component) => component?.skuKey)
+        .map((component) => `${component.skuName || component.skuKey} x ${normalizeOrderMatchQuantity(component.quantity)}`)
+        .join(", ");
+}
+
+function saveOrderMatchComponents(matchKey, components) {
+    const orderProductName = getOrderProductNameByMatchKey(matchKey);
+    const cleanComponents = (components ?? [])
+        .map((component) => {
+            const skuRow = getSkuByMatchKey(component?.skuKey);
+            if (!skuRow) return null;
+            return createOrderMatchComponent(skuRow, component.quantity);
+        })
+        .filter(Boolean);
+
+    if (!cleanComponents.length) {
+        delete orderProductMatches[matchKey];
+        delete orderMatchDraftComponents[matchKey];
+        void saveOrderProductMatches();
+        return;
+    }
+
+    orderProductMatches[matchKey] = {
+        orderProductName,
+        components: cleanComponents,
+        matchedAt: new Date().toISOString(),
+    };
+    orderMatchDraftComponents[matchKey] = cleanComponents;
+    void saveOrderProductMatches();
+}
+
+function getSavedOrderMatchEntries() {
+    return Object.entries(orderProductMatches ?? {})
+        .map(([matchKey, matchRecord]) => {
+            const components = normalizeOrderMatchComponents(matchRecord);
+            return {
+                matchKey,
+                matchRecord,
+                components,
+            };
+        })
+        .filter((entry) => entry.components.length > 0)
+        .map(({ matchKey, matchRecord, components }) => {
+            const orderProductName = String(matchRecord.orderProductName || getOrderProductNameByMatchKey(matchKey) || matchKey).trim();
+
+            return {
+                matchKey,
+                orderProductName,
+                components,
+                componentSummary: getOrderMatchComponentSummary(components),
+                matchedAt: matchRecord.matchedAt || "",
+            };
+        })
+        .sort((left, right) => left.orderProductName.localeCompare(right.orderProductName, "ko"));
+}
+
+function syncOrderMatchDeleteButton() {
+    if (!orderMatchDeleteOpenBtn) return;
+    orderMatchDeleteOpenBtn.disabled = getSavedOrderMatchEntries().length === 0;
+}
+
+function getSkuBySearchValue(value) {
+    const safeValue = String(value ?? "").trim();
+    if (!safeValue) return null;
+
+    return getMatchableSkuRows().find((row) => (
+        getSkuMatchKey(row) === safeValue || getSkuDisplayLabel(row) === safeValue
+    )) || null;
+}
+
+function getUniqueOrderProducts() {
+    const productMap = new Map();
+
+    orderUploadRows
+        .filter((row) => row.isValid && row.productName)
+        .forEach((row) => {
+            const productName = String(row.productName ?? "").trim();
+            const matchKey = normalizeOrderProductName(productName);
+            if (!matchKey) return;
+
+            if (!productMap.has(matchKey)) {
+                productMap.set(matchKey, {
+                    matchKey,
+                    productName,
+                    rowCount: 0,
+                    channels: new Set(),
+                });
+            }
+
+            const item = productMap.get(matchKey);
+            item.rowCount += 1;
+            item.channels.add(row.channelName || getOrderUploadChannelLabel(row.channel));
+        });
+
+    return [...productMap.values()];
+}
+
+function renderOrderMatchPanel() {
+    if (!orderMatchStatusEl || !orderMatchListEl) return;
+    closeOrderSkuPicker({ restoreFocus: false });
+    syncOrderMatchDeleteButton();
+
+    const products = getUniqueOrderProducts();
+    if (!products.length) {
+        orderMatchStatusEl.textContent = "발주서를 업로드하면 매칭이 필요한 상품이 표시됩니다.";
+        orderMatchListEl.innerHTML = '<div class="order-match-empty">매칭할 상품이 없습니다.</div>';
+        if (orderMatchConfirmBtn) orderMatchConfirmBtn.disabled = true;
+        return;
+    }
+
+    const skuOptions = getMatchableSkuRows();
+    if (!skuOptions.length) {
+        orderMatchStatusEl.textContent = "SKU 관리에 등록된 상품이 없습니다.";
+        orderMatchListEl.innerHTML = '<div class="order-match-empty">SKU 관리에서 상품을 먼저 등록해주세요.</div>';
+        if (orderMatchConfirmBtn) orderMatchConfirmBtn.disabled = true;
+        return;
+    }
+
+    const openProducts = products.filter((item) => !confirmedOrderMatchKeys.has(item.matchKey));
+    const matchedCount = products.filter((item) => hasCompleteOrderMatch(item.productName)).length;
+    orderMatchStatusEl.textContent = `총 ${products.length}개 상품 중 ${matchedCount}개 매칭`;
+
+    if (!openProducts.length) {
+        orderMatchListEl.innerHTML = '<div class="order-match-empty is-success">상품 매칭 확인이 완료되었습니다.</div>';
+        if (orderMatchConfirmBtn) orderMatchConfirmBtn.disabled = true;
+        return;
+    }
+
+    orderMatchListEl.innerHTML = `
+        ${openProducts.map((item) => {
+        const components = getEditableOrderComponents(item.productName);
+        const hasCompleteMatch = hasCompleteOrderComponents(getResolvedOrderComponents(item.productName));
+        const matchStateText = getOrderMatchStateText(item.productName);
+        const componentRowsHtml = components.map((component, componentIndex) => {
+            const skuRow = component.skuKey ? getSkuByMatchKey(component.skuKey) : null;
+            const skuLabel = skuRow ? getSkuDisplayLabel(skuRow) : "";
+            return `
+            <div class="order-match-component-row">
+                <button
+                    class="order-match-sku-trigger${skuRow ? " is-selected" : ""}"
+                    data-order-match-key="${escapeHtml(item.matchKey)}"
+                    data-order-match-index="${componentIndex}"
+                    data-order-match-sku-trigger
+                    type="button"
+                    aria-haspopup="listbox"
+                    aria-expanded="false"
+                >
+                    <span class="order-match-sku-trigger-text">${escapeHtml(skuLabel || "SKU 상품 선택")}</span>
+                    <span class="order-match-sku-trigger-chev" aria-hidden="true"></span>
+                </button>
+                <input
+                    class="order-match-quantity-input"
+                    data-order-match-key="${escapeHtml(item.matchKey)}"
+                    data-order-match-index="${componentIndex}"
+                    data-order-match-field="quantity"
+                    type="number"
+                    min="1"
+                    step="1"
+                    value="${escapeHtml(normalizeOrderMatchQuantity(component.quantity))}"
+                    aria-label="구성 수량"
+                />
+                <button
+                    class="order-match-component-remove-btn"
+                    data-order-match-remove-key="${escapeHtml(item.matchKey)}"
+                    data-order-match-index="${componentIndex}"
+                    type="button"
+                    ${components.length <= 1 ? "disabled" : ""}
+                >
+                    삭제
+                </button>
+            </div>
+            `;
+        }).join("");
+        return `
+        <div class="order-match-item${hasCompleteMatch ? " is-matched" : ""}">
+            <div class="order-match-product">
+                <strong>${escapeHtml(item.productName)}</strong>
+                <span>${escapeHtml([...item.channels].join(", "))} · ${item.rowCount}행 · ${matchStateText}</span>
+            </div>
+            <div class="order-match-components">
+                ${componentRowsHtml}
+                <button
+                    class="order-match-component-add-btn"
+                    data-order-match-add-key="${escapeHtml(item.matchKey)}"
+                    type="button"
+                >
+                    + 구성 추가
+                </button>
+            </div>
+        </div>
+        `;
+    }).join("")}
+    `;
+
+    const hasUnmatched = openProducts.some((item) => !hasCompleteOrderMatch(item.productName));
+    if (orderMatchConfirmBtn) orderMatchConfirmBtn.disabled = hasUnmatched;
+}
+
+function getOrderSkuPickerOptions(searchTerm = "") {
+    const rawTerm = String(searchTerm ?? "").trim().toLowerCase();
+    const normalizedTerm = normalizeOrderProductName(rawTerm);
+    const skuOptions = getMatchableSkuRows();
+    if (!rawTerm && !normalizedTerm) return skuOptions;
+
+    return skuOptions.filter((row) => {
+        const productName = String(row?.productName ?? "");
+        const adminCode = String(row?.adminProductCode ?? "");
+        const displayLabel = getSkuDisplayLabel(row);
+
+        return (
+            normalizeOrderProductName(productName).includes(normalizedTerm) ||
+            normalizeOrderProductName(displayLabel).includes(normalizedTerm) ||
+            adminCode.toLowerCase().includes(rawTerm)
+        );
+    });
+}
+
+function getOrderSkuPickerPopover() {
+    let popover = document.getElementById(ORDER_SKU_PICKER_POPOVER_ID);
+    if (popover) return popover;
+
+    popover = document.createElement("div");
+    popover.id = ORDER_SKU_PICKER_POPOVER_ID;
+    popover.className = "order-sku-picker-popover";
+    popover.setAttribute("role", "dialog");
+    popover.addEventListener("input", handleOrderSkuPickerInput);
+    popover.addEventListener("compositionstart", handleOrderSkuPickerCompositionStart);
+    popover.addEventListener("compositionend", handleOrderSkuPickerCompositionEnd);
+    popover.addEventListener("click", handleOrderSkuPickerClick);
+    popover.addEventListener("keydown", handleOrderSkuPickerKeydown);
+    document.body.appendChild(popover);
+    return popover;
+}
+
+function closeOrderSkuPicker(options = {}) {
+    const { restoreFocus = true } = options;
+    const previousPicker = activeOrderSkuPicker;
+    const popover = document.getElementById(ORDER_SKU_PICKER_POPOVER_ID);
+
+    if (previousPicker?.anchorEl) {
+        previousPicker.anchorEl.classList.remove("is-open");
+        previousPicker.anchorEl.setAttribute("aria-expanded", "false");
+        if (restoreFocus && previousPicker.anchorEl.isConnected) {
+            previousPicker.anchorEl.focus();
+        }
+    }
+
+    popover?.remove();
+    activeOrderSkuPicker = null;
+}
+
+function positionOrderSkuPicker() {
+    if (!activeOrderSkuPicker?.anchorEl?.isConnected) {
+        closeOrderSkuPicker({ restoreFocus: false });
+        return;
+    }
+
+    const popover = document.getElementById(ORDER_SKU_PICKER_POPOVER_ID);
+    if (!popover) return;
+
+    const anchorRect = activeOrderSkuPicker.anchorEl.getBoundingClientRect();
+    if (anchorRect.width === 0 || anchorRect.height === 0) {
+        closeOrderSkuPicker({ restoreFocus: false });
+        return;
+    }
+
+    const margin = 10;
+    const width = Math.min(520, Math.max(320, anchorRect.width + 180));
+    const availableBelow = window.innerHeight - anchorRect.bottom - margin;
+    const availableAbove = anchorRect.top - margin;
+    const openAbove = availableBelow < 280 && availableAbove > availableBelow;
+    const availableHeight = Math.max(190, Math.min(380, openAbove ? availableAbove : availableBelow));
+
+    popover.style.width = `${Math.min(width, window.innerWidth - (margin * 2))}px`;
+    popover.style.setProperty("--order-sku-picker-list-max", `${Math.max(96, availableHeight - 104)}px`);
+
+    const adjustedLeft = Math.min(
+        Math.max(anchorRect.left, margin),
+        window.innerWidth - Number.parseFloat(popover.style.width) - margin
+    );
+    popover.style.left = `${adjustedLeft}px`;
+
+    const popoverRect = popover.getBoundingClientRect();
+    const adjustedTop = openAbove
+        ? Math.max(margin, anchorRect.top - popoverRect.height - 6)
+        : Math.min(anchorRect.bottom + 6, window.innerHeight - popoverRect.height - margin);
+
+    popover.style.top = `${adjustedTop}px`;
+    popover.classList.toggle("is-above", openAbove);
+}
+
+function getOrderSkuPickerOptionList(options) {
+    if (!options.length) {
+        return '<div class="order-sku-picker-empty">일치하는 상품이 없습니다.</div>';
+    }
+
+    const selectedSkuKey = activeOrderSkuPicker?.skuKey || "";
+    return options.map((row, index) => {
+        const skuKey = getSkuMatchKey(row);
+        const selected = skuKey === selectedSkuKey;
+        const highlighted = index === activeOrderSkuPicker.highlightedIndex;
+        const adminCode = String(row?.adminProductCode ?? "").trim();
+
+        return `
+            <button
+                class="order-sku-picker-option${selected ? " is-selected" : ""}${highlighted ? " is-active" : ""}"
+                data-order-sku-option="${escapeHtml(skuKey)}"
+                type="button"
+                role="option"
+                aria-selected="${selected ? "true" : "false"}"
+            >
+                <span class="order-sku-picker-option-main">
+                    <span class="order-sku-picker-option-name">${escapeHtml(row.productName || skuKey)}</span>
+                    ${adminCode ? `<span class="order-sku-picker-option-code">${escapeHtml(adminCode)}</span>` : ""}
+                </span>
+                ${selected ? '<span class="order-sku-picker-option-tag">선택됨</span>' : ""}
+            </button>
+        `;
+    }).join("");
+}
+
+function updateOrderSkuPickerResults() {
+    if (!activeOrderSkuPicker) return;
+
+    const popover = document.getElementById(ORDER_SKU_PICKER_POPOVER_ID);
+    if (!popover) return;
+
+    const options = getOrderSkuPickerOptions(activeOrderSkuPicker.searchTerm);
+    if (activeOrderSkuPicker.highlightedIndex >= options.length) {
+        activeOrderSkuPicker.highlightedIndex = Math.max(0, options.length - 1);
+    }
+
+    const countEl = popover.querySelector("[data-order-sku-picker-count]");
+    if (countEl) countEl.textContent = `${options.length} / ${getMatchableSkuRows().length}`;
+
+    const listEl = popover.querySelector("[data-order-sku-picker-list]");
+    if (listEl) listEl.innerHTML = getOrderSkuPickerOptionList(options);
+
+    positionOrderSkuPicker();
+    popover.querySelector(".order-sku-picker-option.is-active")?.scrollIntoView({ block: "nearest" });
+}
+
+function renderOrderSkuPicker() {
+    if (!activeOrderSkuPicker) return;
+
+    const popover = getOrderSkuPickerPopover();
+    popover.innerHTML = `
+        <div class="order-sku-picker-head">
+            <strong>SKU 상품 선택</strong>
+            <span data-order-sku-picker-count></span>
+        </div>
+        <input
+            class="order-sku-picker-search"
+            data-order-sku-picker-search
+            type="search"
+            value="${escapeHtml(activeOrderSkuPicker.searchTerm)}"
+            placeholder="상품명 / 관리코드 검색"
+            autocomplete="off"
+        />
+        <div class="order-sku-picker-list" data-order-sku-picker-list role="listbox"></div>
+    `;
+
+    updateOrderSkuPickerResults();
+
+    const searchInput = popover.querySelector("[data-order-sku-picker-search]");
+    if (searchInput instanceof HTMLInputElement) {
+        searchInput.focus({ preventScroll: true });
+        const caretPosition = searchInput.value.length;
+        searchInput.setSelectionRange(caretPosition, caretPosition);
+    }
+}
+
+function openOrderSkuPicker(trigger) {
+    const matchKey = trigger.getAttribute("data-order-match-key") || "";
+    const componentIndex = Number(trigger.getAttribute("data-order-match-index") || "0");
+    if (!matchKey) return;
+
+    if (
+        activeOrderSkuPicker?.matchKey === matchKey &&
+        activeOrderSkuPicker?.componentIndex === componentIndex
+    ) {
+        closeOrderSkuPicker();
+        return;
+    }
+
+    closeOrderSkuPicker({ restoreFocus: false });
+
+    const components = getEditableOrderComponents(getOrderProductNameByMatchKey(matchKey));
+    const skuKey = components[componentIndex]?.skuKey || "";
+    const selectedIndex = getMatchableSkuRows().findIndex((row) => getSkuMatchKey(row) === skuKey);
+
+    activeOrderSkuPicker = {
+        anchorEl: trigger,
+        componentIndex,
+        highlightedIndex: selectedIndex >= 0 ? selectedIndex : 0,
+        isComposing: false,
+        matchKey,
+        searchTerm: "",
+        skuKey,
+    };
+    trigger.classList.add("is-open");
+    trigger.setAttribute("aria-expanded", "true");
+    renderOrderSkuPicker();
+}
+
+function selectOrderSkuForMatch(skuKey) {
+    if (!activeOrderSkuPicker) return;
+
+    const skuRow = getSkuByMatchKey(skuKey);
+    if (!skuRow) return;
+
+    const { matchKey, componentIndex } = activeOrderSkuPicker;
+    const components = getEditableOrderComponents(getOrderProductNameByMatchKey(matchKey))
+        .map((component) => ({ ...component }));
+
+    if (!components[componentIndex]) {
+        components[componentIndex] = { skuKey: "", skuName: "", quantity: 1 };
+    }
+
+    components[componentIndex] = createOrderMatchComponent(skuRow, components[componentIndex].quantity);
+    orderMatchDraftComponents[matchKey] = components;
+    confirmedOrderMatchKeys.delete(matchKey);
+
+    if (hasCompleteOrderComponents(components)) {
+        saveOrderMatchComponents(matchKey, components);
+    }
+
+    closeOrderSkuPicker({ restoreFocus: false });
+    renderOrderMatchPanel();
+}
+
+function handleOrderSkuPickerInput(event) {
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement)) return;
+    if (!target.matches("[data-order-sku-picker-search]")) return;
+    if (!activeOrderSkuPicker) return;
+    if (event.isComposing || activeOrderSkuPicker.isComposing) return;
+
+    activeOrderSkuPicker.searchTerm = target.value;
+    activeOrderSkuPicker.highlightedIndex = 0;
+    updateOrderSkuPickerResults();
+}
+
+function handleOrderSkuPickerCompositionStart(event) {
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement)) return;
+    if (!target.matches("[data-order-sku-picker-search]")) return;
+    if (!activeOrderSkuPicker) return;
+
+    activeOrderSkuPicker.isComposing = true;
+}
+
+function handleOrderSkuPickerCompositionEnd(event) {
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement)) return;
+    if (!target.matches("[data-order-sku-picker-search]")) return;
+    if (!activeOrderSkuPicker) return;
+
+    activeOrderSkuPicker.isComposing = false;
+    activeOrderSkuPicker.searchTerm = target.value;
+    activeOrderSkuPicker.highlightedIndex = 0;
+    updateOrderSkuPickerResults();
+}
+
+function handleOrderSkuPickerClick(event) {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+
+    const option = target.closest("[data-order-sku-option]");
+    if (!(option instanceof HTMLButtonElement)) return;
+
+    const skuKey = option.getAttribute("data-order-sku-option") || "";
+    selectOrderSkuForMatch(skuKey);
+}
+
+function handleOrderSkuPickerKeydown(event) {
+    if (!activeOrderSkuPicker) return;
+
+    const options = getOrderSkuPickerOptions(activeOrderSkuPicker.searchTerm);
+    if (event.key === "Escape") {
+        event.preventDefault();
+        closeOrderSkuPicker();
+        return;
+    }
+
+    if (event.key === "ArrowDown") {
+        event.preventDefault();
+        activeOrderSkuPicker.highlightedIndex = options.length
+            ? (activeOrderSkuPicker.highlightedIndex + 1) % options.length
+            : 0;
+        updateOrderSkuPickerResults();
+        return;
+    }
+
+    if (event.key === "ArrowUp") {
+        event.preventDefault();
+        activeOrderSkuPicker.highlightedIndex = options.length
+            ? (activeOrderSkuPicker.highlightedIndex - 1 + options.length) % options.length
+            : 0;
+        updateOrderSkuPickerResults();
+        return;
+    }
+
+    if (event.key === "Enter") {
+        event.preventDefault();
+        const nextSku = options[activeOrderSkuPicker.highlightedIndex];
+        if (nextSku) selectOrderSkuForMatch(getSkuMatchKey(nextSku));
+    }
+}
+
+function handleOrderSkuPickerOutsideClick(event) {
+    if (!activeOrderSkuPicker) return;
+    const target = event.target;
+    if (!(target instanceof Node)) return;
+
+    const popover = document.getElementById(ORDER_SKU_PICKER_POPOVER_ID);
+    if (popover?.contains(target)) return;
+    if (target instanceof HTMLElement && target.closest("[data-order-match-sku-trigger]")) return;
+    closeOrderSkuPicker({ restoreFocus: false });
+}
+
+function handleOrderSkuPickerViewportChange(event) {
+    if (!activeOrderSkuPicker) return;
+    const target = event?.target;
+    const popover = document.getElementById(ORDER_SKU_PICKER_POPOVER_ID);
+    if (target instanceof Node && popover?.contains(target)) return;
+    positionOrderSkuPicker();
+}
+
+function handleOrderMatchChange(event) {
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement)) return;
+    if (!target.matches("[data-order-match-key]")) return;
+
+    const matchKey = target.getAttribute("data-order-match-key") || "";
+    const field = target.getAttribute("data-order-match-field") || "";
+    const componentIndex = Number(target.getAttribute("data-order-match-index") || "0");
+    if (!matchKey) return;
+
+    const components = getEditableOrderComponents(getOrderProductNameByMatchKey(matchKey))
+        .map((component) => ({ ...component }));
+
+    if (!components[componentIndex]) {
+        components[componentIndex] = { skuKey: "", skuName: "", quantity: 1 };
+    }
+
+    if (field === "quantity") {
+        components[componentIndex].quantity = normalizeOrderMatchQuantity(target.value);
+    } else {
+        const inputValue = target.value.trim();
+
+        if (!inputValue) {
+            components[componentIndex].skuKey = "";
+            components[componentIndex].skuName = "";
+        } else {
+            const skuRow = getSkuBySearchValue(inputValue);
+            if (!skuRow) {
+                window.alert("SKU 관리에 등록된 상품 중에서 선택해주세요.");
+                renderOrderMatchPanel();
+                return;
+            }
+
+            components[componentIndex] = createOrderMatchComponent(skuRow, components[componentIndex].quantity);
+        }
+    }
+
+    orderMatchDraftComponents[matchKey] = components;
+    confirmedOrderMatchKeys.delete(matchKey);
+
+    if (hasCompleteOrderComponents(components)) {
+        saveOrderMatchComponents(matchKey, components);
+    } else if (!components.some((component) => component.skuKey)) {
+        delete orderProductMatches[matchKey];
+        void saveOrderProductMatches();
+    }
+
+    renderOrderMatchPanel();
+}
+
+function handleOrderMatchClick(event) {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+
+    const skuTrigger = target.closest("[data-order-match-sku-trigger]");
+    if (skuTrigger instanceof HTMLButtonElement) {
+        event.preventDefault();
+        openOrderSkuPicker(skuTrigger);
+        return;
+    }
+
+    const addButton = target.closest("[data-order-match-add-key]");
+    if (addButton instanceof HTMLElement) {
+        const matchKey = addButton.getAttribute("data-order-match-add-key") || "";
+        if (!matchKey) return;
+
+        const components = getEditableOrderComponents(getOrderProductNameByMatchKey(matchKey))
+            .map((component) => ({ ...component }));
+        components.push({ skuKey: "", skuName: "", quantity: 1 });
+        orderMatchDraftComponents[matchKey] = components;
+        confirmedOrderMatchKeys.delete(matchKey);
+        renderOrderMatchPanel();
+        return;
+    }
+
+    const removeButton = target.closest("[data-order-match-remove-key]");
+    if (removeButton instanceof HTMLElement) {
+        const matchKey = removeButton.getAttribute("data-order-match-remove-key") || "";
+        const componentIndex = Number(removeButton.getAttribute("data-order-match-index") || "0");
+        if (!matchKey) return;
+
+        const components = getEditableOrderComponents(getOrderProductNameByMatchKey(matchKey))
+            .map((component) => ({ ...component }))
+            .filter((_, index) => index !== componentIndex);
+        const nextComponents = components.length ? components : [{ skuKey: "", skuName: "", quantity: 1 }];
+
+        orderMatchDraftComponents[matchKey] = nextComponents;
+        confirmedOrderMatchKeys.delete(matchKey);
+
+        if (hasCompleteOrderComponents(nextComponents)) {
+            saveOrderMatchComponents(matchKey, nextComponents);
+        } else if (!nextComponents.some((component) => component.skuKey)) {
+            delete orderProductMatches[matchKey];
+            void saveOrderProductMatches();
+        }
+
+        renderOrderMatchPanel();
+    }
+}
+
+function persistConfirmedOrderMatchIfNeeded(item) {
+    const components = getResolvedOrderComponents(item.productName);
+    if (!hasCompleteOrderComponents(components)) return false;
+
+    saveOrderMatchComponents(item.matchKey, components);
+    confirmedOrderMatchKeys.add(item.matchKey);
+    return true;
+}
+
+function handleConfirmAllOrderMatches() {
+    const products = getUniqueOrderProducts();
+    const openProducts = products.filter((item) => !confirmedOrderMatchKeys.has(item.matchKey));
+    const unmatchedProducts = openProducts.filter((item) => !hasCompleteOrderMatch(item.productName));
+
+    if (!openProducts.length) return;
+
+    if (unmatchedProducts.length) {
+        window.alert(`아직 매칭되지 않은 상품이 ${unmatchedProducts.length}개 있습니다.`);
+        return;
+    }
+
+    openProducts.forEach((item) => {
+        persistConfirmedOrderMatchIfNeeded(item);
+    });
+
+    renderOrderMatchPanel();
+}
+
+function renderOrderMatchDeleteList() {
+    syncOrderMatchDeleteButton();
+    if (!orderMatchDeleteListEl) return;
+
+    const entries = getSavedOrderMatchEntries();
+    const rawTerm = String(orderMatchDeleteSearchInput?.value || "").trim().toLowerCase();
+    const normalizedTerm = normalizeOrderProductName(rawTerm);
+    const filteredEntries = entries.filter((entry) => {
+        if (!normalizedTerm && !rawTerm) return true;
+
+        return (
+            normalizeOrderProductName(entry.orderProductName).includes(normalizedTerm) ||
+            normalizeOrderProductName(entry.componentSummary).includes(normalizedTerm) ||
+            entry.components.some((component) => (
+                normalizeOrderProductName(component.skuName).includes(normalizedTerm) ||
+                String(component.skuKey).toLowerCase().includes(rawTerm)
+            ))
+        );
+    });
+
+    if (!entries.length) {
+        orderMatchDeleteListEl.innerHTML = '<div class="order-match-delete-empty">저장된 매칭이 없습니다.</div>';
+        return;
+    }
+
+    if (!filteredEntries.length) {
+        orderMatchDeleteListEl.innerHTML = '<div class="order-match-delete-empty">검색 결과가 없습니다.</div>';
+        return;
+    }
+
+    orderMatchDeleteListEl.innerHTML = filteredEntries.map((entry) => `
+        <div class="order-match-delete-item">
+            <div class="order-match-delete-main">
+                <strong>${escapeHtml(entry.orderProductName)}</strong>
+                <span>${escapeHtml(entry.componentSummary)}</span>
+            </div>
+            <button
+                class="order-match-delete-action"
+                data-order-match-delete-key="${escapeHtml(entry.matchKey)}"
+                type="button"
+            >
+                삭제
+            </button>
+        </div>
+    `).join("");
+}
+
+function openOrderMatchDeleteModal() {
+    if (!orderMatchDeleteModal) return;
+
+    if (orderMatchDeleteSearchInput) {
+        orderMatchDeleteSearchInput.value = "";
+    }
+
+    renderOrderMatchDeleteList();
+    orderMatchDeleteModal.classList.remove("is-hidden");
+    orderMatchDeleteModal.setAttribute("aria-hidden", "false");
+    window.setTimeout(() => orderMatchDeleteSearchInput?.focus(), 0);
+}
+
+function closeOrderMatchDeleteModal() {
+    if (!orderMatchDeleteModal) return;
+
+    orderMatchDeleteModal.classList.add("is-hidden");
+    orderMatchDeleteModal.setAttribute("aria-hidden", "true");
+}
+
+function handleOrderMatchDeleteClick(event) {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+
+    const deleteButton = target.closest("[data-order-match-delete-key]");
+    if (!(deleteButton instanceof HTMLElement)) return;
+
+    const matchKey = deleteButton.getAttribute("data-order-match-delete-key") || "";
+    if (!matchKey) return;
+
+    const orderProductName = getOrderProductNameByMatchKey(matchKey);
+    if (!window.confirm(`${orderProductName} 매칭을 삭제할까요?`)) return;
+
+    delete orderProductMatches[matchKey];
+    delete orderMatchDraftComponents[matchKey];
+    confirmedOrderMatchKeys.delete(matchKey);
+    void saveOrderProductMatches();
+    renderOrderMatchDeleteList();
+    renderOrderMatchPanel();
+}
+
+function buildOrderUploadErrorMessage(rows, channelName) {
+    const invalidRows = (rows ?? []).filter((row) => !row.isValid);
+    if (!invalidRows.length) return "";
+
+    const previewLines = invalidRows
+        .slice(0, 5)
+        .map((row) => `${row.rowId}행: ${(row.errors ?? []).join(" / ")}`);
+    const suffix = invalidRows.length > 5 ? `\n외 ${invalidRows.length - 5}건` : "";
+
+    return `${channelName} 발주서 검증 오류\n${previewLines.join("\n")}${suffix}\n\n파일을 수정한 뒤 다시 업로드해주세요.`;
+}
+
+function applyCoupangOrdersToMilkrun(rows) {
+    const validRows = (rows ?? []).filter((row) => row.channel === "coupang" && row.isValid);
+    milkrunRows = buildMilkrunRowsFromOrderRows(validRows);
+
+    const uploadedCenters = getUniqueMilkrunCenters(validRows.map((row) => row.center));
+    const nextCenters = getUniqueMilkrunCenters([...coupangCenterOptions, ...uploadedCenters]);
+
+    if (nextCenters.length !== coupangCenterOptions.length) {
+        setMilkrunCenterOptions(nextCenters);
+    }
+
+    renderMilkrunDashboard();
+}
+
+function applyKurlyOrdersToLabel(validationRows, file) {
+    const validRows = (validationRows ?? []).filter((row) => row.isValid);
+
+    kurlyRows = validRows;
+    kurlyParsedFileName = file?.name || "";
+    updateSelectedFileName(file, kurlyLabelFileNameEl);
+    setKurlyLabelResult(`발주서 업로드에서 전달됨: 총 ${validRows.length}건\n컬리 라벨 PDF 다운로드를 눌러 출력할 수 있습니다.`);
+    setKurlyProgress({
+        message: "업로드/검증 완료",
+        detail: `정상 ${validRows.length}건, 라벨 생성 준비 완료`,
+        value: 100,
+        visible: true,
+    });
+}
+
+async function setOrderUploadFileSelectedState(channel, file) {
+    const channelLabel = getOrderUploadChannelLabel(channel);
+
+    if (!file) {
+        orderUploadRows = orderUploadRows.filter((row) => row.channel !== channel);
+        setOrderUploadChannelStatus(channel, "대기 중", "idle");
+        renderOrderMatchPanel();
+        return;
+    }
+
+    try {
+        setOrderUploadChannelStatus(channel, "읽는 중", "loading");
+
+        let normalizedRows = [];
+        let validationRows = [];
+
+        if (channel === "coupang") {
+            normalizedRows = await parseCoupangOrderFile(file);
+            validationRows = normalizedRows;
+        } else {
+            const parsedKurlyRows = await parseKurlyLabelFile(file);
+            const validationResult = validateKurlyRows(parsedKurlyRows);
+            validationRows = validationResult.rows;
+            normalizedRows = buildKurlyOrderRows(validationRows);
+        }
+
+        orderUploadRows = [
+            ...orderUploadRows.filter((row) => row.channel !== channel),
+            ...normalizedRows,
+        ];
+        normalizedRows.forEach((row) => {
+            const matchKey = normalizeOrderProductName(row.productName);
+            if (matchKey) confirmedOrderMatchKeys.delete(matchKey);
+        });
+        renderOrderMatchPanel();
+
+        const total = normalizedRows.length;
+        const invalid = normalizedRows.filter((row) => !row.isValid).length;
+        const valid = total - invalid;
+
+        if (!total) {
+            setOrderUploadChannelStatus(channel, "데이터 없음", "warning");
+            return;
+        }
+
+        if (invalid > 0) {
+            setOrderUploadChannelStatus(channel, `확인 필요 ${invalid}건`, "warning");
+            window.alert(buildOrderUploadErrorMessage(normalizedRows, channelLabel));
+            return;
+        }
+
+        if (channel === "coupang") {
+            applyCoupangOrdersToMilkrun(normalizedRows);
+            setOrderUploadChannelStatus(channel, `완료 ${valid}건`, "success");
+        } else {
+            applyKurlyOrdersToLabel(validationRows, file);
+            setOrderUploadChannelStatus(channel, `완료 ${valid}건`, "success");
+        }
+    } catch (error) {
+        console.error(error);
+        orderUploadRows = orderUploadRows.filter((row) => row.channel !== channel);
+        renderOrderMatchPanel();
+        setOrderUploadChannelStatus(channel, error.message || "파일 처리 중 오류가 발생했습니다.", "error");
+    }
 }
 
 function buildKurlyUploadErrorMessage(validationRows) {
@@ -1094,6 +2271,7 @@ function renderCurrentSkuRows() {
     if (!skuRows.length) {
         setSkuEmptyTable("SKU 파일을 선택하면 자동으로 검증합니다.");
         setSkuResult("선택된 SKU 데이터가 없습니다.");
+        renderOrderMatchPanel();
         return;
     }
 
@@ -1101,6 +2279,7 @@ function renderCurrentSkuRows() {
     renderSkuTable(validationResult.rows);
     const { total, valid, invalid } = validationResult.summary;
     setSkuResult(`총 ${total}건 중 정상 ${valid}건, 오류 ${invalid}건`);
+    renderOrderMatchPanel();
 }
 
 function handleSkuRowSelectionChange(event) {
@@ -1131,6 +2310,7 @@ function handleDeleteSelectedSkuRows() {
         updateSelectedFileName(null, skuFileNameEl);
         setSkuEmptyTable("선택한 SKU를 모두 삭제했습니다. 새 파일을 업로드해주세요.");
         setSkuResult("SKU 목록이 비어 있습니다.");
+        renderOrderMatchPanel();
         void persistSkuWorkspace();
         return;
     }
@@ -2592,6 +3772,7 @@ async function setSkuFileSelectedState(file) {
         updateSelectedFileName(null, skuFileNameEl);
         setSkuEmptyTable("SKU 파일을 선택하면 자동으로 검증합니다.");
         setSkuResult("선택된 파일이 없습니다.");
+        renderOrderMatchPanel();
         return;
     }
 
@@ -2615,6 +3796,7 @@ async function setSkuFileSelectedState(file) {
         updateSelectedFileName(file, skuFileNameEl);
         renderSkuTable(validationResult.rows);
         setSkuResult(`업로드 완료: 총 ${total}건 (정상 ${valid}건)`);
+        renderOrderMatchPanel();
         await persistSkuWorkspace();
     } catch (error) {
         console.error(error);
@@ -3009,6 +4191,27 @@ function bindEvents() {
         const file = skuFileInput.files?.[0];
         await setSkuFileSelectedState(file);
     });
+    orderUploadCoupangFileInput?.addEventListener("change", async () => {
+        const file = orderUploadCoupangFileInput.files?.[0];
+        await setOrderUploadFileSelectedState("coupang", file);
+    });
+    orderUploadKurlyFileInput?.addEventListener("change", async () => {
+        const file = orderUploadKurlyFileInput.files?.[0];
+        await setOrderUploadFileSelectedState("kurly", file);
+    });
+    orderMatchListEl?.addEventListener("change", handleOrderMatchChange);
+    orderMatchListEl?.addEventListener("click", handleOrderMatchClick);
+    orderMatchConfirmBtn?.addEventListener("click", handleConfirmAllOrderMatches);
+    orderMatchDeleteOpenBtn?.addEventListener("click", openOrderMatchDeleteModal);
+    orderMatchDeleteCloseBtn?.addEventListener("click", closeOrderMatchDeleteModal);
+    orderMatchDeleteSearchInput?.addEventListener("input", renderOrderMatchDeleteList);
+    orderMatchDeleteListEl?.addEventListener("click", handleOrderMatchDeleteClick);
+    orderMatchDeleteModal?.addEventListener("click", (event) => {
+        if (event.target === orderMatchDeleteModal) closeOrderMatchDeleteModal();
+    });
+    document.addEventListener("click", handleOrderSkuPickerOutsideClick);
+    document.addEventListener("scroll", handleOrderSkuPickerViewportChange, true);
+    window.addEventListener("resize", handleOrderSkuPickerViewportChange);
     kurlyLabelFileInput?.addEventListener("change", async () => {
         const file = kurlyLabelFileInput.files?.[0];
         await setKurlyFileSelectedState(file);
@@ -3116,6 +4319,15 @@ function initializeSkuUi() {
     closeSkuLabelPrintModal();
 }
 
+function initializeOrderUploadUi() {
+    orderUploadRows = [];
+    orderMatchDraftComponents = {};
+    loadLocalOrderProductMatches();
+    setOrderUploadChannelStatus("coupang", "대기 중", "idle");
+    setOrderUploadChannelStatus("kurly", "대기 중", "idle");
+    renderOrderMatchPanel();
+}
+
 function initializeKurlyLabelUi() {
     kurlyRows = [];
     kurlyParsedFileName = "";
@@ -3145,6 +4357,7 @@ function initializeMilkrunUi() {
 
 async function loadSkuWorkspace(userId) {
     skuWorkspaceUserId = userId ?? null;
+    await loadOrderProductMatches();
     if (!skuWorkspaceUserId) return;
 
     const workspaceDocRef = getSkuWorkspaceDocRef();
@@ -3168,6 +4381,7 @@ async function loadSkuWorkspace(userId) {
             setSkuEmptyTable("SKU 파일을 선택하면 자동으로 검증합니다.");
             setSkuResult("업로드 시 자동 검증되며, 오류가 있으면 업로드되지 않습니다.");
         }
+        renderOrderMatchPanel();
     } catch (error) {
         console.error(error);
         if (error?.code === "permission-denied") {
@@ -3186,6 +4400,7 @@ function initializeDashboard() {
     showTrackingMode("excel");
     initializeTrackingUi();
     initializeSkuUi();
+    initializeOrderUploadUi();
     initializeKurlyLabelUi();
     bindEvents();
     initializeMilkrunUi();

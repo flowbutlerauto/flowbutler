@@ -45,6 +45,10 @@
                                     <span class="sidebar-nav-title">SKU 관리</span>
                                     <span class="sidebar-nav-desc">상품 마스터 등록 / 검증</span>
                                 </button>
+                                <button class="sidebar-subnav-item" data-view="order-upload" type="button">
+                                    <span class="sidebar-nav-title">발주서 업로드</span>
+                                    <span class="sidebar-nav-desc">쿠팡·컬리 발주서 수집</span>
+                                </button>
                                 <button class="sidebar-subnav-item" data-view="kurly-label" data-paid-feature="true" type="button">
                                     <span class="sidebar-nav-title">컬리 라벨 생성 <span class="paid-lock-icon" aria-hidden="true">🔒</span></span>
                                     <span class="sidebar-nav-desc">엑셀 업로드 기반 라벨 출력</span>
@@ -128,6 +132,76 @@
                             <p class="inline-notice">
                                 빠른 안내: 좌측 메뉴에서 도구를 전환할 수 있으며, 최근 작업/이력 기능이 순차적으로 추가될 예정입니다.
                             </p>
+                        </section>
+                    </div>
+
+                    <div id="view-order-upload" class="workspace-view">
+                        <section class="workspace-card order-upload-card">
+                            <div class="section-head">
+                                <div>
+                                    <h2 class="section-title">발주서 업로드</h2>
+                                </div>
+                            </div>
+
+                            <div class="order-upload-simple-list" aria-label="판매처별 발주서 업로드">
+                                <div class="order-upload-simple-row">
+                                    <div class="order-upload-simple-name">
+                                        <strong>쿠팡(밀크런)</strong>
+                                        <span id="order-upload-coupang-status">대기 중</span>
+                                    </div>
+                                    <label for="order-upload-coupang-file" class="order-upload-simple-btn">업로드</label>
+                                    <input id="order-upload-coupang-file" class="hidden-file-input" type="file"
+                                        accept=".xlsx,.xls,.csv" />
+                                </div>
+
+                                <div class="order-upload-simple-row">
+                                    <div class="order-upload-simple-name">
+                                        <strong>컬리</strong>
+                                        <span id="order-upload-kurly-status">대기 중</span>
+                                    </div>
+                                    <label for="order-upload-kurly-file" class="order-upload-simple-btn">업로드</label>
+                                    <input id="order-upload-kurly-file" class="hidden-file-input" type="file"
+                                        accept=".xlsx,.xls" />
+                                </div>
+                            </div>
+
+                            <section class="order-match-panel" aria-label="상품 매칭">
+                                <div class="order-match-head">
+                                    <div>
+                                        <h3 class="order-match-title">상품 매칭</h3>
+                                        <p id="order-match-status" class="order-match-status">
+                                            발주서를 업로드하면 매칭이 필요한 상품이 표시됩니다.
+                                        </p>
+                                    </div>
+                                    <div class="order-match-head-actions">
+                                        <button id="order-match-delete-open-btn" class="order-match-delete-open-btn" type="button">
+                                            매칭 삭제
+                                        </button>
+                                        <button id="order-match-confirm-btn" class="order-match-confirm-btn" type="button" disabled>
+                                            전체 확인
+                                        </button>
+                                    </div>
+                                </div>
+                                <div id="order-match-list" class="order-match-list">
+                                    <div class="order-match-empty">매칭할 상품이 없습니다.</div>
+                                </div>
+                            </section>
+
+                            <div id="order-match-delete-modal" class="sku-header-modal is-hidden" aria-hidden="true">
+                                <div class="sku-header-modal-card order-match-delete-modal-card">
+                                    <div class="order-match-delete-head">
+                                        <div>
+                                            <h3 class="subcard-title">매칭 삭제</h3>
+                                            <p class="subcard-text">저장된 상품 매칭을 검색해서 삭제할 수 있습니다.</p>
+                                        </div>
+                                        <button id="order-match-delete-close-btn" class="order-match-modal-close-btn"
+                                            type="button">닫기</button>
+                                    </div>
+                                    <input id="order-match-delete-search-input" class="order-match-delete-search-input"
+                                        type="text" placeholder="상품명 검색" />
+                                    <div id="order-match-delete-list" class="order-match-delete-list"></div>
+                                </div>
+                            </div>
                         </section>
                     </div>
 
@@ -821,12 +895,13 @@
     <script>
         window.__flowbutlerDashboardModuleReady = false;
         (function () {
-            const toolViews = new Set(["tracking", "label", "sku", "kurly-label", "coupang-milkrun"]);
+            const toolViews = new Set(["tracking", "label", "sku", "order-upload", "kurly-label", "coupang-milkrun"]);
             const fallbackMeta = {
                 home: ["홈", "지금 필요한 물류 자동화 작업을 빠르게 시작하세요."],
                 tracking: ["송장번호 Tracking", ""],
                 label: ["라벨 양식 설정", ""],
                 sku: ["SKU 관리", ""],
+                "order-upload": ["발주서 업로드", "쿠팡(밀크런)과 컬리 발주서를 판매처별 양식으로 업로드합니다."],
                 "kurly-label": ["컬리 라벨 생성", ""],
                 "coupang-milkrun": ["쿠팡 밀크런 도우미", "발주번호 단위 센터 변경과 센터별 PLT 요약을 확인합니다."],
                 settings: ["설정", "계정, 플랜, 권한과 같은 기본 정보를 확인할 수 있습니다."],
@@ -1093,7 +1168,7 @@
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
     <script src="https://js.tosspayments.com/v1/payment"></script>
-    <script type="module" src="./js/dashboard.js?v=20260518-4"></script>
+    <script type="module" src="./js/dashboard.js?v=20260521-1"></script>
 </body>
 
 </html>

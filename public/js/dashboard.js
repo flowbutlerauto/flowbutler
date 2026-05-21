@@ -322,6 +322,7 @@ const MILKRUN_SAMPLE_ROWS = [
 const SKU_IMAGE_FIELD_KEY = "productImageUrl";
 const SKU_IMAGE_MAX_BYTES = 2 * 1024 * 1024;
 let draggingSkuHeaderKey = "";
+let draggingSkuHeaderOptionKey = "";
 let currentUserPlan = "free";
 let currentUserEmail = "";
 let navigationEventsBound = false;
@@ -890,32 +891,44 @@ function isSkuImageField(key) {
 }
 
 function getDefaultSkuHeaderKeys() {
-    return ensureSkuHeaderSelection(["adminProductCode", "productName", "productImageUrl", "brand", "category"]);
+    return ensureSkuHeaderSelection(["adminProductCode", "productName", "brand", "category", "productImageUrl"]);
 }
 
 function ensureSkuHeaderSelection(keys) {
-    const uniqueKeys = [...new Set(keys)];
     const availableKeySet = new Set(SKU_FIELDS.map((field) => field.key));
-    const requiredKeySet = new Set(SKU_REQUIRED_KEYS);
+    const orderedKeys = [];
 
-    const filtered = uniqueKeys.filter((key) => availableKeySet.has(key));
-    const merged = [...new Set([...filtered, ...SKU_REQUIRED_KEYS])];
-
-    if (!merged.length) {
-        return [...SKU_REQUIRED_KEYS];
-    }
-
-    return merged.sort((a, b) => {
-        const fieldIndexA = SKU_FIELDS.findIndex((field) => field.key === a);
-        const fieldIndexB = SKU_FIELDS.findIndex((field) => field.key === b);
-
-        const isRequiredA = requiredKeySet.has(a);
-        const isRequiredB = requiredKeySet.has(b);
-
-        if (isRequiredA && !isRequiredB) return -1;
-        if (!isRequiredA && isRequiredB) return 1;
-        return fieldIndexA - fieldIndexB;
+    (keys ?? []).forEach((key) => {
+        if (!availableKeySet.has(key) || orderedKeys.includes(key)) return;
+        orderedKeys.push(key);
     });
+
+    SKU_REQUIRED_KEYS.forEach((key) => {
+        if (!availableKeySet.has(key) || orderedKeys.includes(key)) return;
+        orderedKeys.push(key);
+    });
+
+    return orderedKeys;
+}
+
+function getSkuHeaderConfigOrderKeys() {
+    if (!skuHeaderCheckboxList) return [];
+
+    return [...skuHeaderCheckboxList.querySelectorAll("[data-sku-header-option-key]")]
+        .map((node) => node.getAttribute("data-sku-header-option-key") || "")
+        .filter(Boolean);
+}
+
+function getOrderedSkuHeaderFields(orderKeys = []) {
+    const fieldsByKey = new Map(SKU_FIELDS.map((field) => [field.key, field]));
+    const orderedKeys = [];
+
+    [...orderKeys, ...SKU_FIELDS.map((field) => field.key)].forEach((key) => {
+        if (!fieldsByKey.has(key) || orderedKeys.includes(key)) return;
+        orderedKeys.push(key);
+    });
+
+    return orderedKeys.map((key) => fieldsByKey.get(key)).filter(Boolean);
 }
 
 function renderSkuTableHead() {
@@ -1009,18 +1022,21 @@ function buildSkuCellMarkup(key, value) {
     `;
 }
 
-function renderSkuHeaderCheckboxes() {
+function renderSkuHeaderCheckboxes(orderKeys = selectedSkuHeaderKeys, selectedKeys = selectedSkuHeaderKeys) {
     if (!skuHeaderCheckboxList) return;
 
     const requiredKeySet = new Set(SKU_REQUIRED_KEYS);
+    const selectedKeySet = new Set(ensureSkuHeaderSelection(selectedKeys));
+    const orderedFields = getOrderedSkuHeaderFields(orderKeys);
 
-    skuHeaderCheckboxList.innerHTML = SKU_FIELDS.map((field) => {
-        const checked = selectedSkuHeaderKeys.includes(field.key);
+    skuHeaderCheckboxList.innerHTML = orderedFields.map((field) => {
+        const checked = selectedKeySet.has(field.key);
         const disabled = requiredKeySet.has(field.key);
         const requiredBadge = disabled ? " (필수)" : "";
 
         return `
-      <label class="sku-header-checkbox-item">
+      <label class="sku-header-checkbox-item" data-sku-header-option-key="${field.key}">
+        <span class="sku-header-drag-handle" draggable="true" data-sku-header-drag-handle="true" aria-hidden="true"></span>
         <input type="checkbox" data-sku-header-key="${field.key}" ${checked ? "checked" : ""} ${disabled ? "disabled" : ""} />
         <span>${escapeHtml(field.label)}${requiredBadge}</span>
       </label>
@@ -1028,15 +1044,14 @@ function renderSkuHeaderCheckboxes() {
     }).join("");
 }
 
-function setSkuHeaderCheckboxSelection(keys) {
+function setSkuHeaderCheckboxSelection(keys, options = {}) {
     if (!skuHeaderCheckboxList) return;
 
-    const selectedKeySet = new Set(ensureSkuHeaderSelection(keys));
-    const checkboxes = skuHeaderCheckboxList.querySelectorAll('input[data-sku-header-key]');
-    checkboxes.forEach((checkbox) => {
-        const key = checkbox.getAttribute("data-sku-header-key") || "";
-        checkbox.checked = selectedKeySet.has(key);
-    });
+    const selectedKeys = ensureSkuHeaderSelection(keys);
+    const currentOrderKeys = getSkuHeaderConfigOrderKeys();
+    const orderKeys = options.resetOrder ? selectedKeys : currentOrderKeys;
+
+    renderSkuHeaderCheckboxes(orderKeys, selectedKeys);
 }
 
 function openSkuHeaderModal() {
@@ -1377,7 +1392,90 @@ function handleSelectRequiredSkuHeaders() {
 }
 
 function handleResetSkuHeaders() {
-    setSkuHeaderCheckboxSelection(getDefaultSkuHeaderKeys());
+    setSkuHeaderCheckboxSelection(getDefaultSkuHeaderKeys(), { resetOrder: true });
+}
+
+function clearSkuHeaderOptionDragClasses() {
+    if (!skuHeaderCheckboxList) return;
+    skuHeaderCheckboxList.querySelectorAll(".sku-header-checkbox-item").forEach((item) => {
+        item.classList.remove("is-dragging", "is-drag-over");
+    });
+}
+
+function moveSkuHeaderOption(sourceKey, targetKey) {
+    if (!skuHeaderCheckboxList || sourceKey === targetKey) return false;
+
+    const items = [...skuHeaderCheckboxList.querySelectorAll("[data-sku-header-option-key]")];
+    const sourceItem = items.find((item) => item.getAttribute("data-sku-header-option-key") === sourceKey);
+    const targetItem = items.find((item) => item.getAttribute("data-sku-header-option-key") === targetKey);
+    const sourceIndex = items.indexOf(sourceItem);
+    const targetIndex = items.indexOf(targetItem);
+
+    if (!sourceItem || !targetItem || sourceIndex < 0 || targetIndex < 0) return false;
+
+    if (sourceIndex < targetIndex) {
+        targetItem.after(sourceItem);
+    } else {
+        targetItem.before(sourceItem);
+    }
+
+    return true;
+}
+
+function handleSkuHeaderOptionDragStart(event) {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+    if (!target.closest("[data-sku-header-drag-handle]")) return;
+
+    const item = target.closest("[data-sku-header-option-key]");
+    if (!(item instanceof HTMLElement)) return;
+
+    const key = item.getAttribute("data-sku-header-option-key") || "";
+    if (!key) return;
+
+    draggingSkuHeaderOptionKey = key;
+    item.classList.add("is-dragging");
+    if (event.dataTransfer) {
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData("text/plain", key);
+    }
+}
+
+function handleSkuHeaderOptionDragOver(event) {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+
+    const item = target.closest("[data-sku-header-option-key]");
+    if (!(item instanceof HTMLElement) || !draggingSkuHeaderOptionKey) return;
+
+    event.preventDefault();
+    clearSkuHeaderOptionDragClasses();
+    item.classList.add("is-drag-over");
+    if (event.dataTransfer) {
+        event.dataTransfer.dropEffect = "move";
+    }
+}
+
+function handleSkuHeaderOptionDrop(event) {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+
+    const item = target.closest("[data-sku-header-option-key]");
+    if (!(item instanceof HTMLElement)) return;
+    event.preventDefault();
+
+    const targetKey = item.getAttribute("data-sku-header-option-key") || "";
+    if (draggingSkuHeaderOptionKey && targetKey) {
+        moveSkuHeaderOption(draggingSkuHeaderOptionKey, targetKey);
+    }
+
+    draggingSkuHeaderOptionKey = "";
+    clearSkuHeaderOptionDragClasses();
+}
+
+function handleSkuHeaderOptionDragEnd() {
+    draggingSkuHeaderOptionKey = "";
+    clearSkuHeaderOptionDragClasses();
 }
 
 function clearSkuHeaderDragClasses() {
@@ -2939,6 +3037,10 @@ function bindEvents() {
     skuHeaderSelectAllBtn?.addEventListener("click", handleSelectAllSkuHeaders);
     skuHeaderRequiredBtn?.addEventListener("click", handleSelectRequiredSkuHeaders);
     skuHeaderResetBtn?.addEventListener("click", handleResetSkuHeaders);
+    skuHeaderCheckboxList?.addEventListener("dragstart", handleSkuHeaderOptionDragStart);
+    skuHeaderCheckboxList?.addEventListener("dragover", handleSkuHeaderOptionDragOver);
+    skuHeaderCheckboxList?.addEventListener("drop", handleSkuHeaderOptionDrop);
+    skuHeaderCheckboxList?.addEventListener("dragend", handleSkuHeaderOptionDragEnd);
     skuEditSaveBtn?.addEventListener("click", handleSaveSkuEdit);
     skuEditForm?.addEventListener("change", (event) => {
         void handleSkuEditFormChange(event);

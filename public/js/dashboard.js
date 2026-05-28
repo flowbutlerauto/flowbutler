@@ -766,6 +766,16 @@ function findSkuByProductNameCandidate(productName) {
     return getMatchableSkuRows().find((row) => normalizeOrderProductName(row.productName) === normalizedName) || null;
 }
 
+function normalizeBarcode(value) {
+    return String(value ?? "").trim().replace(/\s+/g, "");
+}
+
+function findSkuByBarcode(barcode) {
+    const normalizedBarcode = normalizeBarcode(barcode);
+    if (!normalizedBarcode) return null;
+    return getMatchableSkuRows().find((row) => normalizeBarcode(row?.barcode) === normalizedBarcode) || null;
+}
+
 function parseOrderProductSegment(segment) {
     const rawName = String(segment ?? "").trim();
     const quantityMatch = rawName.match(/\s*(\d+)\s*(?:개입|입|개|팩|세트)\s*$/i);
@@ -780,9 +790,14 @@ function parseOrderProductSegment(segment) {
     };
 }
 
-function getAutoOrderComponents(productName) {
+function getAutoOrderComponents(productName, barcode = "") {
     const productNameText = String(productName ?? "").trim();
     if (!productNameText) return [];
+
+    const barcodeSkuRow = findSkuByBarcode(barcode);
+    if (barcodeSkuRow) {
+        return [createOrderMatchComponent(barcodeSkuRow, 1)];
+    }
 
     const bundleSegments = productNameText
         .split(/\s*\+\s*/g)
@@ -822,7 +837,8 @@ function getEditableOrderComponents(productName) {
     const savedComponents = normalizeOrderMatchComponents(matchRecord, { includeIncomplete: true });
     if (savedComponents.length) return savedComponents;
 
-    const autoComponents = getAutoOrderComponents(productName);
+    const orderProduct = getUniqueOrderProducts().find((item) => item.productName === productName);
+    const autoComponents = getAutoOrderComponents(productName, orderProduct?.barcode || "");
     if (autoComponents.length) return autoComponents;
 
     return [{ skuKey: "", skuName: "", quantity: 1 }];
@@ -838,7 +854,8 @@ function getResolvedOrderComponents(productName) {
     const savedComponents = getSavedOrderComponents(productName);
     if (savedComponents.length) return savedComponents;
 
-    return getAutoOrderComponents(productName);
+    const orderProduct = getUniqueOrderProducts().find((item) => item.productName === productName);
+    return getAutoOrderComponents(productName, orderProduct?.barcode || "");
 }
 
 function hasSavedOrderProductMatch(productName) {
@@ -943,6 +960,7 @@ function getUniqueOrderProducts() {
                 productMap.set(matchKey, {
                     matchKey,
                     productName,
+                    barcode: normalizeBarcode(row.barcode),
                     rowCount: 0,
                     channels: new Set(),
                 });

@@ -1645,7 +1645,7 @@ function applyKurlyOrdersToLabel(validationRows, file) {
     });
 }
 
-async function setOrderUploadFileSelectedState(channel, file) {
+async function setOrderUploadFileSelectedState(channel, file, fileInput = null) {
     const channelLabel = getOrderUploadChannelLabel(channel);
 
     if (!file) {
@@ -1708,6 +1708,10 @@ async function setOrderUploadFileSelectedState(channel, file) {
         orderUploadRows = orderUploadRows.filter((row) => row.channel !== channel);
         renderOrderMatchPanel();
         setOrderUploadChannelStatus(channel, error.message || "파일 처리 중 오류가 발생했습니다.", "error");
+    } finally {
+        if (fileInput instanceof HTMLInputElement) {
+            fileInput.value = "";
+        }
     }
 }
 
@@ -4193,11 +4197,11 @@ function bindEvents() {
     });
     orderUploadCoupangFileInput?.addEventListener("change", async () => {
         const file = orderUploadCoupangFileInput.files?.[0];
-        await setOrderUploadFileSelectedState("coupang", file);
+        await setOrderUploadFileSelectedState("coupang", file, orderUploadCoupangFileInput);
     });
     orderUploadKurlyFileInput?.addEventListener("change", async () => {
         const file = orderUploadKurlyFileInput.files?.[0];
-        await setOrderUploadFileSelectedState("kurly", file);
+        await setOrderUploadFileSelectedState("kurly", file, orderUploadKurlyFileInput);
     });
     orderMatchListEl?.addEventListener("change", handleOrderMatchChange);
     orderMatchListEl?.addEventListener("click", handleOrderMatchClick);

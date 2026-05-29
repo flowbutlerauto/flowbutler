@@ -58,7 +58,7 @@ function buildAliasLookup() {
 
 const COUPANG_ALIAS_LOOKUP = buildAliasLookup();
 
-function parseCsvLine(line) {
+function parseDelimitedLine(line, delimiter = ",") {
     const result = [];
     let current = "";
     let inQuotes = false;
@@ -77,7 +77,7 @@ function parseCsvLine(line) {
             continue;
         }
 
-        if (char === "," && !inQuotes) {
+        if (char === delimiter && !inQuotes) {
             result.push(current);
             current = "";
             continue;
@@ -92,10 +92,19 @@ function parseCsvLine(line) {
 
 async function readCsvRows(file) {
     const text = await file.text();
-    return safeString(text)
+    const normalizedText = safeString(text);
+    const lines = normalizedText
         .split(/\r?\n/)
-        .filter((line) => safeString(line))
-        .map(parseCsvLine);
+        .filter((line) => safeString(line));
+
+    if (!lines.length) return [];
+
+    const sample = lines.slice(0, 5).join("\n");
+    const tabCount = (sample.match(/\t/g) || []).length;
+    const commaCount = (sample.match(/,/g) || []).length;
+    const delimiter = tabCount > commaCount ? "\t" : ",";
+
+    return lines.map((line) => parseDelimitedLine(line, delimiter));
 }
 
 async function readWorkbookRows(file) {

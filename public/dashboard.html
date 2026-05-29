@@ -726,13 +726,13 @@
                                 <div>
                                     <h2 class="section-title">쿠팡 밀크런 도우미</h2>
                                     <p class="workspace-text">
-                                        발주번호 단위로 센터를 변경하면서 같은 센터끼리 자동 정렬하고,
-                                        센터별 박스·PT·SKU·중량 요약을 확인하는 테트리스 작업판입니다.
+                                        업로드한 쿠팡 발주서명을 먼저 선택한 뒤,
+                                        해당 발주서의 센터별 박스·PT·SKU·중량 테트리스 작업판으로 이동합니다.
                                     </p>
                                 </div>
                             </div>
 
-                            <div id="milkrun-workboard-summary" class="summary-grid milkrun-summary-grid">
+                            <div id="milkrun-workboard-summary" class="summary-grid milkrun-summary-grid" hidden>
                                 <div class="summary-card">
                                     <div class="summary-label">센터 수</div>
                                     <div id="milkrun-center-count" class="summary-value">0</div>
@@ -766,7 +766,7 @@
                                         </div>
                                     </div>
                                     <div class="tracking-toolbar-right">
-                                        <div id="milkrun-workboard-actions" class="tracking-action-buttons">
+                                        <div id="milkrun-workboard-actions" class="tracking-action-buttons" hidden>
                                             <button id="milkrun-workspace-back-btn" class="secondary-btn" type="button">발주서 목록</button>
                                             <button id="milkrun-center-toggle-btn" class="secondary-btn" type="button">센터 목록 관리</button>
                                             <button id="milkrun-load-sample-btn" class="secondary-btn" type="button">샘플 데이터 불러오기</button>
@@ -777,7 +777,7 @@
                                 <div id="milkrun-session-list" class="milkrun-session-list" aria-label="업로드된 발주서 목록"></div>
                             </div>
 
-                            <div id="milkrun-workboard-grid" class="milkrun-grid">
+                            <div id="milkrun-workboard-grid" class="milkrun-grid" hidden>
                                 <div class="workspace-subcard milkrun-summary-panel">
                                     <h3 class="subcard-title">센터별 요약</h3>
                                     <div class="tracking-table-scroll milkrun-summary-scroll">

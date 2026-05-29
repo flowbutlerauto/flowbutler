@@ -2914,21 +2914,49 @@ function renderMilkrunWorkspaceMode() {
     }
 }
 
+function formatMilkrunWorkspaceUpdatedAt(value) {
+    if (!value) return "";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+    return date.toLocaleString("ko-KR", {
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+    });
+}
+
 function renderMilkrunWorkspaceList() {
     if (!milkrunSessionListEl) return;
     if (!milkrunWorkspaces.length) {
-        milkrunSessionListEl.innerHTML = '<div class="order-match-empty">업로드된 발주서 작업이 없습니다.</div>';
+        milkrunSessionListEl.innerHTML = `
+            <div class="milkrun-session-empty">
+                발주서 업로드에서 쿠팡 발주서를 업로드하면 이곳에 발주서명이 표시됩니다.
+            </div>
+        `;
         renderMilkrunWorkspaceMode();
         return;
     }
 
-    milkrunSessionListEl.innerHTML = milkrunWorkspaces.map((workspace) => `
-        <button
-            type="button"
-            class="milkrun-session-chip${workspace.id === activeMilkrunWorkspaceId ? " is-active" : ""}"
-            data-milkrun-workspace-id="${escapeHtml(workspace.id)}"
-        >${escapeHtml(workspace.title || workspace.id)}</button>
-    `).join("");
+    milkrunSessionListEl.innerHTML = milkrunWorkspaces.map((workspace) => {
+        const rows = Array.isArray(workspace.rows) ? workspace.rows : [];
+        const centerCount = new Set(rows.map((row) => row.assignedCenter || row.originalCenter).filter(Boolean)).size;
+        const updatedAt = formatMilkrunWorkspaceUpdatedAt(workspace.updatedAt);
+
+        return `
+            <button
+                type="button"
+                class="milkrun-session-chip${workspace.id === activeMilkrunWorkspaceId ? " is-active" : ""}"
+                data-milkrun-workspace-id="${escapeHtml(workspace.id)}"
+            >
+                <span class="milkrun-session-title">${escapeHtml(workspace.title || workspace.id)}</span>
+                <span class="milkrun-session-meta">
+                    발주 ${formatMilkrunNumber(rows.length)}건 · 센터 ${formatMilkrunNumber(centerCount)}개${updatedAt ? ` · ${escapeHtml(updatedAt)}` : ""}
+                </span>
+                <span class="milkrun-session-action">테트리스 작업장으로 이동</span>
+            </button>
+        `;
+    }).join("");
     renderMilkrunWorkspaceMode();
 }
 

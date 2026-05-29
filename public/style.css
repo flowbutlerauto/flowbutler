@@ -2844,6 +2844,27 @@ a {
   margin-top: 18px;
 }
 
+.milkrun-session-list {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.milkrun-session-chip {
+  border: 1px solid #dbe3f0;
+  border-radius: 999px;
+  background: #fff;
+  color: #1f2937;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+.milkrun-session-chip.is-active {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: #eef2ff;
+}
+
 
 .milkrun-summary-grid[hidden],
 .milkrun-grid[hidden],

@@ -150,6 +150,12 @@ const milkrunCenterListEl = document.getElementById("milkrun-center-list");
 const milkrunLoadSampleBtn = document.getElementById("milkrun-load-sample-btn");
 const milkrunSortCenterBtn = document.getElementById("milkrun-sort-center-btn");
 const milkrunSessionListEl = document.getElementById("milkrun-session-list");
+const milkrunWorkboardSummaryEl = document.getElementById("milkrun-workboard-summary");
+const milkrunWorkboardGridEl = document.getElementById("milkrun-workboard-grid");
+const milkrunWorkboardActionsEl = document.getElementById("milkrun-workboard-actions");
+const milkrunWorkspaceBackBtn = document.getElementById("milkrun-workspace-back-btn");
+const milkrunWorkspaceTitleEl = document.getElementById("milkrun-workspace-title");
+const milkrunWorkspaceDescEl = document.getElementById("milkrun-workspace-desc");
 
 const viewMeta = {
     home: {
@@ -1659,8 +1665,8 @@ async function applyCoupangOrdersToMilkrun(rows, file) {
         ...milkrunWorkspaces.filter((item) => item.id !== workspaceId),
         { id: workspaceId, title: workspaceTitle, rows: nextRows, updatedAt: new Date().toISOString() },
     ].sort((a, b) => String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")));
-    activeMilkrunWorkspaceId = workspaceId;
-    milkrunRows = nextRows;
+    activeMilkrunWorkspaceId = "";
+    milkrunRows = [];
 
     const uploadedCenters = getUniqueMilkrunCenters(validRows.map((row) => row.center));
     const nextCenters = getUniqueMilkrunCenters([...coupangCenterOptions, ...uploadedCenters]);
@@ -1669,7 +1675,9 @@ async function applyCoupangOrdersToMilkrun(rows, file) {
         setMilkrunCenterOptions(nextCenters);
     }
 
-    applyActiveMilkrunWorkspace();
+    renderMilkrunWorkspaceList();
+    renderMilkrunDashboard();
+    saveMilkrunWorkspacesToLocal();
     await persistSkuWorkspace();
 }
 
@@ -2881,10 +2889,36 @@ function loadMilkrunWorkspacesFromLocal() {
     }
 }
 
+function getActiveMilkrunWorkspace() {
+    return milkrunWorkspaces.find((item) => item.id === activeMilkrunWorkspaceId) || null;
+}
+
+function renderMilkrunWorkspaceMode() {
+    const active = getActiveMilkrunWorkspace();
+    const hasActiveWorkspace = Boolean(active);
+
+    if (milkrunSessionListEl) milkrunSessionListEl.hidden = hasActiveWorkspace;
+    if (milkrunWorkboardSummaryEl) milkrunWorkboardSummaryEl.hidden = !hasActiveWorkspace;
+    if (milkrunWorkboardGridEl) milkrunWorkboardGridEl.hidden = !hasActiveWorkspace;
+    if (milkrunWorkboardActionsEl) milkrunWorkboardActionsEl.hidden = !hasActiveWorkspace;
+
+    if (milkrunWorkspaceTitleEl) {
+        milkrunWorkspaceTitleEl.textContent = hasActiveWorkspace
+            ? `${active.title || active.id} 테트리스 작업판`
+            : "업로드 발주서 목록";
+    }
+    if (milkrunWorkspaceDescEl) {
+        milkrunWorkspaceDescEl.textContent = hasActiveWorkspace
+            ? "센터 변경과 센터별 요약을 확인하면서 해당 발주서의 밀크런 테트리스 작업을 진행합니다."
+            : "발주서명을 선택하면 해당 발주서의 테트리스 작업판으로 이동합니다.";
+    }
+}
+
 function renderMilkrunWorkspaceList() {
     if (!milkrunSessionListEl) return;
     if (!milkrunWorkspaces.length) {
         milkrunSessionListEl.innerHTML = '<div class="order-match-empty">업로드된 발주서 작업이 없습니다.</div>';
+        renderMilkrunWorkspaceMode();
         return;
     }
 
@@ -2895,11 +2929,21 @@ function renderMilkrunWorkspaceList() {
             data-milkrun-workspace-id="${escapeHtml(workspace.id)}"
         >${escapeHtml(workspace.title || workspace.id)}</button>
     `).join("");
+    renderMilkrunWorkspaceMode();
 }
 
 function applyActiveMilkrunWorkspace() {
-    const active = milkrunWorkspaces.find((item) => item.id === activeMilkrunWorkspaceId);
+    const active = getActiveMilkrunWorkspace();
     milkrunRows = Array.isArray(active?.rows) ? active.rows : [];
+    renderMilkrunWorkspaceList();
+    renderMilkrunDashboard();
+    saveMilkrunWorkspacesToLocal();
+}
+
+function showMilkrunWorkspaceList() {
+    activeMilkrunWorkspaceId = "";
+    milkrunRows = [];
+    closeMilkrunCenterPicker({ restoreFocus: false });
     renderMilkrunWorkspaceList();
     renderMilkrunDashboard();
     saveMilkrunWorkspacesToLocal();
@@ -2922,9 +2966,13 @@ function handleMilkrunWorkspaceClick(event) {
     const button = target.closest("[data-milkrun-workspace-id]");
     if (!(button instanceof HTMLElement)) return;
     const nextId = button.getAttribute("data-milkrun-workspace-id") || "";
-    if (!nextId || nextId === activeMilkrunWorkspaceId) return;
+    if (!nextId) return;
     activeMilkrunWorkspaceId = nextId;
     applyActiveMilkrunWorkspace();
+}
+
+function handleMilkrunWorkspaceBackClick() {
+    showMilkrunWorkspaceList();
 }
 
 function loadMilkrunCenterOptions() {
@@ -4392,6 +4440,7 @@ function bindEvents() {
     milkrunCenterListEl?.addEventListener("change", handleMilkrunCenterListInput);
     milkrunCenterListEl?.addEventListener("click", handleMilkrunCenterListClick);
     milkrunSessionListEl?.addEventListener("click", handleMilkrunWorkspaceClick);
+    milkrunWorkspaceBackBtn?.addEventListener("click", handleMilkrunWorkspaceBackClick);
     milkrunCenterModal?.addEventListener("click", (event) => {
         if (event.target === milkrunCenterModal) closeMilkrunCenterModal();
     });
@@ -4467,14 +4516,10 @@ function initializeMilkrunUi() {
         closeMilkrunCenterModal();
         refreshMilkrunCenterUi();
         loadMilkrunWorkspacesFromLocal();
-        if (!milkrunWorkspaces.length) {
-            loadMilkrunSampleRows();
-        } else {
-            if (!milkrunWorkspaces.some((item) => item.id === activeMilkrunWorkspaceId)) {
-                activeMilkrunWorkspaceId = milkrunWorkspaces[0]?.id || "";
-            }
-            applyActiveMilkrunWorkspace();
-        }
+        activeMilkrunWorkspaceId = "";
+        milkrunRows = [];
+        renderMilkrunWorkspaceList();
+        renderMilkrunDashboard();
     } catch (error) {
         console.error("쿠팡 밀크런 도우미 초기화 중 오류가 발생했습니다.", error);
         coupangCenterOptions = [...DEFAULT_COUPANG_CENTER_OPTIONS];
@@ -4502,7 +4547,6 @@ async function loadSkuWorkspace(userId) {
         const savedRows = Array.isArray(data?.rows) ? data.rows : [];
         const savedHeaders = Array.isArray(data?.selectedSkuHeaderKeys) ? data.selectedSkuHeaderKeys : [];
         const savedMilkrunWorkspaces = Array.isArray(data?.milkrunWorkspaces) ? data.milkrunWorkspaces : [];
-        const savedActiveMilkrunWorkspaceId = String(data?.activeMilkrunWorkspaceId || "");
 
         skuRows = savedRows;
         selectedSkuHeaderKeys = ensureSkuHeaderSelection(savedHeaders.length ? savedHeaders : getDefaultSkuHeaderKeys());
@@ -4517,13 +4561,10 @@ async function loadSkuWorkspace(userId) {
             setSkuResult("업로드 시 자동 검증되며, 오류가 있으면 업로드되지 않습니다.");
         }
         milkrunWorkspaces = savedMilkrunWorkspaces;
-        activeMilkrunWorkspaceId = savedActiveMilkrunWorkspaceId;
-        if (milkrunWorkspaces.length) {
-            if (!milkrunWorkspaces.some((item) => item.id === activeMilkrunWorkspaceId)) {
-                activeMilkrunWorkspaceId = milkrunWorkspaces[0]?.id || "";
-            }
-            applyActiveMilkrunWorkspace();
-        }
+        activeMilkrunWorkspaceId = "";
+        milkrunRows = [];
+        renderMilkrunWorkspaceList();
+        renderMilkrunDashboard();
         renderOrderMatchPanel();
     } catch (error) {
         console.error(error);

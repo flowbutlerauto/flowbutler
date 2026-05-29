@@ -149,6 +149,7 @@ const milkrunCenterStatusEl = document.getElementById("milkrun-center-status");
 const milkrunCenterListEl = document.getElementById("milkrun-center-list");
 const milkrunLoadSampleBtn = document.getElementById("milkrun-load-sample-btn");
 const milkrunSortCenterBtn = document.getElementById("milkrun-sort-center-btn");
+const milkrunSessionListEl = document.getElementById("milkrun-session-list");
 
 const viewMeta = {
     home: {
@@ -202,6 +203,8 @@ let confirmedOrderMatchKeys = new Set();
 let kurlyRows = [];
 let kurlyParsedFileName = "";
 let milkrunRows = [];
+let milkrunWorkspaces = [];
+let activeMilkrunWorkspaceId = "";
 let activeOrderSkuPicker = null;
 let activeMilkrunCenterPicker = null;
 const MILKRUN_CENTER_PICKER_POPOVER_ID = "milkrun-center-picker-popover";
@@ -215,6 +218,18 @@ const COUPANG_CENTER_STORAGE_KEY = "flowbutler:coupang-center-options";
 const COUPANG_CENTER_DEFAULT_VERSION_STORAGE_KEY = `${COUPANG_CENTER_STORAGE_KEY}:default-version`;
 let coupangCenterOptions = [...DEFAULT_COUPANG_CENTER_OPTIONS];
 const DEFAULT_MILKRUN_DESTINATION = "남양주시_1-1";
+const MILKRUN_WORKSPACE_STORAGE_KEY = "flowbutler:milkrun-workspaces";
+
+function getMilkrunWorkspaceLabel(fileName = "") {
+    return String(fileName || "")
+        .replace(/\.[^.]+$/, "")
+        .trim() || "업로드 발주서";
+}
+
+function buildMilkrunWorkspaceId(fileName = "") {
+    const label = getMilkrunWorkspaceLabel(fileName);
+    return label.toLowerCase().replace(/\s+/g, "-");
+}
 
 function createMilkrunSampleRow(row) {
     return {
@@ -1634,9 +1649,18 @@ function buildOrderUploadErrorMessage(rows, channelName) {
     return `${channelName} 발주서 검증 오류\n${previewLines.join("\n")}${suffix}\n\n파일을 수정한 뒤 다시 업로드해주세요.`;
 }
 
-function applyCoupangOrdersToMilkrun(rows) {
+async function applyCoupangOrdersToMilkrun(rows, file) {
     const validRows = (rows ?? []).filter((row) => row.channel === "coupang" && row.isValid);
-    milkrunRows = buildMilkrunRowsFromOrderRows(validRows);
+    const nextRows = buildMilkrunRowsFromOrderRows(validRows);
+    const workspaceId = buildMilkrunWorkspaceId(file?.name || `order-${Date.now()}`);
+    const workspaceTitle = getMilkrunWorkspaceLabel(file?.name || "");
+
+    milkrunWorkspaces = [
+        ...milkrunWorkspaces.filter((item) => item.id !== workspaceId),
+        { id: workspaceId, title: workspaceTitle, rows: nextRows, updatedAt: new Date().toISOString() },
+    ].sort((a, b) => String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")));
+    activeMilkrunWorkspaceId = workspaceId;
+    milkrunRows = nextRows;
 
     const uploadedCenters = getUniqueMilkrunCenters(validRows.map((row) => row.center));
     const nextCenters = getUniqueMilkrunCenters([...coupangCenterOptions, ...uploadedCenters]);
@@ -1645,7 +1669,8 @@ function applyCoupangOrdersToMilkrun(rows) {
         setMilkrunCenterOptions(nextCenters);
     }
 
-    renderMilkrunDashboard();
+    applyActiveMilkrunWorkspace();
+    await persistSkuWorkspace();
 }
 
 function applyKurlyOrdersToLabel(validationRows, file) {
@@ -1715,7 +1740,7 @@ async function setOrderUploadFileSelectedState(channel, file, fileInput = null) 
         }
 
         if (channel === "coupang") {
-            applyCoupangOrdersToMilkrun(normalizedRows);
+            await applyCoupangOrdersToMilkrun(normalizedRows, file);
             setOrderUploadChannelStatus(channel, `완료 ${valid}건`, "success");
         } else {
             applyKurlyOrdersToLabel(validationRows, file);
@@ -1995,6 +2020,8 @@ async function persistSkuWorkspace() {
             {
                 selectedSkuHeaderKeys,
                 rows: skuRows,
+                milkrunWorkspaces,
+                activeMilkrunWorkspaceId,
                 updatedAt: serverTimestamp(),
             },
             { merge: true },
@@ -2829,6 +2856,77 @@ function saveMilkrunCenterOptions() {
     }
 }
 
+function saveMilkrunWorkspacesToLocal() {
+    try {
+        const storage = getMilkrunStorage();
+        storage?.setItem(MILKRUN_WORKSPACE_STORAGE_KEY, JSON.stringify({
+            activeId: activeMilkrunWorkspaceId,
+            workspaces: milkrunWorkspaces,
+        }));
+    } catch (error) {
+        console.warn("밀크런 작업 목록을 저장하지 못했습니다.", error);
+    }
+}
+
+function loadMilkrunWorkspacesFromLocal() {
+    try {
+        const storage = getMilkrunStorage();
+        const raw = storage?.getItem(MILKRUN_WORKSPACE_STORAGE_KEY);
+        if (!raw) return;
+        const parsed = JSON.parse(raw);
+        milkrunWorkspaces = Array.isArray(parsed?.workspaces) ? parsed.workspaces : [];
+        activeMilkrunWorkspaceId = String(parsed?.activeId || "");
+    } catch (error) {
+        console.warn("밀크런 작업 목록을 불러오지 못했습니다.", error);
+    }
+}
+
+function renderMilkrunWorkspaceList() {
+    if (!milkrunSessionListEl) return;
+    if (!milkrunWorkspaces.length) {
+        milkrunSessionListEl.innerHTML = '<div class="order-match-empty">업로드된 발주서 작업이 없습니다.</div>';
+        return;
+    }
+
+    milkrunSessionListEl.innerHTML = milkrunWorkspaces.map((workspace) => `
+        <button
+            type="button"
+            class="milkrun-session-chip${workspace.id === activeMilkrunWorkspaceId ? " is-active" : ""}"
+            data-milkrun-workspace-id="${escapeHtml(workspace.id)}"
+        >${escapeHtml(workspace.title || workspace.id)}</button>
+    `).join("");
+}
+
+function applyActiveMilkrunWorkspace() {
+    const active = milkrunWorkspaces.find((item) => item.id === activeMilkrunWorkspaceId);
+    milkrunRows = Array.isArray(active?.rows) ? active.rows : [];
+    renderMilkrunWorkspaceList();
+    renderMilkrunDashboard();
+    saveMilkrunWorkspacesToLocal();
+}
+
+function syncActiveMilkrunWorkspaceRows() {
+    if (!activeMilkrunWorkspaceId) return;
+    milkrunWorkspaces = milkrunWorkspaces.map((item) => (
+        item.id === activeMilkrunWorkspaceId
+            ? { ...item, rows: milkrunRows, updatedAt: new Date().toISOString() }
+            : item
+    ));
+    saveMilkrunWorkspacesToLocal();
+    void persistSkuWorkspace();
+}
+
+function handleMilkrunWorkspaceClick(event) {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+    const button = target.closest("[data-milkrun-workspace-id]");
+    if (!(button instanceof HTMLElement)) return;
+    const nextId = button.getAttribute("data-milkrun-workspace-id") || "";
+    if (!nextId || nextId === activeMilkrunWorkspaceId) return;
+    activeMilkrunWorkspaceId = nextId;
+    applyActiveMilkrunWorkspace();
+}
+
 function loadMilkrunCenterOptions() {
     try {
         const storage = getMilkrunStorage();
@@ -2998,6 +3096,7 @@ function handleMilkrunCenterListInput(event) {
     target.title = "";
     setMilkrunCenterOptions(nextCenters);
     renderMilkrunDashboard();
+    syncActiveMilkrunWorkspaceRows();
     setMilkrunCenterStatus(`센터명을 ${oldCenter}에서 ${nextCenter}(으)로 변경했습니다.`, "success");
 }
 
@@ -3152,6 +3251,8 @@ function renderMilkrunDashboard() {
 
 function loadMilkrunSampleRows() {
     milkrunRows = MILKRUN_SAMPLE_ROWS.map((row) => ({ ...row }));
+    activeMilkrunWorkspaceId = "";
+    renderMilkrunWorkspaceList();
     renderMilkrunDashboard();
 }
 
@@ -3359,6 +3460,7 @@ function selectMilkrunCenterForOrder(orderId, nextCenter) {
     ));
     closeMilkrunCenterPicker({ restoreFocus: false });
     renderMilkrunDashboard();
+    syncActiveMilkrunWorkspaceRows();
 }
 
 function handleMilkrunOrderClick(event) {
@@ -4289,6 +4391,7 @@ function bindEvents() {
     });
     milkrunCenterListEl?.addEventListener("change", handleMilkrunCenterListInput);
     milkrunCenterListEl?.addEventListener("click", handleMilkrunCenterListClick);
+    milkrunSessionListEl?.addEventListener("click", handleMilkrunWorkspaceClick);
     milkrunCenterModal?.addEventListener("click", (event) => {
         if (event.target === milkrunCenterModal) closeMilkrunCenterModal();
     });
@@ -4363,7 +4466,15 @@ function initializeMilkrunUi() {
         loadMilkrunCenterOptions();
         closeMilkrunCenterModal();
         refreshMilkrunCenterUi();
-        loadMilkrunSampleRows();
+        loadMilkrunWorkspacesFromLocal();
+        if (!milkrunWorkspaces.length) {
+            loadMilkrunSampleRows();
+        } else {
+            if (!milkrunWorkspaces.some((item) => item.id === activeMilkrunWorkspaceId)) {
+                activeMilkrunWorkspaceId = milkrunWorkspaces[0]?.id || "";
+            }
+            applyActiveMilkrunWorkspace();
+        }
     } catch (error) {
         console.error("쿠팡 밀크런 도우미 초기화 중 오류가 발생했습니다.", error);
         coupangCenterOptions = [...DEFAULT_COUPANG_CENTER_OPTIONS];
@@ -4390,6 +4501,8 @@ async function loadSkuWorkspace(userId) {
         const data = workspaceSnap.data();
         const savedRows = Array.isArray(data?.rows) ? data.rows : [];
         const savedHeaders = Array.isArray(data?.selectedSkuHeaderKeys) ? data.selectedSkuHeaderKeys : [];
+        const savedMilkrunWorkspaces = Array.isArray(data?.milkrunWorkspaces) ? data.milkrunWorkspaces : [];
+        const savedActiveMilkrunWorkspaceId = String(data?.activeMilkrunWorkspaceId || "");
 
         skuRows = savedRows;
         selectedSkuHeaderKeys = ensureSkuHeaderSelection(savedHeaders.length ? savedHeaders : getDefaultSkuHeaderKeys());
@@ -4402,6 +4515,14 @@ async function loadSkuWorkspace(userId) {
         } else {
             setSkuEmptyTable("SKU 파일을 선택하면 자동으로 검증합니다.");
             setSkuResult("업로드 시 자동 검증되며, 오류가 있으면 업로드되지 않습니다.");
+        }
+        milkrunWorkspaces = savedMilkrunWorkspaces;
+        activeMilkrunWorkspaceId = savedActiveMilkrunWorkspaceId;
+        if (milkrunWorkspaces.length) {
+            if (!milkrunWorkspaces.some((item) => item.id === activeMilkrunWorkspaceId)) {
+                activeMilkrunWorkspaceId = milkrunWorkspaces[0]?.id || "";
+            }
+            applyActiveMilkrunWorkspace();
         }
         renderOrderMatchPanel();
     } catch (error) {

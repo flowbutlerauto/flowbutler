@@ -732,7 +732,7 @@
                                 </div>
                             </div>
 
-                            <div class="summary-grid milkrun-summary-grid">
+                            <div id="milkrun-workboard-summary" class="summary-grid milkrun-summary-grid">
                                 <div class="summary-card">
                                     <div class="summary-label">센터 수</div>
                                     <div id="milkrun-center-count" class="summary-value">0</div>
@@ -759,23 +759,25 @@
                                 <div class="tracking-toolbar">
                                     <div class="tracking-toolbar-left">
                                         <div>
-                                            <h3 class="subcard-title">센터 변경 작업판</h3>
-                                            <p class="subcard-text">
-                                                각 발주번호의 센터를 쿠팡 센터 목록에서 선택하면 즉시 같은 센터끼리 모이고 요약이 갱신됩니다.
+                                            <h3 id="milkrun-workspace-title" class="subcard-title">업로드 발주서 목록</h3>
+                                            <p id="milkrun-workspace-desc" class="subcard-text">
+                                                발주서명을 선택하면 해당 발주서의 테트리스 작업판으로 이동합니다.
                                             </p>
                                         </div>
                                     </div>
                                     <div class="tracking-toolbar-right">
-                                        <div class="tracking-action-buttons">
+                                        <div id="milkrun-workboard-actions" class="tracking-action-buttons">
+                                            <button id="milkrun-workspace-back-btn" class="secondary-btn" type="button">발주서 목록</button>
                                             <button id="milkrun-center-toggle-btn" class="secondary-btn" type="button">센터 목록 관리</button>
                                             <button id="milkrun-load-sample-btn" class="secondary-btn" type="button">샘플 데이터 불러오기</button>
                                             <button id="milkrun-sort-center-btn" class="primary-btn" type="button">센터순 정렬</button>
                                         </div>
                                     </div>
                                 </div>
+                                <div id="milkrun-session-list" class="milkrun-session-list" aria-label="업로드된 발주서 목록"></div>
                             </div>
 
-                            <div class="milkrun-grid">
+                            <div id="milkrun-workboard-grid" class="milkrun-grid">
                                 <div class="workspace-subcard milkrun-summary-panel">
                                     <h3 class="subcard-title">센터별 요약</h3>
                                     <div class="tracking-table-scroll milkrun-summary-scroll">

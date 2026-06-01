@@ -2949,11 +2949,10 @@ function renderMilkrunWorkspaceList() {
                 class="milkrun-session-chip${workspace.id === activeMilkrunWorkspaceId ? " is-active" : ""}"
                 data-milkrun-workspace-id="${escapeHtml(workspace.id)}"
             >
-                <span class="milkrun-session-title">${escapeHtml(workspace.title || workspace.id)}</span>
+                <span class="milkrun-session-title" title="${escapeHtml(workspace.title || workspace.id)}">${escapeHtml(workspace.title || workspace.id)}</span>
                 <span class="milkrun-session-meta">
                     발주 ${formatMilkrunNumber(rows.length)}건 · 센터 ${formatMilkrunNumber(centerCount)}개${updatedAt ? ` · ${escapeHtml(updatedAt)}` : ""}
                 </span>
-                <span class="milkrun-session-action">테트리스 작업장으로 이동</span>
             </button>
         `;
     }).join("");

@@ -5,7 +5,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>FlowButler - 작업 공간</title>
-    <link rel="stylesheet" href="./style.css" />
+    <link rel="stylesheet" href="./style.css?v=20260707-crm1" />
 </head>
 
 <body class="app-body dashboard-body">
@@ -15,54 +15,49 @@
                 <aside class="sidebar-card">
                     <div class="sidebar-brand">
                         <div class="brand-inline">FLOWBUTLER</div>
-                        <p class="sidebar-brand-sub">물류 업무 자동화 워크스페이스</p>
+                        <p class="sidebar-brand-sub">물류 운영 콘솔</p>
                     </div>
 
                     <nav class="sidebar-nav">
                         <button class="sidebar-nav-item is-active" data-view="home" type="button">
-                            <span class="sidebar-nav-title">홈</span>
-                            <span class="sidebar-nav-desc">업무 요약과 빠른 시작</span>
+                            <span class="sidebar-nav-title">대시보드</span>
                         </button>
 
                         <div class="sidebar-nav-group" data-nav-group="tools">
                             <button class="sidebar-nav-group-toggle" type="button" aria-expanded="false"
                                 aria-controls="sidebar-tools-menu">
-                                <span class="sidebar-nav-title">도구</span>
+                                <span class="sidebar-nav-title">업무 도구</span>
                                 <span class="sidebar-nav-group-arrow">▾</span>
                             </button>
 
                             <div id="sidebar-tools-menu" class="sidebar-subnav" hidden>
                                 <button class="sidebar-subnav-item" data-view="tracking" data-paid-feature="true" type="button">
-                                    <span class="sidebar-nav-title">송장번호 Tracking <span class="paid-lock-icon" aria-hidden="true">🔒</span></span>
-                                    <span class="sidebar-nav-desc">엑셀 업로드 / 수기입력 조회</span>
+                                    <span class="sidebar-nav-title">송장 조회 <span class="paid-lock-icon" aria-hidden="true">🔒</span></span>
                                 </button>
 
                                 <button class="sidebar-subnav-item" data-view="label" type="button">
-                                    <span class="sidebar-nav-title">라벨 양식 설정</span>
-                                    <span class="sidebar-nav-desc">텍스트 박스 기반 라벨 편집</span>
+                                    <span class="sidebar-nav-title">라벨 양식</span>
                                 </button>
                                 <button class="sidebar-subnav-item" data-view="sku" type="button">
                                     <span class="sidebar-nav-title">SKU 관리</span>
-                                    <span class="sidebar-nav-desc">상품 마스터 등록 / 검증</span>
                                 </button>
                                 <button class="sidebar-subnav-item" data-view="order-upload" type="button">
                                     <span class="sidebar-nav-title">발주서 업로드</span>
-                                    <span class="sidebar-nav-desc">쿠팡·컬리 발주서 수집</span>
+                                </button>
+                                <button class="sidebar-subnav-item" data-view="crm" type="button">
+                                    <span class="sidebar-nav-title">CRM</span>
                                 </button>
                                 <button class="sidebar-subnav-item" data-view="kurly-label" data-paid-feature="true" type="button">
                                     <span class="sidebar-nav-title">컬리 라벨 생성 <span class="paid-lock-icon" aria-hidden="true">🔒</span></span>
-                                    <span class="sidebar-nav-desc">엑셀 업로드 기반 라벨 출력</span>
                                 </button>
                                 <button class="sidebar-subnav-item" data-view="coupang-milkrun" data-paid-feature="true" type="button">
-                                    <span class="sidebar-nav-title">쿠팡 밀크런 도우미 <span class="paid-lock-icon" aria-hidden="true">🔒</span></span>
-                                    <span class="sidebar-nav-desc">PO/SKU 기반 적재리스트 자동화</span>
+                                    <span class="sidebar-nav-title">쿠팡 밀크런 <span class="paid-lock-icon" aria-hidden="true">🔒</span></span>
                                 </button>
                             </div>
                         </div>
 
                         <button class="sidebar-nav-item" data-view="settings" type="button">
                             <span class="sidebar-nav-title">설정</span>
-                            <span class="sidebar-nav-desc">계정 및 서비스 정보 확인</span>
                         </button>
                     </nav>
 
@@ -82,56 +77,59 @@
                     <header class="workspace-header-card">
                         <div class="workspace-header-content">
                             <div>
-                                <div class="status-badge approved-badge">ACTIVE</div>
-                                <h1 id="view-title" class="workspace-title">홈</h1>
+                                <h1 id="view-title" class="workspace-title">대시보드</h1>
                                 <p id="view-subtitle" class="workspace-subtitle">
-                                    지금 필요한 물류 자동화 작업을 빠르게 시작하세요.
+                                    자주 쓰는 작업을 빠르게 실행합니다.
                                 </p>
                             </div>
                             <div id="header-actions" class="workspace-header-actions">
                                 <button type="button" class="primary-btn header-action-btn" data-quick-view="tracking" data-paid-feature="true">
-                                    송장 조회 시작 <span class="paid-lock-icon" aria-hidden="true">🔒</span>
+                                    송장 조회 <span class="paid-lock-icon" aria-hidden="true">🔒</span>
                                 </button>
                                 <button type="button" class="secondary-btn header-action-btn" data-quick-view="label">
-                                    라벨 양식 설정
+                                    라벨 양식
                                 </button>
                             </div>
                         </div>
                     </header>
 
                     <div id="view-home" class="workspace-view is-visible">
-                        <section class="workspace-card">
+                        <section class="workspace-card home-command-center">
                             <div class="section-head">
                                 <div>
-                                    <h2 class="section-title">업무 현황 요약</h2>
+                                    <h2 class="section-title">오늘 작업</h2>
                                     <p class="workspace-text">
-                                        현재 운영 상태와 주요 기능 준비 단계를 한눈에 확인할 수 있습니다.
+                                        필요한 기능을 선택해 바로 시작하세요.
                                     </p>
                                 </div>
                             </div>
 
-                            <div class="summary-grid">
-                                <div class="summary-card">
-                                    <div class="summary-label">현재 상태</div>
-                                    <div class="summary-value">정상 운영</div>
-                                    <div class="summary-desc">승인된 사용자 워크스페이스</div>
-                                </div>
+                            <div class="quick-action-grid">
+                                <button class="quick-action-card" data-quick-view="tracking" data-paid-feature="true" type="button">
+                                    <span class="quick-action-title">송장 조회</span>
+                                    <span class="quick-action-desc">엑셀 업로드 또는 수기입력</span>
+                                </button>
 
-                                <div class="summary-card">
-                                    <div class="summary-label">Tracking 방식</div>
-                                    <div class="summary-value">업로드 / 수기입력</div>
-                                    <div class="summary-desc">엑셀 파일 또는 직접 입력</div>
-                                </div>
+                                <button class="quick-action-card" data-quick-view="order-upload" type="button">
+                                    <span class="quick-action-title">발주서 업로드</span>
+                                    <span class="quick-action-desc">쿠팡·컬리 발주서 정리</span>
+                                </button>
 
-                                <div class="summary-card">
-                                    <div class="summary-label">서비스 단계</div>
-                                    <div class="summary-value">MVP</div>
-                                    <div class="summary-desc">핵심 기능 중심 확장 진행 중</div>
-                                </div>
+                                <button class="quick-action-card" data-quick-view="sku" type="button">
+                                    <span class="quick-action-title">SKU 관리</span>
+                                    <span class="quick-action-desc">상품 마스터 등록 및 검증</span>
+                                </button>
+
+                                <button class="quick-action-card" data-quick-view="crm" type="button">
+                                    <span class="quick-action-title">CRM</span>
+                                    <span class="quick-action-desc">재구매 주기 확인</span>
+                                </button>
+
+                                <button class="quick-action-card" data-quick-view="coupang-milkrun" data-paid-feature="true" type="button">
+                                    <span class="quick-action-title">쿠팡 밀크런</span>
+                                    <span class="quick-action-desc">센터별 적재리스트 확인</span>
+                                </button>
                             </div>
-                            <p class="inline-notice">
-                                빠른 안내: 좌측 메뉴에서 도구를 전환할 수 있으며, 최근 작업/이력 기능이 순차적으로 추가될 예정입니다.
-                            </p>
                         </section>
                     </div>
 
@@ -143,25 +141,16 @@
                                 </div>
                             </div>
 
-                            <div class="order-upload-simple-list" aria-label="판매처별 발주서 업로드">
-                                <div class="order-upload-simple-row">
-                                    <div class="order-upload-simple-name">
-                                        <strong>쿠팡(밀크런)</strong>
-                                        <span id="order-upload-coupang-status">대기 중</span>
-                                    </div>
-                                    <label for="order-upload-coupang-file" class="order-upload-simple-btn">업로드</label>
-                                    <input id="order-upload-coupang-file" class="hidden-file-input" type="file"
-                                        accept=".xlsx,.xls,.csv" />
-                                </div>
+                            <div id="order-upload-channel-list" class="order-upload-simple-list"
+                                aria-label="판매처별 발주서 업로드"></div>
 
-                                <div class="order-upload-simple-row">
-                                    <div class="order-upload-simple-name">
-                                        <strong>컬리</strong>
-                                        <span id="order-upload-kurly-status">대기 중</span>
-                                    </div>
-                                    <label for="order-upload-kurly-file" class="order-upload-simple-btn">업로드</label>
-                                    <input id="order-upload-kurly-file" class="hidden-file-input" type="file"
-                                        accept=".xlsx,.xls" />
+                            <div class="order-upload-channel-manager" aria-label="판매처 추가">
+                                <div class="order-upload-channel-add">
+                                    <input id="order-upload-channel-input" class="order-upload-channel-input"
+                                        type="text" placeholder="추가할 판매처명" />
+                                    <button id="order-upload-channel-add-btn" class="secondary-btn" type="button">
+                                        판매처 추가
+                                    </button>
                                 </div>
                             </div>
 
@@ -187,6 +176,70 @@
                                 </div>
                             </section>
 
+                            <div id="order-header-map-modal" class="sku-header-modal order-header-map-modal is-hidden"
+                                aria-hidden="true">
+                                <div class="sku-header-modal-card order-header-map-card" role="dialog"
+                                    aria-modal="true" aria-labelledby="order-header-map-title">
+                                    <div class="order-header-map-head">
+                                        <div>
+                                            <h3 id="order-header-map-title" class="subcard-title">엑셀 양식 설정</h3>
+                                            <p id="order-header-map-desc" class="subcard-text">
+                                                샘플 발주서의 헤더를 불러와 사이트 주문 헤더와 맞춥니다.
+                                            </p>
+                                        </div>
+                                        <button id="order-header-map-close-btn" class="order-match-modal-close-btn"
+                                            type="button">닫기</button>
+                                    </div>
+
+                                    <div class="order-header-map-upload">
+                                        <label for="order-header-map-file" class="order-header-map-file-btn">
+                                            샘플 엑셀 업로드
+                                        </label>
+                                        <input id="order-header-map-file" class="hidden-file-input" type="file"
+                                            accept=".xlsx,.xls,.csv" />
+                                        <div id="order-header-map-file-name" class="selected-file-name">
+                                            선택된 파일 없음
+                                        </div>
+                                    </div>
+
+                                    <div id="order-header-map-status" class="order-header-map-status">
+                                        필수 주문 헤더가 먼저 표시됩니다.
+                                    </div>
+
+                                    <section class="order-header-map-section" aria-label="사이트 주문 헤더">
+                                        <div class="order-header-map-section-head">
+                                            <h4>사이트 헤더</h4>
+                                            <div class="order-header-map-add">
+                                                <select id="order-header-map-field-select"
+                                                    class="order-header-map-field-select"
+                                                    aria-label="추가할 사이트 헤더"></select>
+                                                <button id="order-header-map-add-field-btn" class="secondary-btn"
+                                                    type="button">헤더 추가</button>
+                                            </div>
+                                        </div>
+                                        <div id="order-header-map-site-fields" class="order-header-site-fields"></div>
+                                        <div id="order-header-map-system-fields" class="order-header-system-fields"></div>
+                                    </section>
+
+                                    <section class="order-header-map-section" aria-label="엑셀 헤더 미리보기">
+                                        <div class="order-header-map-section-head">
+                                            <h4>엑셀 헤더</h4>
+                                            <span id="order-header-map-summary" class="order-header-map-summary">-</span>
+                                        </div>
+                                        <div id="order-header-map-preview" class="order-header-map-preview">
+                                            샘플 엑셀을 업로드하면 헤더가 표시됩니다.
+                                        </div>
+                                    </section>
+
+                                    <div class="label-tool-actions order-header-map-actions">
+                                        <button id="order-header-map-cancel-btn" class="secondary-btn"
+                                            type="button">취소</button>
+                                        <button id="order-header-map-save-btn" class="primary-btn"
+                                            type="button" disabled>저장</button>
+                                    </div>
+                                </div>
+                            </div>
+
                             <div id="order-match-delete-modal" class="sku-header-modal is-hidden" aria-hidden="true">
                                 <div class="sku-header-modal-card order-match-delete-modal-card">
                                     <div class="order-match-delete-head">
@@ -209,7 +262,7 @@
                         <section class="workspace-card">
                             <div class="section-head">
                                 <div>
-                                    <h2 class="section-title">송장번호 Tracking</h2>
+                                    <h2 class="section-title">송장 조회</h2>
                                 </div>
                             </div>
 
@@ -247,7 +300,7 @@
                                                 </a>
                                             </div>
                                             <div class="tracking-action-buttons">
-                                                <button id="tracking-run-btn" class="primary-btn">Tracking 실행</button>
+                                                <button id="tracking-run-btn" class="primary-btn">조회 실행</button>
                                                 <button id="tracking-download-btn" class="secondary-btn">결과
                                                     다운로드</button>
                                             </div>
@@ -283,7 +336,7 @@
                                                     준비됨
                                                 </div>
                                                 <div id="tracking-progress-detail" class="tracking-progress-detail">
-                                                    엑셀 파일을 업로드하고 Tracking 실행을 눌러주세요.
+                                                    엑셀 파일을 업로드하고 조회 실행을 눌러주세요.
                                                 </div>
                                             </div>
                                             <div id="tracking-progress-percent" class="tracking-progress-percent">0%
@@ -391,7 +444,7 @@
                         <section class="workspace-card">
                             <div class="section-head">
                                 <div>
-                                    <h2 class="section-title">라벨 양식 설정</h2>
+                                    <h2 class="section-title">라벨 양식</h2>
                                 </div>
                             </div>
 
@@ -591,8 +644,19 @@
                                     </div>
                                 </div>
 
-                                <div id="sku-result" class="info-block tracking-result-box">
-                                    업로드 시 자동 검증되며, 오류가 있으면 업로드되지 않습니다.
+                                <div class="sku-table-control-row">
+                                    <div id="sku-result" class="info-block tracking-result-box" hidden>
+                                        업로드 시 자동 검증되며, 오류가 있으면 업로드되지 않습니다.
+                                    </div>
+                                    <div class="sku-search-controls" role="search" aria-label="SKU 검색">
+                                        <select id="sku-search-field" class="sku-search-field" aria-label="검색 범위">
+                                            <option value="all">전체</option>
+                                        </select>
+                                        <input id="sku-search-input" class="sku-search-input" type="search"
+                                            aria-label="검색어" placeholder="검색어 입력" autocomplete="off" />
+                                        <button id="sku-search-clear-btn" class="secondary-btn sku-search-clear-btn"
+                                            type="button">초기화</button>
+                                    </div>
                                 </div>
 
                                 <div class="tracking-table-wrap">
@@ -670,11 +734,14 @@
                             <div class="section-head">
                                 <div>
                                     <h2 class="section-title">컬리 라벨 생성</h2>
+                                    <p class="workspace-text">
+                                        업로드한 컬리 발주서명을 먼저 선택한 뒤, 해당 발주서의 라벨 미리보기와 PDF 다운로드를 진행합니다.
+                                    </p>
                                 </div>
                             </div>
 
-                            <div class="workspace-subcard">
-                                <div class="tracking-toolbar">
+                            <div class="workspace-subcard kurly-label-upload-card">
+                                <div class="tracking-toolbar kurly-label-upload-toolbar">
                                     <div class="tracking-toolbar-left">
                                         <label for="kurly-label-file" class="file-trigger-btn">컬리 라벨 파일 선택</label>
                                         <input type="file" id="kurly-label-file" accept=".xlsx,.xls"
@@ -716,6 +783,87 @@
                                         <div id="kurly-progress-bar" class="tracking-progress-bar"></div>
                                     </div>
                                 </div>
+
+                            </div>
+
+                            <div id="kurly-label-summary" class="summary-grid kurly-label-summary-grid" hidden>
+                                <div class="summary-card">
+                                    <div class="summary-label">총 라벨</div>
+                                    <div id="kurly-label-total-labels" class="summary-value">0</div>
+                                    <div class="summary-desc">박스 단위 출력 장수</div>
+                                </div>
+                                <div class="summary-card">
+                                    <div class="summary-label">상품 행</div>
+                                    <div id="kurly-label-total-rows" class="summary-value">0</div>
+                                    <div class="summary-desc">검증 완료된 발주 행</div>
+                                </div>
+                                <div class="summary-card">
+                                    <div class="summary-label">센터 수</div>
+                                    <div id="kurly-label-center-count" class="summary-value">0</div>
+                                    <div class="summary-desc">PDF 분리 기준</div>
+                                </div>
+                                <div class="summary-card">
+                                    <div class="summary-label">발주서</div>
+                                    <div id="kurly-label-active-name" class="summary-value">-</div>
+                                    <div class="summary-desc">현재 선택된 파일</div>
+                                </div>
+                            </div>
+
+                            <div class="workspace-subcard milkrun-toolbar-card kurly-label-list-card">
+                                <div class="tracking-toolbar kurly-label-workspace-head">
+                                    <div class="tracking-toolbar-left">
+                                        <div>
+                                            <h3 id="kurly-label-workspace-title" class="subcard-title">업로드 발주서 목록</h3>
+                                            <p id="kurly-label-workspace-desc" class="subcard-text">
+                                                발주서 업로드에서 컬리 발주서를 업로드한 뒤, 발주서명을 선택해 라벨을 미리보고 PDF를 다운로드합니다.
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div class="tracking-toolbar-right">
+                                        <div id="kurly-label-workspace-actions" class="tracking-action-buttons kurly-label-workspace-actions" hidden>
+                                            <button id="kurly-label-workspace-back-btn" class="secondary-btn" type="button">발주서 목록</button>
+                                            <button id="kurly-label-download-btn" class="primary-btn" type="button">PDF 다운로드</button>
+                                        </div>
+                                        <div id="kurly-label-list-actions" class="tracking-action-buttons workspace-list-actions">
+                                            <button id="kurly-label-select-all-btn" class="secondary-btn" type="button">전체 선택</button>
+                                            <button id="kurly-label-delete-selected-btn" class="secondary-btn danger-btn" type="button">선택 삭제</button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div id="kurly-label-session-list" class="milkrun-session-list kurly-label-session-list"
+                                    aria-label="업로드된 컬리 발주서 목록"></div>
+                            </div>
+
+                            <div id="kurly-label-workspace-grid" class="kurly-label-workspace-grid" hidden>
+                                <section class="kurly-label-preview-panel" aria-label="라벨 미리보기">
+                                    <div class="kurly-label-panel-head">
+                                        <h3 class="subcard-title">라벨 미리보기</h3>
+                                        <p id="kurly-label-preview-note" class="subcard-text"></p>
+                                    </div>
+                                    <div id="kurly-label-preview-grid" class="kurly-label-preview-grid"></div>
+                                </section>
+                                <section class="kurly-label-order-panel" aria-label="발주 행 요약">
+                                    <h3 class="subcard-title">발주 행 요약</h3>
+                                    <div class="tracking-table-scroll kurly-label-order-scroll">
+                                        <table class="tracking-table kurly-label-order-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>발주코드</th>
+                                                    <th>상품명</th>
+                                                    <th>마스터코드</th>
+                                                    <th>입고지</th>
+                                                    <th>박스</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="kurly-label-order-body">
+                                                <tr class="tracking-empty-row">
+                                                    <td colspan="5">발주서를 선택하면 행 요약이 표시됩니다.</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </section>
                             </div>
                         </section>
                     </div>
@@ -724,34 +872,11 @@
                         <section class="workspace-card">
                             <div class="section-head">
                                 <div>
-                                    <h2 class="section-title">쿠팡 밀크런 도우미</h2>
+                                    <h2 class="section-title">쿠팡 밀크런</h2>
                                     <p class="workspace-text">
                                         업로드한 쿠팡 발주서명을 먼저 선택한 뒤,
-                                        해당 발주서의 센터별 박스·PT·SKU·중량 테트리스 작업판으로 이동합니다.
+                                        해당 발주서의 센터별 박스·PLT·SKU·중량 테트리스 작업판으로 이동합니다.
                                     </p>
-                                </div>
-                            </div>
-
-                            <div id="milkrun-workboard-summary" class="summary-grid milkrun-summary-grid" hidden>
-                                <div class="summary-card">
-                                    <div class="summary-label">센터 수</div>
-                                    <div id="milkrun-center-count" class="summary-value">0</div>
-                                    <div class="summary-desc">센터 변경 후 물량이 남아있는 센터</div>
-                                </div>
-                                <div class="summary-card">
-                                    <div class="summary-label">총 PLT</div>
-                                    <div id="milkrun-total-plt" class="summary-value">0</div>
-                                    <div class="summary-desc">센터별 PT를 올림 처리한 예상 팔레트</div>
-                                </div>
-                                <div class="summary-card">
-                                    <div class="summary-label">총 SKU 수</div>
-                                    <div id="milkrun-total-sku" class="summary-value">0</div>
-                                    <div class="summary-desc">발주번호별 SKU 수 합계</div>
-                                </div>
-                                <div class="summary-card">
-                                    <div class="summary-label">총 중량</div>
-                                    <div id="milkrun-total-weight" class="summary-value">0</div>
-                                    <div class="summary-desc">센터별 중량 합계</div>
                                 </div>
                             </div>
 
@@ -766,45 +891,123 @@
                                         </div>
                                     </div>
                                     <div class="tracking-toolbar-right">
+                                        <div id="milkrun-workspace-list-actions" class="tracking-action-buttons workspace-list-actions">
+                                            <button id="milkrun-select-all-btn" class="secondary-btn" type="button">전체 선택</button>
+                                            <button id="milkrun-delete-selected-btn" class="secondary-btn danger-btn" type="button">선택 삭제</button>
+                                        </div>
                                         <div id="milkrun-workboard-actions" class="tracking-action-buttons" hidden>
                                             <button id="milkrun-workspace-back-btn" class="secondary-btn" type="button">발주서 목록</button>
                                             <button id="milkrun-center-toggle-btn" class="secondary-btn" type="button">센터 목록 관리</button>
-                                            <button id="milkrun-load-sample-btn" class="secondary-btn" type="button">샘플 데이터 불러오기</button>
-                                            <button id="milkrun-sort-center-btn" class="primary-btn" type="button">센터순 정렬</button>
+                                            <button id="milkrun-loading-list-download-btn" class="secondary-btn" type="button">적재리스트 편집</button>
                                         </div>
                                     </div>
                                 </div>
                                 <div id="milkrun-session-list" class="milkrun-session-list" aria-label="업로드된 발주서 목록"></div>
                             </div>
 
-                            <div id="milkrun-workboard-grid" class="milkrun-grid" hidden>
-                                <div class="workspace-subcard milkrun-summary-panel">
-                                    <h3 class="subcard-title">센터별 요약</h3>
-                                    <div class="tracking-table-scroll milkrun-summary-scroll">
-                                        <table class="tracking-table milkrun-summary-table">
+                            <div id="milkrun-workboard-grid" class="milkrun-workboard" hidden>
+                                <div class="milkrun-view-tabs" role="tablist" aria-label="쿠팡 밀크런 작업 보기">
+                                    <button class="milkrun-view-tab is-active" data-milkrun-view-tab="overview" type="button"
+                                        role="tab" aria-selected="true" aria-controls="milkrun-workboard-grid">
+                                        전체 작업판
+                                    </button>
+                                    <button class="milkrun-view-tab" data-milkrun-view-tab="sku" type="button"
+                                        role="tab" aria-selected="false" aria-controls="milkrun-sku-panel">
+                                        발주 SKU 상세
+                                        <span id="milkrun-detail-tab-count" class="milkrun-tab-count">0</span>
+                                    </button>
+                                    <button class="milkrun-view-tab" data-milkrun-view-tab="centers" type="button"
+                                        role="tab" aria-selected="false" aria-controls="milkrun-centers-panel">
+                                        물류센터별
+                                        <span id="milkrun-center-tab-count" class="milkrun-tab-count">0</span>
+                                    </button>
+                                    <button class="milkrun-view-tab" data-milkrun-view-tab="orders" type="button"
+                                        role="tab" aria-selected="false" aria-controls="milkrun-orders-panel">
+                                        발주번호별
+                                        <span id="milkrun-order-tab-count" class="milkrun-tab-count">0</span>
+                                    </button>
+                                </div>
+
+                                <section id="milkrun-sku-panel" class="workspace-subcard milkrun-data-panel"
+                                    data-milkrun-view-panel="sku" role="tabpanel">
+                                    <div class="milkrun-panel-head">
+                                        <div>
+                                            <h3 class="subcard-title">발주 SKU 상세</h3>
+                                            <p class="subcard-text">원본 발주 행을 기준으로 상품별 박스·PLT·중량을 확인합니다.</p>
+                                        </div>
+                                        <span class="milkrun-panel-note">원본 발주 행 기준</span>
+                                    </div>
+                                    <div class="tracking-table-scroll milkrun-detail-scroll">
+                                        <table class="tracking-table milkrun-data-table milkrun-detail-table">
                                             <thead>
                                                 <tr>
+                                                    <th>발주번호</th>
                                                     <th>물류센터</th>
+                                                    <th>상품번호</th>
+                                                    <th>상품명</th>
+                                                    <th>확정수량</th>
                                                     <th>박스 수</th>
-                                                    <th>PT 수</th>
-                                                    <th>SKU 수</th>
-                                                    <th>중량</th>
-                                                    <th>납품지</th>
+                                                    <th>PLT 수</th>
+                                                    <th>중량(kg)</th>
                                                 </tr>
                                             </thead>
-                                            <tbody id="milkrun-center-summary-body">
+                                            <tbody id="milkrun-detail-body">
                                                 <tr class="tracking-empty-row">
-                                                    <td colspan="6">샘플 데이터를 불러오면 센터별 요약이 표시됩니다.</td>
+                                                    <td colspan="8">발주서를 선택하면 SKU 상세가 표시됩니다.</td>
                                                 </tr>
                                             </tbody>
                                         </table>
                                     </div>
-                                </div>
+                                </section>
 
-                                <div class="workspace-subcard milkrun-order-panel">
-                                    <h3 class="subcard-title">발주번호별 센터 변경</h3>
+                                <button id="milkrun-overview-resizer" class="milkrun-overview-resizer" type="button"
+                                    role="separator" aria-orientation="vertical"
+                                    aria-label="발주 SKU 상세와 요약 영역 너비 조절"
+                                    aria-valuemin="36" aria-valuemax="62" aria-valuenow="46"
+                                    title="드래그해서 좌우 크기를 조절합니다.">
+                                    <span class="milkrun-overview-resizer-line" aria-hidden="true"></span>
+                                </button>
+
+                                <section id="milkrun-centers-panel" class="workspace-subcard milkrun-data-panel"
+                                    data-milkrun-view-panel="centers" role="tabpanel" hidden>
+                                    <div class="milkrun-panel-head">
+                                        <div>
+                                            <h3 class="subcard-title">물류센터별</h3>
+                                            <p class="subcard-text">변경된 센터를 기준으로 물량과 SKU 수를 다시 집계합니다.</p>
+                                        </div>
+                                        <span class="milkrun-panel-note">센터 변경 즉시 반영</span>
+                                    </div>
+                                    <div class="tracking-table-scroll milkrun-summary-scroll">
+                                        <table class="tracking-table milkrun-data-table milkrun-summary-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>물류센터</th>
+                                                    <th>박스 수</th>
+                                                    <th>PLT 수</th>
+                                                    <th>SKU 수</th>
+                                                    <th>중량(kg)</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="milkrun-center-summary-body">
+                                                <tr class="tracking-empty-row">
+                                                    <td colspan="5">발주서를 선택하면 센터별 요약이 표시됩니다.</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </section>
+
+                                <section id="milkrun-orders-panel" class="workspace-subcard milkrun-data-panel"
+                                    data-milkrun-view-panel="orders" role="tabpanel" hidden>
+                                    <div class="milkrun-panel-head">
+                                        <div>
+                                            <h3 class="subcard-title">발주번호별 센터 변경</h3>
+                                            <p class="subcard-text">발주번호 단위로 센터를 변경하면 다른 표와 적재리스트에도 반영됩니다.</p>
+                                        </div>
+                                        <span class="milkrun-panel-note is-action">변경센터를 눌러 선택</span>
+                                    </div>
                                     <div class="tracking-table-scroll milkrun-order-scroll">
-                                        <table class="tracking-table milkrun-order-table">
+                                        <table class="tracking-table milkrun-data-table milkrun-order-table">
                                             <thead>
                                                 <tr>
                                                     <th>발주번호</th>
@@ -814,14 +1017,105 @@
                                                     <th>SKU</th>
                                                     <th>수량</th>
                                                     <th>박스</th>
-                                                    <th>PT</th>
-                                                    <th>중량</th>
+                                                    <th>PLT</th>
+                                                    <th>중량(kg)</th>
                                                     <th>상태</th>
                                                 </tr>
                                             </thead>
                                             <tbody id="milkrun-order-body">
                                                 <tr class="tracking-empty-row">
-                                                    <td colspan="10">샘플 데이터를 불러오면 발주번호 단위 작업판이 표시됩니다.</td>
+                                                    <td colspan="10">발주서를 선택하면 발주번호 단위 작업판이 표시됩니다.</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </section>
+                            </div>
+                        </section>
+                    </div>
+
+                    <div id="view-crm" class="workspace-view">
+                        <section class="workspace-card crm-card">
+                            <div class="section-head">
+                                <div>
+                                    <h2 class="section-title">CRM</h2>
+                                </div>
+                            </div>
+
+                            <div class="workspace-subcard crm-upload-card">
+                                <div class="tracking-toolbar crm-upload-toolbar">
+                                    <div class="tracking-toolbar-left">
+                                        <label for="crm-file" class="file-trigger-btn">과거 주문 엑셀 업로드</label>
+                                        <input type="file" id="crm-file" accept=".xlsx,.xls,.csv" multiple
+                                            class="hidden-file-input" />
+                                        <div id="crm-file-name" class="selected-file-name">선택된 파일 없음</div>
+                                    </div>
+                                </div>
+
+                                <div id="crm-upload-status" class="info-block crm-upload-status" role="status"
+                                    aria-live="polite">
+                                    과거 주문 엑셀을 업로드하면 고객 재구매 요약이 표시됩니다.
+                                </div>
+                            </div>
+
+                            <div class="summary-grid crm-summary-grid">
+                                <div class="summary-card">
+                                    <div class="summary-label">주문 행</div>
+                                    <div id="crm-summary-lines" class="summary-value">0</div>
+                                    <div id="crm-summary-lines-desc" class="summary-desc">정상 0건 · 오류 0건</div>
+                                </div>
+                                <div class="summary-card">
+                                    <div class="summary-label">주문번호</div>
+                                    <div id="crm-summary-orders" class="summary-value">0</div>
+                                    <div class="summary-desc">고유 주문번호 기준</div>
+                                </div>
+                                <div class="summary-card">
+                                    <div class="summary-label">고객</div>
+                                    <div id="crm-summary-customers" class="summary-value">0</div>
+                                    <div class="summary-desc">수령자 키 기준</div>
+                                </div>
+                                <div class="summary-card">
+                                    <div class="summary-label">재구매율</div>
+                                    <div id="crm-summary-repeat-rate" class="summary-value">0%</div>
+                                    <div id="crm-summary-repeat-desc" class="summary-desc">2회 이상 구매 0명</div>
+                                </div>
+                                <div class="summary-card">
+                                    <div class="summary-label">재구매 주기</div>
+                                    <div id="crm-summary-gap" class="summary-value">0일</div>
+                                    <div id="crm-summary-gap-desc" class="summary-desc">첫 재구매 중앙값</div>
+                                </div>
+                                <div class="summary-card">
+                                    <div class="summary-label">기간</div>
+                                    <div id="crm-summary-period" class="summary-value">-</div>
+                                    <div id="crm-summary-period-desc" class="summary-desc">주문일 범위</div>
+                                </div>
+                            </div>
+
+                            <div class="workspace-subcard crm-preview-card">
+                                <div class="crm-preview-head">
+                                    <div>
+                                        <h3 class="subcard-title">업로드 주문 미리보기</h3>
+                                    </div>
+                                    <div id="crm-preview-meta" class="subcard-text">0건</div>
+                                </div>
+
+                                <div class="tracking-table-wrap crm-table-wrap">
+                                    <div class="tracking-table-scroll crm-table-scroll">
+                                        <table class="tracking-table crm-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>주문일</th>
+                                                    <th>판매처</th>
+                                                    <th>주문번호</th>
+                                                    <th>상품명</th>
+                                                    <th>수량</th>
+                                                    <th>결제금액</th>
+                                                    <th>수령자 키</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="crm-preview-body">
+                                                <tr class="tracking-empty-row">
+                                                    <td colspan="7">업로드된 주문 데이터가 없습니다.</td>
                                                 </tr>
                                             </tbody>
                                         </table>
@@ -854,6 +1148,59 @@
                             <div id="milkrun-center-list" class="milkrun-center-list" aria-label="쿠팡 센터 목록"></div>
                             <div class="label-tool-actions">
                                 <button id="milkrun-center-close-btn" class="primary-btn" type="button">닫기</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="milkrun-loading-editor-modal" class="sku-header-modal is-hidden" aria-hidden="true">
+                        <div class="sku-header-modal-card milkrun-loading-editor-card">
+                            <div class="milkrun-loading-editor-head">
+                                <div>
+                                    <h3 class="subcard-title">쿠팡 파렛트 적재리스트 편집</h3>
+                                    <p class="subcard-text">
+                                        출력될 적재리스트 양식 그대로 SKU 행을 드래그해 PLT를 조정한 뒤 PDF를 생성합니다.
+                                    </p>
+                                </div>
+                                <button id="milkrun-loading-editor-close-btn" class="order-match-modal-close-btn" type="button"
+                                    aria-label="적재리스트 편집 닫기">×</button>
+                            </div>
+
+                            <div class="milkrun-loading-editor-layout">
+                                <aside class="milkrun-loading-editor-sidebar">
+                                    <div class="milkrun-loading-editor-sidebar-head">
+                                        <span>물류센터</span>
+                                        <span id="milkrun-loading-editor-center-count">0개</span>
+                                    </div>
+                                    <div id="milkrun-loading-editor-center-list" class="milkrun-loading-editor-center-list"></div>
+                                </aside>
+
+                                <section class="milkrun-loading-editor-main">
+                                    <div class="milkrun-loading-editor-summary">
+                                        <div>
+                                            <div id="milkrun-loading-editor-active-center" class="milkrun-loading-editor-center-name">센터 선택</div>
+                                            <div id="milkrun-loading-editor-active-desc" class="milkrun-loading-editor-desc">
+                                                센터를 선택하면 적재리스트를 편집할 수 있습니다.
+                                            </div>
+                                        </div>
+                                        <div id="milkrun-loading-editor-summary-grid" class="milkrun-loading-editor-summary-grid"></div>
+                                    </div>
+
+                                    <div id="milkrun-loading-editor-status" class="milkrun-loading-editor-status" role="status"
+                                        aria-live="polite"></div>
+
+                                    <div id="milkrun-loading-editor-pages" class="milkrun-loading-editor-pages"></div>
+
+                                    <button id="milkrun-loading-editor-new-pallet-drop" class="milkrun-loading-editor-new-drop"
+                                        type="button">
+                                        + 새 PLT로 드롭 / 현재 센터에 PLT 추가
+                                    </button>
+                                </section>
+                            </div>
+
+                            <div class="label-tool-actions milkrun-loading-editor-actions">
+                                <button id="milkrun-loading-editor-add-pallet-btn" class="secondary-btn" type="button">현재 센터에 PLT 추가</button>
+                                <button id="milkrun-loading-editor-cancel-btn" class="ghost-btn" type="button">취소</button>
+                                <button id="milkrun-loading-editor-download-btn" class="primary-btn" type="button">편집 결과 PDF 다운로드</button>
                             </div>
                         </div>
                     </div>
@@ -897,15 +1244,16 @@
     <script>
         window.__flowbutlerDashboardModuleReady = false;
         (function () {
-            const toolViews = new Set(["tracking", "label", "sku", "order-upload", "kurly-label", "coupang-milkrun"]);
+            const toolViews = new Set(["tracking", "label", "sku", "order-upload", "crm", "kurly-label", "coupang-milkrun"]);
             const fallbackMeta = {
-                home: ["홈", "지금 필요한 물류 자동화 작업을 빠르게 시작하세요."],
-                tracking: ["송장번호 Tracking", ""],
-                label: ["라벨 양식 설정", ""],
+                home: ["대시보드", "자주 쓰는 작업을 빠르게 실행합니다."],
+                tracking: ["송장 조회", ""],
+                label: ["라벨 양식", ""],
                 sku: ["SKU 관리", ""],
                 "order-upload": ["발주서 업로드", "쿠팡(밀크런)과 컬리 발주서를 판매처별 양식으로 업로드합니다."],
+                crm: ["CRM", "고객 재구매 흐름을 확인합니다."],
                 "kurly-label": ["컬리 라벨 생성", ""],
-                "coupang-milkrun": ["쿠팡 밀크런 도우미", "발주번호 단위 센터 변경과 센터별 PLT 요약을 확인합니다."],
+                "coupang-milkrun": ["쿠팡 밀크런", "발주번호 단위 센터 변경과 센터별 PLT 요약을 확인합니다."],
                 settings: ["설정", "계정, 플랜, 권한과 같은 기본 정보를 확인할 수 있습니다."],
             };
 
@@ -1165,12 +1513,12 @@
         }());
     </script>
 
-    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+    <script src="./vendor/xlsx.full.min.js?v=20260625-local"></script>
+    <script src="./vendor/jspdf.umd.min.js?v=20260625-local"></script>
+    <script src="./vendor/html2canvas.min.js?v=20260625-local"></script>
+    <script src="./vendor/jszip.min.js?v=20260625-local"></script>
     <script src="https://js.tosspayments.com/v1/payment"></script>
-    <script type="module" src="./js/dashboard.js?v=20260521-1"></script>
+    <script type="module" src="./js/dashboard.js?v=20260707-crm2"></script>
 </body>
 
 </html>

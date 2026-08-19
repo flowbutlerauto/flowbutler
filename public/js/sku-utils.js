@@ -1,4 +1,9 @@
-import { SKU_FIELDS, SKU_NUMERIC_KEYS, SKU_REQUIRED_KEYS } from "./sku-schema.js";
+import {
+    SKU_FIELDS,
+    SKU_NUMERIC_KEYS,
+    SKU_REQUIRED_KEYS,
+    SKU_TYPE_OPTIONS,
+} from "./sku-schema.js?v=20260724-sku-types3";
 
 function safeString(value) {
     return String(value ?? "").trim();
@@ -76,13 +81,19 @@ export function validateSkuRows(rows) {
             }
         });
 
+        const skuType = safeString(normalizedRow.skuType);
+        if (skuType && !SKU_TYPE_OPTIONS.includes(skuType)) {
+            errors.push(`SKU 유형은 ${SKU_TYPE_OPTIONS.join(", ")} 중 하나여야 합니다.`);
+        }
+
         const adminCode = safeString(normalizedRow.adminProductCode);
         if (adminCode) {
-            if (seenAdminCodes.has(adminCode)) {
-                const firstRowId = seenAdminCodes.get(adminCode);
+            const normalizedAdminCode = adminCode.toLowerCase();
+            if (seenAdminCodes.has(normalizedAdminCode)) {
+                const firstRowId = seenAdminCodes.get(normalizedAdminCode);
                 errors.push(`어드민 상품코드 중복 (첫 등장 행: ${firstRowId})`);
             } else {
-                seenAdminCodes.set(adminCode, normalizedRow.rowId);
+                seenAdminCodes.set(normalizedAdminCode, normalizedRow.rowId);
             }
         }
 

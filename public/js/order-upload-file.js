@@ -1,5 +1,5 @@
 const COUPANG_REQUIRED_FIELDS = ["orderCode", "dueDate", "center", "productCode", "productName", "quantity"];
-const GENERIC_ORDER_REQUIRED_FIELDS = ["productName", "quantity", "recipientName", "recipientAddress", "recipientPhone"];
+const GENERIC_ORDER_REQUIRED_FIELDS = ["orderCode", "orderDate", "productName", "quantity", "recipientName", "recipientAddress", "recipientPhone"];
 
 const COUPANG_HEADER_ALIASES = {
     orderCode: ["발주번호", "발주 번호", "PO", "PO No", "PO번호", "주문번호"],
@@ -119,9 +119,45 @@ function getMilkrunComponentLabel(component) {
     return safeString(component?.skuName) || safeString(component?.skuKey) || "SKU";
 }
 
+function formatIsoDate(yearValue, monthValue, dayValue) {
+    const rawYear = String(yearValue ?? "").trim();
+    const year = rawYear.length === 2
+        ? (Number(rawYear) <= 69 ? 2000 + Number(rawYear) : 1900 + Number(rawYear))
+        : Number(rawYear);
+    const month = Number(monthValue);
+    const day = Number(dayValue);
+    const date = new Date(Date.UTC(year, month - 1, day));
+
+    if (year < 1900 || year > 2100
+        || date.getUTCFullYear() !== year
+        || date.getUTCMonth() !== month - 1
+        || date.getUTCDate() !== day) {
+        return "";
+    }
+
+    return [year, String(month).padStart(2, "0"), String(day).padStart(2, "0")].join("-");
+}
+
 function formatDateLikeText(value) {
     const raw = safeString(value);
     if (!raw) return "";
+
+    const datePatterns = [
+        /^(\d{4})\s*(?:[-./년])\s*(\d{1,2})\s*(?:[-./월])\s*(\d{1,2})\s*일?(?=$|[\sT])/, // YYYY-MM-DD
+        /^(\d{1,2})\s*[./-]\s*(\d{1,2})\s*[./-]\s*(\d{2}|\d{4})(?=$|[\sT])/, // M/D/YY or M/D/YYYY
+        /^(\d{4})(\d{2})(\d{2})(?=$|[\sT])/, // YYYYMMDD
+    ];
+    const matchingPattern = datePatterns.find((pattern) => pattern.test(raw));
+    if (matchingPattern) {
+        const match = raw.match(matchingPattern);
+        if (match) {
+            const [fullMatch, first, second, third] = match;
+            const normalizedDate = matchingPattern === datePatterns[1]
+                ? formatIsoDate(third, first, second)
+                : formatIsoDate(first, second, third);
+            if (normalizedDate) return `${normalizedDate}${raw.slice(fullMatch.length)}`;
+        }
+    }
 
     const digits = raw.replace(/[^\d]/g, "");
     if (digits.length === 8) {
@@ -133,7 +169,7 @@ function formatDateLikeText(value) {
 
 function formatDateTimeLikeText(combinedValue, dateValue, timeValue) {
     const combined = safeString(combinedValue);
-    if (combined) return combined;
+    if (combined) return formatDateLikeText(combined);
 
     const dateText = formatDateLikeText(dateValue);
     const timeText = safeString(timeValue);
@@ -740,7 +776,7 @@ function isValidDateParts(year, month, day) {
 }
 
 function isValidDateLikeText(value) {
-    const raw = safeString(value);
+    const raw = formatDateLikeText(value);
     if (!raw) return true;
 
     const separatedDateMatch = raw.match(/^(\d{4})[-./년\s]+(\d{1,2})[-./월\s]+(\d{1,2})/);
@@ -785,6 +821,8 @@ function validateGenericOrderRow(row, options = {}) {
     const requiredFields = getGenericOrderRequiredFields(options);
 
     if (requiredFields.includes("channelName") && !row.channelName) errors.push("판매처가 비어 있습니다.");
+    if (requiredFields.includes("orderCode") && !row.orderCode) errors.push("주문번호가 비어 있습니다.");
+    if (requiredFields.includes("orderDate") && !row.orderDate) errors.push("주문일이 비어 있습니다.");
     if (!row.productName) errors.push("상품명이 비어 있습니다.");
     if (!row.recipientName) errors.push("수령자이름이 비어 있습니다.");
     pushErrorIfPresent(errors, validateAddressText(row.recipientAddress));
@@ -860,8 +898,10 @@ function mapGenericOrderRows(sheetRows, columnIndexes, headerRowIndex, options =
                 courierName: getCell(row, columnIndexes, "courierName"),
                 ordererName: getCell(row, columnIndexes, "ordererName"),
                 ordererPhone: getCell(row, columnIndexes, "ordererPhone"),
+                ordererKey: "",
                 recipientName: getCell(row, columnIndexes, "recipientName"),
                 recipientPhone: getCell(row, columnIndexes, "recipientPhone"),
+                recipientKey: "",
                 recipientZip: getCell(row, columnIndexes, "recipientZip"),
                 recipientAddress: getCell(row, columnIndexes, "recipientAddress"),
                 deliveryMemo: getCell(row, columnIndexes, "deliveryMemo"),
@@ -918,11 +958,19 @@ export async function parseGenericOrderFile(file, options = {}) {
         ? resolveGenericOrderColumnIndexesFromMap(headerRow, options.headerMap)
         : resolveGenericOrderColumnIndexes(headerRow);
     const requiredFields = getGenericOrderRequiredFields(options);
-    const missingFields = requiredFields.filter((fieldKey) => typeof columnIndexes[fieldKey] !== "number");
+    const missingFields = requiredFields.filter((fieldKey) => {
+        if (fieldKey === "orderDate") {
+            return typeof columnIndexes.orderDate !== "number"
+                && typeof columnIndexes.orderDateTime !== "number";
+        }
+        return typeof columnIndexes[fieldKey] !== "number";
+    });
 
     if (missingFields.length) {
         const labelMap = {
             channelName: "판매처",
+            orderCode: "주문번호",
+            orderDate: "주문일",
             productName: "상품명",
             quantity: "수량",
             recipientName: "수령자이름",

@@ -1,6 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
 import { getFirestore } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+import { getFunctions } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-functions.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyBYQbBznp6VQjy4MdXDK632fLPtMB3LwgM",
@@ -14,5 +15,6 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+const functions = getFunctions(app, "asia-northeast3");
 
-export { auth, db };
+export { auth, db, functions };

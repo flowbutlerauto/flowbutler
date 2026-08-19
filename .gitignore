@@ -5,3 +5,8 @@ functions/node_modules/
 .env
 .env.*
 npm-debug.log*
+.tools/
+/outputs/
+/tmp/
+/functions/firebase-debug.log
+/public/.codex-static-server.*.log

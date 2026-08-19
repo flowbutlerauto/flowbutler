@@ -1,8 +1,9 @@
-const {onRequest} = require('firebase-functions/v2/https');
+const {onCall, onRequest, HttpsError} = require('firebase-functions/v2/https');
 const logger = require('firebase-functions/logger');
 const express = require('express');
 const cors = require('cors');
 const admin = require('firebase-admin');
+const {createHmac} = require('crypto');
 
 const {getCjTrackingResults} = require('./cj-tracking');
 const {getLotteTrackingResults} = require('./lotte-tracking');
@@ -13,6 +14,13 @@ admin.initializeApp();
 
 const app = express();
 const firestore = admin.firestore();
+// Callable functions must accept the browser request at the Cloud Run layer.
+// Each handler still verifies Firebase Authentication before reading or writing data.
+const CUSTOMER_KEY_CALLABLE_OPTIONS = Object.freeze({
+  region: 'asia-northeast3',
+  timeoutSeconds: 30,
+  invoker: 'public',
+});
 
 app.use(cors({origin: true}));
 app.use(express.json());
@@ -55,6 +63,174 @@ function safeString(value) {
   return String(value ?? '').trim();
 }
 
+function normalizeCustomerPhone(value) {
+  const digits = safeString(value).replace(/\D/g, '');
+  if (!digits) return '';
+
+  if (digits.startsWith('0082') && digits.length > 4) {
+    return `0${digits.slice(4)}`;
+  }
+
+  if (digits.startsWith('82') && digits.length > 2) {
+    return `0${digits.slice(2)}`;
+  }
+
+  return digits;
+}
+
+function getCustomerKeySecretRef(userId) {
+  return firestore
+      .collection('users')
+      .doc(userId)
+      .collection('private')
+      .doc('customerKey');
+}
+
+function isValidCustomerKeySecret(secret) {
+  return /^[A-Za-z0-9\uAC00-\uD7A3]{6,}$/.test(secret);
+}
+
+function buildCustomerKeySettings(secret) {
+  const normalizedSecret = safeString(secret);
+  return {
+    configured: Boolean(normalizedSecret),
+    version: normalizedSecret ? 'server-hmac-v1' : '',
+    secretLength: normalizedSecret ? [...normalizedSecret].length : 0,
+  };
+}
+
+async function findRegisteredCustomerKeySecret(userId) {
+  const secretSnap = await getCustomerKeySecretRef(userId).get();
+  const data = secretSnap.data() || {};
+  const secret = safeString(data.secret);
+  return data.source === 'user-provided-v1' ? secret : '';
+}
+
+async function getRegisteredCustomerKeySecret(userId) {
+  const secret = await findRegisteredCustomerKeySecret(userId);
+
+  if (!secret) {
+    throw new HttpsError(
+        'failed-precondition',
+        '\uACE0\uAC1D\uD0A4\uB97C \uB4F1\uB85D\uD55C \uD6C4 \uBC1C\uC8FC\uC11C\uB97C \uC5C5\uB85C\uB4DC\uD574\uC8FC\uC138\uC694.',
+    );
+  }
+
+  return secret;
+}
+
+function requireRecentReauthentication(request) {
+  const authTime = Number(request.auth?.token?.auth_time || 0) * 1000;
+  const fiveMinutes = 5 * 60 * 1000;
+  if (!authTime || Date.now() - authTime > fiveMinutes) {
+    throw new HttpsError(
+        'failed-precondition',
+        '\uBCF4\uC548\uC744 \uC704\uD574 \uACC4\uC815 \uBE44\uBC00\uBC88\uD638\uB97C \uB2E4\uC2DC \uD655\uC778\uD574\uC8FC\uC138\uC694.',
+    );
+  }
+}
+
+function createCustomerKey(secret, phoneValue) {
+  const phone = normalizeCustomerPhone(phoneValue);
+  if (!phone) return '';
+
+  const signature = createHmac('sha256', secret)
+      .update(phone, 'utf8')
+      .digest('hex');
+  return `v1_${signature}`;
+}
+
+exports.registerCustomerKey = onCall(
+    CUSTOMER_KEY_CALLABLE_OPTIONS,
+    async function(request) {
+      if (!request.auth?.uid) {
+        throw new HttpsError('unauthenticated', '\uB85C\uADF8\uC778 \uD6C4 \uACE0\uAC1D\uD0A4\uB97C \uB4F1\uB85D\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.');
+      }
+
+      const secret = safeString(request.data?.secret);
+      if (!isValidCustomerKeySecret(secret)) {
+        throw new HttpsError('invalid-argument', '\uACE0\uAC1D\uD0A4\uB294 \uC601\uBB38, \uD55C\uAE00, \uC22B\uC790\uB9CC \uC0AC\uC6A9\uD558\uBA70 6\uC790 \uC774\uC0C1\uC73C\uB85C \uC785\uB825\uD574\uC8FC\uC138\uC694.');
+      }
+
+      const secretRef = getCustomerKeySecretRef(request.auth.uid);
+      await secretRef.set({
+        version: 'server-hmac-v1',
+        source: 'user-provided-v1',
+        secret,
+        secretLength: [...secret].length,
+        registeredAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      }, {merge: true});
+
+      return {settings: buildCustomerKeySettings(secret)};
+    },
+);
+
+exports.getCustomerKeySettings = onCall(
+    CUSTOMER_KEY_CALLABLE_OPTIONS,
+    async function(request) {
+      if (!request.auth?.uid) {
+        throw new HttpsError('unauthenticated', '\uB85C\uADF8\uC778 \uD6C4 \uACE0\uAC1D\uD0A4 \uC124\uC815\uC744 \uD655\uC778\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.');
+      }
+
+      const secretSnap = await getCustomerKeySecretRef(request.auth.uid).get();
+      const data = secretSnap.data() || {};
+      const secret = data.source === 'user-provided-v1' ? safeString(data.secret) : '';
+      return {settings: buildCustomerKeySettings(secret)};
+    },
+);
+
+exports.revealCustomerKeyPrefix = onCall(
+    CUSTOMER_KEY_CALLABLE_OPTIONS,
+    async function(request) {
+      if (!request.auth?.uid) {
+        throw new HttpsError('unauthenticated', '\uB85C\uADF8\uC778 \uD6C4 \uACE0\uAC1D\uD0A4\uB97C \uD655\uC778\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.');
+      }
+
+      requireRecentReauthentication(request);
+      const secret = await getRegisteredCustomerKeySecret(request.auth.uid);
+      return {
+        displayPrefix: [...secret].slice(0, 2).join(''),
+        secretLength: [...secret].length,
+      };
+    },
+);
+
+exports.generateCustomerKeys = onCall(
+    CUSTOMER_KEY_CALLABLE_OPTIONS,
+    async function(request) {
+      if (!request.auth?.uid) {
+        throw new HttpsError('unauthenticated', '\uB85C\uADF8\uC778 \uD6C4 \uACE0\uAC1D \uC2DD\uBCC4\uD0A4\uB97C \uC0DD\uC131\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.');
+      }
+
+      const phoneValues = request.data?.phoneValues;
+      if (!Array.isArray(phoneValues)) {
+        throw new HttpsError('invalid-argument', '\uC804\uD654\uBC88\uD638 \uBAA9\uB85D\uC774 \uD544\uC694\uD569\uB2C8\uB2E4.');
+      }
+      if (phoneValues.length > 2000) {
+        throw new HttpsError('invalid-argument', '\uD55C \uBC88\uC5D0 \uCD5C\uB300 2,000\uAC1C\uC758 \uC804\uD654\uBC88\uD638\uB9CC \uCC98\uB9AC\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.');
+      }
+
+      const secret = await findRegisteredCustomerKeySecret(request.auth.uid);
+      if (!secret) {
+        return {
+          keys: phoneValues.map(function() {
+            return '';
+          }),
+          version: '',
+          encrypted: false,
+        };
+      }
+
+      return {
+        keys: phoneValues.map(function(phoneValue) {
+          return createCustomerKey(secret, phoneValue);
+        }),
+        version: 'server-hmac-v1',
+        encrypted: true,
+      };
+    },
+);
 function normalizeCourierCode(value) {
   const raw = safeString(value).toUpperCase();
 
@@ -275,15 +451,15 @@ app.get('/api/admin/users/pending', async function (req, res) {
     const users = filterUsersByQuery(
         Array.from(userMap.values())
             .map(mapUserDocToItem)
-        .filter(function (user) {
-          return user.status === 'pending';
-        })
-        .sort(function (a, b) {
-          const aMillis = a.createdAt && typeof a.createdAt.toMillis === 'function' ? a.createdAt.toMillis() : 0;
-          const bMillis = b.createdAt && typeof b.createdAt.toMillis === 'function' ? b.createdAt.toMillis() : 0;
-          return bMillis - aMillis;
-        })
-        .slice(0, 200),
+            .filter(function (user) {
+              return user.status === 'pending';
+            })
+            .sort(function (a, b) {
+              const aMillis = a.createdAt && typeof a.createdAt.toMillis === 'function' ? a.createdAt.toMillis() : 0;
+              const bMillis = b.createdAt && typeof b.createdAt.toMillis === 'function' ? b.createdAt.toMillis() : 0;
+              return bMillis - aMillis;
+            })
+            .slice(0, 200),
         query,
     );
 

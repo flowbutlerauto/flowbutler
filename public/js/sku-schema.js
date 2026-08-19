@@ -1,6 +1,65 @@
+const SKU_TYPE_DEFAULT = "본품";
+const SKU_TYPE_OPTIONS = Object.freeze(["본품", "부자재", "사은품", "세트상품", "기타"]);
+const SKU_CATEGORY_TYPE_MAP = Object.freeze({
+    본품: "본품",
+    기획상품: "본품",
+    사은품: "사은품",
+    부자재: "부자재",
+    세트상품: "세트상품",
+    기타: "기타",
+});
+const SKU_TYPE_ALIAS_MAP = Object.freeze({
+    상품: "본품",
+    제품: "본품",
+    판매상품: "본품",
+    완제품: "본품",
+    포장재: "부자재",
+    포장부자재: "부자재",
+    자재: "부자재",
+    증정품: "사은품",
+    증정: "사은품",
+    샘플: "사은품",
+    세트: "세트상품",
+    세트상품: "세트상품",
+    세트제품: "세트상품",
+    묶음상품: "세트상품",
+    번들: "세트상품",
+    bundle: "세트상품",
+    other: "기타",
+});
+
+function normalizeSkuTypeValue(value, options = {}) {
+    const fallback = options.fallback ?? SKU_TYPE_DEFAULT;
+    const text = String(value ?? "").trim();
+    if (!text) return fallback;
+    if (SKU_TYPE_OPTIONS.includes(text)) return text;
+
+    const normalizedAlias = text.toLowerCase().replace(/[\s_-]+/g, "");
+    return SKU_TYPE_ALIAS_MAP[normalizedAlias] ?? (options.preserveUnknown ? text : fallback);
+}
+
+function getSkuTypeFromCategory(value) {
+    const category = String(value ?? "").trim().replace(/\s+/g, " ");
+    if (!category) return "";
+
+    const mappedType = SKU_CATEGORY_TYPE_MAP[category]
+        ?? normalizeSkuTypeValue(category, { fallback: "", preserveUnknown: true });
+    return SKU_TYPE_OPTIONS.includes(mappedType) ? mappedType : "";
+}
+
 const SKU_FIELDS = [
+    {
+        key: "skuType",
+        label: "SKU 유형",
+        required: true,
+        aliases: ["SKU유형", "SKU 구분", "SKU구분", "품목 유형", "품목유형", "품목 구분", "품목구분"],
+        options: SKU_TYPE_OPTIONS,
+    },
     { key: "brand", label: "브랜드" },
     { key: "category", label: "카테고리" },
+    { key: "category1", label: "분류1", aliases: ["분류 1", "대분류", "카테고리1", "카테고리 1"] },
+    { key: "category2", label: "분류2", aliases: ["분류 2", "중분류", "카테고리2", "카테고리 2"] },
+    { key: "category3", label: "분류3", aliases: ["분류 3", "소분류", "카테고리3", "카테고리 3"] },
     { key: "productImageUrl", label: "제품 사진 URL", aliases: ["제품 사진", "제품이미지", "이미지 URL"] },
     { key: "barcode", label: "바코드" },
     { key: "adminProductCode", label: "어드민 상품코드", required: true, aliases: ["SKU No", "SKU NO", "상품번호", "상품코드", "업체상품코드"] },
@@ -51,4 +110,8 @@ export {
     SKU_HEADER_ALIASES,
     SKU_REQUIRED_KEYS,
     SKU_NUMERIC_KEYS,
+    SKU_TYPE_DEFAULT,
+    SKU_TYPE_OPTIONS,
+    getSkuTypeFromCategory,
+    normalizeSkuTypeValue,
 };

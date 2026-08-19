@@ -5,7 +5,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>FlowButler - 작업 공간</title>
-    <link rel="stylesheet" href="./style.css?v=20260707-crm1" />
+    <link rel="stylesheet" href="./style.css?v=20260813-order-ui1" />
 </head>
 
 <body class="app-body dashboard-body">
@@ -23,29 +23,59 @@
                             <span class="sidebar-nav-title">대시보드</span>
                         </button>
 
-                        <div class="sidebar-nav-group" data-nav-group="tools">
-                            <button class="sidebar-nav-group-toggle" type="button" aria-expanded="false"
-                                aria-controls="sidebar-tools-menu">
-                                <span class="sidebar-nav-title">업무 도구</span>
-                                <span class="sidebar-nav-group-arrow">▾</span>
+                        <div class="sidebar-nav-group is-open" data-nav-group="orders">
+                            <button class="sidebar-nav-group-toggle" type="button" aria-expanded="true"
+                                aria-controls="sidebar-orders-menu">
+                                <span class="sidebar-nav-title">발주·주문 관리</span>
+                                <span class="sidebar-nav-group-arrow" aria-hidden="true">▾</span>
                             </button>
 
-                            <div id="sidebar-tools-menu" class="sidebar-subnav" hidden>
-                                <button class="sidebar-subnav-item" data-view="tracking" data-paid-feature="true" type="button">
-                                    <span class="sidebar-nav-title">송장 조회 <span class="paid-lock-icon" aria-hidden="true">🔒</span></span>
-                                </button>
-
-                                <button class="sidebar-subnav-item" data-view="label" type="button">
-                                    <span class="sidebar-nav-title">라벨 양식</span>
-                                </button>
-                                <button class="sidebar-subnav-item" data-view="sku" type="button">
-                                    <span class="sidebar-nav-title">SKU 관리</span>
-                                </button>
+                            <div id="sidebar-orders-menu" class="sidebar-subnav">
                                 <button class="sidebar-subnav-item" data-view="order-upload" type="button">
                                     <span class="sidebar-nav-title">발주서 업로드</span>
                                 </button>
-                                <button class="sidebar-subnav-item" data-view="crm" type="button">
-                                    <span class="sidebar-nav-title">CRM</span>
+                                <button class="sidebar-subnav-item" data-view="upload-history" type="button">
+                                    <span class="sidebar-nav-title">업로드 이력</span>
+                                </button>
+                                <button class="sidebar-subnav-item" data-view="order-management" type="button">
+                                    <span class="sidebar-nav-title">주문관리</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="sidebar-nav-group" data-nav-group="inventory">
+                            <button class="sidebar-nav-group-toggle" type="button" aria-expanded="false"
+                                aria-controls="sidebar-inventory-menu">
+                                <span class="sidebar-nav-title">상품·재고 관리</span>
+                                <span class="sidebar-nav-group-arrow" aria-hidden="true">▾</span>
+                            </button>
+
+                            <div id="sidebar-inventory-menu" class="sidebar-subnav" hidden>
+                                <button class="sidebar-subnav-item" data-view="sku" type="button">
+                                    <span class="sidebar-nav-title">SKU 관리</span>
+                                </button>
+                                <button class="sidebar-subnav-item" data-view="receiving" type="button">
+                                    <span class="sidebar-nav-title">입고 관리</span>
+                                </button>
+                                <button class="sidebar-subnav-item" data-view="inventory-ledger" type="button">
+                                    <span class="sidebar-nav-title">재고수불부</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="sidebar-nav-group" data-nav-group="fulfillment">
+                            <button class="sidebar-nav-group-toggle" type="button" aria-expanded="false"
+                                aria-controls="sidebar-fulfillment-menu">
+                                <span class="sidebar-nav-title">출고·납품 관리</span>
+                                <span class="sidebar-nav-group-arrow" aria-hidden="true">▾</span>
+                            </button>
+
+                            <div id="sidebar-fulfillment-menu" class="sidebar-subnav" hidden>
+                                <button class="sidebar-subnav-item" data-view="tracking" data-paid-feature="true" type="button">
+                                    <span class="sidebar-nav-title">송장 조회 <span class="paid-lock-icon" aria-hidden="true">🔒</span></span>
+                                </button>
+                                <button class="sidebar-subnav-item" data-view="label" type="button">
+                                    <span class="sidebar-nav-title">라벨 양식</span>
                                 </button>
                                 <button class="sidebar-subnav-item" data-view="kurly-label" data-paid-feature="true" type="button">
                                     <span class="sidebar-nav-title">컬리 라벨 생성 <span class="paid-lock-icon" aria-hidden="true">🔒</span></span>
@@ -56,7 +86,21 @@
                             </div>
                         </div>
 
-                        <button class="sidebar-nav-item" data-view="settings" type="button">
+                        <div class="sidebar-nav-group" data-nav-group="customers">
+                            <button class="sidebar-nav-group-toggle" type="button" aria-expanded="false"
+                                aria-controls="sidebar-customers-menu">
+                                <span class="sidebar-nav-title">고객 관리</span>
+                                <span class="sidebar-nav-group-arrow" aria-hidden="true">▾</span>
+                            </button>
+
+                            <div id="sidebar-customers-menu" class="sidebar-subnav" hidden>
+                                <button class="sidebar-subnav-item" data-view="crm" type="button">
+                                    <span class="sidebar-nav-title">CRM</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <button class="sidebar-nav-item sidebar-settings-item" data-view="settings" type="button">
                             <span class="sidebar-nav-title">설정</span>
                         </button>
                     </nav>
@@ -115,9 +159,24 @@
                                     <span class="quick-action-desc">쿠팡·컬리 발주서 정리</span>
                                 </button>
 
+                                <button class="quick-action-card" data-quick-view="order-management" type="button">
+                                    <span class="quick-action-title">주문관리</span>
+                                    <span class="quick-action-desc">수집 주문 확인 및 처리</span>
+                                </button>
+
                                 <button class="quick-action-card" data-quick-view="sku" type="button">
                                     <span class="quick-action-title">SKU 관리</span>
                                     <span class="quick-action-desc">상품 마스터 등록 및 검증</span>
+                                </button>
+
+                                <button class="quick-action-card" data-quick-view="receiving" type="button">
+                                    <span class="quick-action-title">입고 관리</span>
+                                    <span class="quick-action-desc">입고 예정 등록 및 완료 처리</span>
+                                </button>
+
+                                <button class="quick-action-card" data-quick-view="inventory-ledger" type="button">
+                                    <span class="quick-action-title">재고수불부</span>
+                                    <span class="quick-action-desc">현재고와 입출고 변동 확인</span>
                                 </button>
 
                                 <button class="quick-action-card" data-quick-view="crm" type="button">
@@ -129,6 +188,250 @@
                                     <span class="quick-action-title">쿠팡 밀크런</span>
                                     <span class="quick-action-desc">센터별 적재리스트 확인</span>
                                 </button>
+                            </div>
+                        </section>
+                    </div>
+
+                    <div id="view-order-management" class="workspace-view">
+                        <section class="workspace-card order-management-card">
+                            <div class="section-head">
+                                <div>
+                                    <h2 class="section-title">주문관리</h2>
+                                </div>
+                            </div>
+
+                            <div class="summary-grid order-management-summary-grid">
+                                <div class="summary-card">
+                                    <div class="summary-label">전체 주문상품</div>
+                                    <div id="order-management-summary-total" class="summary-value">0</div>
+                                    <div class="summary-desc">업로드된 상품 행 기준</div>
+                                </div>
+                                <div class="summary-card">
+                                    <div class="summary-label">정상 주문</div>
+                                    <div id="order-management-summary-active" class="summary-value">0</div>
+                                    <div class="summary-desc">취소되지 않은 상품 행</div>
+                                </div>
+                                <div class="summary-card">
+                                    <div class="summary-label">할당 조치 필요</div>
+                                    <div id="order-management-summary-allocation-pending" class="summary-value">0</div>
+                                    <div class="summary-desc">미할당·일부할당·재고부족</div>
+                                </div>
+                                <div class="summary-card">
+                                    <div class="summary-label">출고 완료</div>
+                                    <div id="order-management-summary-shipped" class="summary-value">0</div>
+                                    <div class="summary-desc">출고 상태 기준</div>
+                                </div>
+                            </div>
+
+                            <div class="workspace-subcard order-management-control-card">
+                                <div class="order-management-controls" role="search" aria-label="주문 검색과 필터">
+                                    <select id="order-management-channel-filter" class="order-management-select" aria-label="판매처 필터">
+                                        <option value="all">전체 판매처</option>
+                                    </select>
+                                    <select id="order-management-order-status-filter" class="order-management-select" aria-label="주문 상태 필터">
+                                        <option value="all">전체 주문 상태</option>
+                                        <option value="active">정상</option>
+                                        <option value="cancelled">취소</option>
+                                    </select>
+                                    <select id="order-management-allocation-status-filter" class="order-management-select" aria-label="할당 상태 필터">
+                                        <option value="all">전체 할당 상태</option>
+                                        <option value="unallocated">미할당</option>
+                                        <option value="partial">일부할당</option>
+                                        <option value="allocated">할당완료</option>
+                                        <option value="shortage">재고부족</option>
+                                        <option value="pending_match">SKU 매칭 필요</option>
+                                        <option value="excluded">할당 제외</option>
+                                    </select>
+                                    <select id="order-management-shipping-status-filter" class="order-management-select" aria-label="출고 상태 필터">
+                                        <option value="all">전체 출고 상태</option>
+                                        <option value="waiting">출고대기</option>
+                                        <option value="picking">피킹중</option>
+                                        <option value="shipped">출고완료</option>
+                                    </select>
+                                    <select id="order-management-match-filter" class="order-management-select" aria-label="SKU 연결 필터">
+                                        <option value="all">전체 SKU 연결</option>
+                                        <option value="needs_match">매칭 필요</option>
+                                        <option value="suggested">자동 매칭 확인</option>
+                                        <option value="matched">연결 완료</option>
+                                    </select>
+                                    <select id="order-management-period-filter" class="order-management-select" aria-label="기간 필터">
+                                        <option value="all">전체 기간</option>
+                                        <option value="7">최근 7일</option>
+                                        <option value="30">최근 30일</option>
+                                        <option value="90">최근 90일</option>
+                                    </select>
+                                    <input id="order-management-search-input" class="order-management-search-input"
+                                        type="search" placeholder="주문번호, 상품명, 수령자, 전화번호 검색" />
+                                    <button id="order-management-clear-btn" class="secondary-btn order-management-clear-btn"
+                                        type="button">초기화</button>
+                                </div>
+                                <div id="order-management-status" class="order-management-status" role="status" aria-live="polite">
+                                    발주서 업로드에서 주문을 업로드하면 이곳에 표시됩니다.
+                                </div>
+                            </div>
+
+                            <div class="workspace-subcard order-management-list-card">
+                                <div class="crm-preview-head">
+                                    <div>
+                                        <h3 class="subcard-title">주문상품 목록</h3>
+                                        <p class="subcard-text">주요 진행 정보만 표시합니다. 전화번호·주소·CS는 상세에서 확인할 수 있습니다.</p>
+                                    </div>
+                                    <div class="order-management-list-actions">
+                                        <div id="order-management-count" class="order-management-list-count">0건</div>
+                                        <div class="order-management-primary-actions">
+                                            <button id="order-management-select-allocation-needed-btn"
+                                                class="secondary-btn order-management-allocation-select-btn"
+                                                type="button" disabled>할당 필요 선택</button>
+                                            <button id="order-management-bulk-allocate-btn"
+                                                class="primary-btn order-management-bulk-allocate-btn"
+                                                type="button" disabled>재고 할당</button>
+                                        </div>
+                                        <div class="order-management-destructive-actions">
+                                            <button id="order-management-bulk-delete-btn"
+                                                class="secondary-btn order-management-bulk-delete-btn"
+                                                type="button" disabled>선택 삭제</button>
+                                            <button id="order-management-delete-all-btn"
+                                                class="secondary-btn order-management-bulk-delete-btn"
+                                                type="button" title="전체 주문 삭제" disabled>전체 삭제</button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="tracking-table-wrap order-management-table-wrap">
+                                    <div class="tracking-table-scroll order-management-table-scroll">
+                                        <table class="tracking-table order-management-table">
+                                            <thead>
+                                                <tr>
+                                                    <th class="order-management-select-column">
+                                                        <input id="order-management-select-all" type="checkbox"
+                                                            aria-label="&#54364;&#49884;&#46108; &#51452;&#47928; &#51204;&#52404; &#49440;&#53469;" />
+                                                    </th>
+                                                    <th>진행 상태</th>
+                                                    <th>주문 정보</th>
+                                                    <th>상품 · SKU</th>
+                                                    <th>수량</th>
+                                                    <th>수령자</th>
+                                                    <th>배송</th>
+                                                    <th>관리</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="order-management-body">
+                                                <tr class="tracking-empty-row">
+                                                    <td colspan="8">아직 주문 데이터가 없습니다.</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="order-management-detail-modal" class="sku-header-modal is-hidden" aria-hidden="true">
+                                <div class="sku-header-modal-card order-management-detail-card" role="dialog"
+                                    aria-modal="true" aria-labelledby="order-management-detail-title">
+                                    <div class="order-match-delete-head">
+                                        <div>
+                                            <h3 id="order-management-detail-title" class="subcard-title">주문 상세</h3>
+                                            <p id="order-management-detail-meta" class="subcard-text">주문 정보를 확인합니다.</p>
+                                        </div>
+                                        <button id="order-management-detail-close-btn" class="order-match-modal-close-btn"
+                                            type="button">닫기</button>
+                                    </div>
+
+                                    <div id="order-management-detail-grid" class="order-management-detail-grid"></div>
+
+                                    <section id="order-management-allocation-editor" class="order-management-allocation-editor"
+                                        aria-labelledby="order-management-allocation-title">
+                                        <div class="order-management-allocation-head">
+                                            <div>
+                                                <h4 id="order-management-allocation-title">재고 할당 내역</h4>
+                                                <p id="order-management-allocation-policy">저장된 기본 할당 정책을 불러오는 중입니다.</p>
+                                            </div>
+                                            <div class="order-management-allocation-head-actions">
+                                                <button id="order-management-allocation-auto-btn" class="secondary-btn" type="button">
+                                                    기본 정책으로 채우기
+                                                </button>
+                                                <button id="order-management-allocation-release-btn" class="secondary-btn" type="button">
+                                                    실재고 할당 해제
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div id="order-management-allocation-summary" class="order-management-allocation-summary"></div>
+                                        <label class="order-management-allocation-search">
+                                            <span class="sr-only">할당 가능 재고 검색</span>
+                                            <input id="order-management-allocation-search" type="search"
+                                                placeholder="SKU, LOT, 유통기한, 로케이션 검색" autocomplete="off" />
+                                        </label>
+                                        <div class="order-management-allocation-table-wrap">
+                                            <table class="order-management-allocation-table">
+                                                <thead>
+                                                    <tr>
+                                                        <th>SKU</th>
+                                                        <th>LOT</th>
+                                                        <th>유통기한</th>
+                                                        <th>로케이션</th>
+                                                        <th>PLT</th>
+                                                        <th>현재고</th>
+                                                        <th>다른 할당</th>
+                                                        <th>할당 가능</th>
+                                                        <th>이번 할당</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="order-management-allocation-body"></tbody>
+                                            </table>
+                                        </div>
+                                        <div class="order-management-allocation-footer">
+                                            <p id="order-management-allocation-message" class="order-management-allocation-message"
+                                                role="status" aria-live="polite"></p>
+                                            <button id="order-management-allocation-save-btn" class="primary-btn" type="button">
+                                                할당 변경 저장
+                                            </button>
+                                        </div>
+                                    </section>
+
+                                    <div class="order-management-edit-grid">
+                                        <label class="customer-key-field">
+                                            <span>주문 상태</span>
+                                            <select id="order-management-detail-order-status">
+                                                <option value="active">정상</option>
+                                                <option value="cancelled">취소</option>
+                                            </select>
+                                        </label>
+                                        <div class="customer-key-field order-management-readonly-field">
+                                            <span>재고 할당 상태</span>
+                                            <div id="order-management-detail-allocation-status" class="order-management-detail-state"></div>
+                                        </div>
+                                        <label class="customer-key-field">
+                                            <span>출고 상태</span>
+                                            <select id="order-management-detail-shipping-status">
+                                                <option value="waiting">출고대기</option>
+                                                <option value="picking">피킹중</option>
+                                                <option value="shipped">출고완료</option>
+                                            </select>
+                                            <small id="order-management-detail-shipping-help"
+                                                class="order-management-shipping-help"></small>
+                                        </label>
+                                        <label class="customer-key-field">
+                                            <span>택배사</span>
+                                            <input id="order-management-detail-courier" type="text" />
+                                        </label>
+                                        <label class="customer-key-field">
+                                            <span>송장번호</span>
+                                            <input id="order-management-detail-invoice" type="text" />
+                                        </label>
+                                        <label class="customer-key-field order-management-cs-field">
+                                            <span>CS</span>
+                                            <textarea id="order-management-detail-cs" rows="3"></textarea>
+                                        </label>
+                                    </div>
+
+                                    <div class="label-tool-actions">
+                                        <button id="order-management-detail-delete-btn"
+                                            class="secondary-btn order-management-detail-delete-btn"
+                                            type="button">&#51452;&#47928; &#49325;&#51228;</button>
+                                        <button id="order-management-detail-cancel-btn" class="secondary-btn" type="button">취소</button>
+                                        <button id="order-management-detail-save-btn" class="primary-btn" type="button">저장</button>
+                                    </div>
+                                </div>
                             </div>
                         </section>
                     </div>
@@ -252,8 +555,134 @@
                                     </div>
                                     <input id="order-match-delete-search-input" class="order-match-delete-search-input"
                                         type="text" placeholder="상품명 검색" />
+                                    <div class="order-match-delete-tools">
+                                        <button id="order-match-delete-select-all-btn" class="secondary-btn"
+                                            type="button" disabled>전체 선택</button>
+                                        <button id="order-match-delete-selected-btn"
+                                            class="secondary-btn order-match-delete-selected-btn" type="button"
+                                            disabled>선택 삭제</button>
+                                        <span id="order-match-delete-selected-count"
+                                            class="order-match-delete-selected-count">선택 0개</span>
+                                    </div>
                                     <div id="order-match-delete-list" class="order-match-delete-list"></div>
                                 </div>
+                            </div>
+                        </section>
+                    </div>
+
+                    <div id="view-upload-history" class="workspace-view">
+                        <section class="workspace-card upload-history-card">
+                            <div class="section-head upload-history-head">
+                                <div>
+                                    <h2 class="section-title">업로드 이력</h2>
+                                    <p class="workspace-text">
+                                        발주서 처리 결과와 오류 원인을 확인합니다. 오류가 있으면 파일을 수정한 뒤 발주서 업로드에서 다시 올려주세요.
+                                    </p>
+                                </div>
+                                <button id="upload-history-refresh-btn" class="secondary-btn" type="button">
+                                    새로고침
+                                </button>
+                            </div>
+
+                            <div class="summary-grid upload-history-summary-grid">
+                                <div class="summary-card">
+                                    <div class="summary-label">전체 시도</div>
+                                    <div id="upload-history-summary-total" class="summary-value">0</div>
+                                    <div class="summary-desc">기록된 발주서 업로드</div>
+                                </div>
+                                <div class="summary-card">
+                                    <div class="summary-label">정상 완료</div>
+                                    <div id="upload-history-summary-success" class="summary-value">0</div>
+                                    <div class="summary-desc">검증 및 저장 완료</div>
+                                </div>
+                                <div class="summary-card upload-history-summary-error">
+                                    <div class="summary-label">수정 필요</div>
+                                    <div id="upload-history-summary-failed" class="summary-value">0</div>
+                                    <div class="summary-desc">전체 저장이 취소된 파일</div>
+                                </div>
+                                <div class="summary-card upload-history-summary-duplicate">
+                                    <div class="summary-label">중복 감지</div>
+                                    <div id="upload-history-summary-duplicate" class="summary-value">0</div>
+                                    <div class="summary-desc">이미 저장된 동일 파일</div>
+                                </div>
+                            </div>
+
+                            <div class="workspace-subcard upload-history-control-card">
+                                <div class="upload-history-controls" role="search" aria-label="업로드 이력 검색과 필터">
+                                    <select id="upload-history-status-filter" class="order-management-select" aria-label="처리 상태 필터">
+                                        <option value="all">전체 상태</option>
+                                        <option value="success">정상 완료</option>
+                                        <option value="failed">수정 필요</option>
+                                        <option value="duplicate">중복 감지</option>
+                                    </select>
+                                    <select id="upload-history-channel-filter" class="order-management-select" aria-label="판매처 필터">
+                                        <option value="all">전체 판매처</option>
+                                    </select>
+                                    <input id="upload-history-search-input" class="order-management-search-input"
+                                        type="search" placeholder="파일명 또는 판매처 검색" />
+                                    <button id="upload-history-clear-btn" class="secondary-btn" type="button">초기화</button>
+                                </div>
+                                <div id="upload-history-status" class="order-management-status" role="status" aria-live="polite">
+                                    업로드 이력을 불러오는 중입니다.
+                                </div>
+                            </div>
+
+                            <div class="workspace-subcard upload-history-list-card">
+                                <div class="crm-preview-head">
+                                    <div>
+                                        <h3 class="subcard-title">처리 기록</h3>
+                                        <p class="subcard-text">최근 업로드부터 표시됩니다.</p>
+                                    </div>
+                                    <div id="upload-history-count" class="subcard-text">0건</div>
+                                </div>
+
+                                <div class="tracking-table-wrap upload-history-table-wrap">
+                                    <div class="tracking-table-scroll">
+                                        <table class="tracking-table upload-history-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>업로드 일시</th>
+                                                    <th>판매처</th>
+                                                    <th>파일명</th>
+                                                    <th>상태</th>
+                                                    <th>전체 행</th>
+                                                    <th>주문관리</th>
+                                                    <th>CRM</th>
+                                                    <th>오류</th>
+                                                    <th>상세</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="upload-history-body">
+                                                <tr class="tracking-empty-row">
+                                                    <td colspan="9">아직 업로드 이력이 없습니다.</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="upload-history-detail" class="workspace-subcard upload-history-detail" hidden>
+                                <div class="upload-history-detail-head">
+                                    <div>
+                                        <div id="upload-history-detail-status" class="upload-history-status-badge is-success">정상 완료</div>
+                                        <h3 id="upload-history-detail-title" class="subcard-title">업로드 상세</h3>
+                                        <p id="upload-history-detail-meta" class="subcard-text"></p>
+                                    </div>
+                                    <div class="upload-history-detail-actions">
+                                        <button id="upload-history-upload-link-btn" class="primary-btn"
+                                            data-quick-view="order-upload" type="button" hidden>
+                                            수정 후 다시 업로드
+                                        </button>
+                                        <button id="upload-history-error-download-btn" class="secondary-btn" type="button" hidden>
+                                            오류 CSV 다운로드
+                                        </button>
+                                        <button id="upload-history-detail-close-btn" class="ghost-btn" type="button">닫기</button>
+                                    </div>
+                                </div>
+                                <div id="upload-history-detail-summary" class="upload-history-detail-summary"></div>
+                                <div id="upload-history-detail-message" class="upload-history-detail-message"></div>
+                                <div id="upload-history-error-list" class="upload-history-error-list"></div>
                             </div>
                         </section>
                     </div>
@@ -617,6 +1046,7 @@
                             <div class="section-head">
                                 <div>
                                     <h2 class="section-title">SKU 관리</h2>
+                                    <p class="workspace-text">SKU 유형을 기준으로 품목을 구분하고 이후 BOM 구성에 활용합니다.</p>
                                 </div>
                             </div>
 
@@ -634,6 +1064,8 @@
                                                 class="secondary-btn tracking-link-btn">
                                                 SKU 양식 다운로드
                                             </a>
+                                            <button id="sku-export-btn" class="secondary-btn tracking-link-btn"
+                                                type="button" disabled>SKU 엑셀 다운로드</button>
                                         </div>
                                         <div class="tracking-action-buttons">
                                             <button id="sku-header-config-btn" class="secondary-btn"
@@ -641,6 +1073,62 @@
                                             <button id="sku-delete-selected-btn" class="secondary-btn"
                                                 type="button">선택 SKU 삭제</button>
                                         </div>
+                                    </div>
+                                </div>
+
+                                <div class="sku-type-panel">
+                                    <div class="sku-type-panel-copy">
+                                        <strong>SKU 유형</strong>
+                                        <span>본품과 구성 자재를 나누어 관리하세요.</span>
+                                    </div>
+                                    <div id="sku-type-tabs" class="sku-type-tabs" role="tablist"
+                                        aria-label="SKU 유형 및 단종 상태별 보기">
+                                        <button class="sku-type-tab" type="button" role="tab"
+                                            data-sku-type-filter="all" aria-selected="false">
+                                            <span>전체</span>
+                                            <span class="sku-type-count" data-sku-type-count="all">0</span>
+                                        </button>
+                                        <button class="sku-type-tab is-active" type="button" role="tab"
+                                            data-sku-type-filter="active" aria-selected="true">
+                                            <span>전체(단종 제외)</span>
+                                            <span class="sku-type-count" data-sku-type-count="active">0</span>
+                                        </button>
+                                        <button class="sku-type-tab" type="button" role="tab"
+                                            data-sku-type-filter="본품" aria-selected="false">
+                                            <span class="sku-type-dot is-product" aria-hidden="true"></span>
+                                            <span>본품</span>
+                                            <span class="sku-type-count" data-sku-type-count="본품">0</span>
+                                        </button>
+                                        <button class="sku-type-tab" type="button" role="tab"
+                                            data-sku-type-filter="부자재" aria-selected="false">
+                                            <span class="sku-type-dot is-material" aria-hidden="true"></span>
+                                            <span>부자재</span>
+                                            <span class="sku-type-count" data-sku-type-count="부자재">0</span>
+                                        </button>
+                                        <button class="sku-type-tab" type="button" role="tab"
+                                            data-sku-type-filter="사은품" aria-selected="false">
+                                            <span class="sku-type-dot is-gift" aria-hidden="true"></span>
+                                            <span>사은품</span>
+                                            <span class="sku-type-count" data-sku-type-count="사은품">0</span>
+                                        </button>
+                                        <button class="sku-type-tab" type="button" role="tab"
+                                            data-sku-type-filter="세트상품" aria-selected="false">
+                                            <span class="sku-type-dot is-set" aria-hidden="true"></span>
+                                            <span>세트상품</span>
+                                            <span class="sku-type-count" data-sku-type-count="세트상품">0</span>
+                                        </button>
+                                        <button class="sku-type-tab" type="button" role="tab"
+                                            data-sku-type-filter="기타" aria-selected="false">
+                                            <span class="sku-type-dot is-other" aria-hidden="true"></span>
+                                            <span>기타</span>
+                                            <span class="sku-type-count" data-sku-type-count="기타">0</span>
+                                        </button>
+                                        <button class="sku-type-tab" type="button" role="tab"
+                                            data-sku-type-filter="discontinued" aria-selected="false">
+                                            <span class="sku-type-dot is-discontinued" aria-hidden="true"></span>
+                                            <span>단종</span>
+                                            <span class="sku-type-count" data-sku-type-count="discontinued">0</span>
+                                        </button>
                                     </div>
                                 </div>
 
@@ -655,7 +1143,7 @@
                                         <input id="sku-search-input" class="sku-search-input" type="search"
                                             aria-label="검색어" placeholder="검색어 입력" autocomplete="off" />
                                         <button id="sku-search-clear-btn" class="secondary-btn sku-search-clear-btn"
-                                            type="button">초기화</button>
+                                            type="button">검색</button>
                                     </div>
                                 </div>
 
@@ -723,6 +1211,1044 @@
                                             type="button">취소</button>
                                         <button id="sku-label-print-run-btn" class="primary-btn"
                                             type="button">출력</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+
+                    <div id="view-inventory-ledger" class="workspace-view">
+                        <section class="workspace-card inventory-ledger-page">
+                            <div class="section-head inventory-page-head">
+                                <div>
+                                    <h2 class="section-title">재고수불부</h2>
+                                    <p class="workspace-text">SKU별 현재고와 LOT·로케이션 잔량, 모든 입·출고 변동을 한곳에서 확인합니다.</p>
+                                </div>
+                                <div class="inventory-head-actions">
+                                    <button id="inventory-adjustment-open-btn" class="secondary-btn" type="button">
+                                        수량만 조정
+                                    </button>
+                                    <button id="inventory-opening-open-btn" class="primary-btn" type="button">
+                                        기초재고 등록
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div id="inventory-page-status" class="inventory-page-status" role="status"
+                                aria-live="polite">
+                                SKU를 등록한 뒤 기초재고를 입력해 재고 관리를 시작하세요.
+                            </div>
+
+                            <div class="inventory-summary-grid" aria-label="재고 요약">
+                                <article class="inventory-summary-card">
+                                    <span class="inventory-summary-label">운영 SKU</span>
+                                    <strong id="inventory-summary-sku-count" class="inventory-summary-value">0</strong>
+                                    <span class="inventory-summary-desc">단종 제외 등록 품목</span>
+                                </article>
+                                <article class="inventory-summary-card">
+                                    <span class="inventory-summary-label">총 현재고</span>
+                                    <strong id="inventory-summary-total-stock" class="inventory-summary-value">0</strong>
+                                    <span class="inventory-summary-desc">운영 SKU 수량 합계</span>
+                                </article>
+                                <article class="inventory-summary-card">
+                                    <span class="inventory-summary-label">재고 0 SKU</span>
+                                    <strong id="inventory-summary-zero-stock" class="inventory-summary-value">0</strong>
+                                    <span class="inventory-summary-desc">기초재고 미등록 포함</span>
+                                </article>
+                                <article class="inventory-summary-card">
+                                    <span class="inventory-summary-label">오늘 수불</span>
+                                    <strong id="inventory-summary-today-movement"
+                                        class="inventory-summary-value inventory-summary-movement">+0 / -0</strong>
+                                    <span class="inventory-summary-desc">입고 / 출고 수량</span>
+                                </article>
+                            </div>
+
+                            <div class="inventory-view-tabs" role="tablist" aria-label="재고 화면 전환">
+                                <button class="inventory-view-tab is-active" data-inventory-view-tab="stock"
+                                    type="button" role="tab" aria-selected="true">
+                                    재고 현황
+                                </button>
+                                <button class="inventory-view-tab" data-inventory-view-tab="lot"
+                                    type="button" role="tab" aria-selected="false">
+                                    LOT·로케이션 재고
+                                </button>
+                                <button class="inventory-view-tab" data-inventory-view-tab="ledger"
+                                    type="button" role="tab" aria-selected="false">
+                                    수불 내역
+                                </button>
+                            </div>
+
+                            <div id="inventory-search-loading" class="inventory-search-loading" role="status"
+                                aria-live="polite" hidden>
+                                <span class="inventory-search-spinner" aria-hidden="true"></span>
+                                <div>
+                                    <strong>최신 재고 데이터를 불러오고 있습니다.</strong>
+                                    <span>데이터 양에 따라 잠시 시간이 걸릴 수 있습니다.</span>
+                                </div>
+                            </div>
+
+                            <section id="inventory-stock-panel" class="inventory-view-panel is-visible"
+                                data-inventory-view-panel="stock" role="tabpanel">
+                                <div class="inventory-filter-bar" role="search" aria-label="재고 현황 검색">
+                                    <input id="inventory-stock-search" class="inventory-search-input" type="search"
+                                        placeholder="상품명, 상품코드, 브랜드 검색" autocomplete="off" />
+                                    <select id="inventory-stock-type-filter" class="inventory-filter-select"
+                                        aria-label="SKU 유형">
+                                        <option value="all">전체 유형</option>
+                                        <option value="본품">본품</option>
+                                        <option value="부자재">부자재</option>
+                                        <option value="사은품">사은품</option>
+                                        <option value="세트상품">세트상품</option>
+                                        <option value="기타">기타</option>
+                                    </select>
+                                    <select id="inventory-stock-state-filter" class="inventory-filter-select"
+                                        aria-label="재고 상태">
+                                        <option value="active">운영 SKU</option>
+                                        <option value="all">전체 SKU</option>
+                                        <option value="in-stock">가용재고 있음</option>
+                                        <option value="zero">가용재고 없음</option>
+                                        <option value="discontinued">단종</option>
+                                    </select>
+                                    <button id="inventory-stock-filter-reset" class="secondary-btn"
+                                        type="button">초기화</button>
+                                    <button id="inventory-stock-search-btn" class="primary-btn inventory-search-btn"
+                                        type="button">검색</button>
+                                </div>
+
+                                <div class="inventory-table-meta">
+                                    <strong>SKU별 현재고</strong>
+                                    <div class="inventory-table-meta-info">
+                                        <span class="inventory-column-resize-help">헤더 경계를 드래그 · 자동 저장</span>
+                                        <span id="inventory-stock-count">0개 SKU</span>
+                                    </div>
+                                </div>
+
+                                <div class="tracking-table-wrap inventory-table-wrap">
+                                    <div class="tracking-table-scroll inventory-table-scroll">
+                                        <table class="tracking-table inventory-table">
+                                            <thead>
+                                                <tr>
+                                                    <th class="inventory-sortable-header" aria-sort="none">
+                                                        <button class="inventory-sort-button" type="button"
+                                                            data-inventory-sort-view="stock" data-inventory-sort-key="product"
+                                                            data-inventory-sort-label="상품">
+                                                            상품 <span class="inventory-sort-indicator" aria-hidden="true">↕</span>
+                                                        </button>
+                                                    </th>
+                                                    <th class="inventory-sortable-header" aria-sort="none">
+                                                        <button class="inventory-sort-button" type="button"
+                                                            data-inventory-sort-view="stock" data-inventory-sort-key="skuType"
+                                                            data-inventory-sort-label="SKU 유형">
+                                                            SKU 유형 <span class="inventory-sort-indicator" aria-hidden="true">↕</span>
+                                                        </button>
+                                                    </th>
+                                                    <th class="inventory-sortable-header" aria-sort="none">
+                                                        <button class="inventory-sort-button" type="button"
+                                                            data-inventory-sort-view="stock" data-inventory-sort-key="category"
+                                                            data-inventory-sort-label="카테고리">
+                                                            카테고리 <span class="inventory-sort-indicator" aria-hidden="true">↕</span>
+                                                        </button>
+                                                    </th>
+                                                    <th class="inventory-number-column inventory-sortable-header" aria-sort="none">
+                                                        <button class="inventory-sort-button" type="button"
+                                                            data-inventory-sort-view="stock" data-inventory-sort-key="quantity"
+                                                            data-inventory-sort-label="현재고">
+                                                            현재고 <span class="inventory-sort-indicator" aria-hidden="true">↕</span>
+                                                        </button>
+                                                    </th>
+                                                    <th class="inventory-number-column inventory-sortable-header" aria-sort="none">
+                                                        <button class="inventory-sort-button" type="button"
+                                                            data-inventory-sort-view="stock" data-inventory-sort-key="allocatedQuantity"
+                                                            data-inventory-sort-label="할당재고" title="실재고 할당과 입고대기 할당을 합한 수량">
+                                                            할당재고 <span class="inventory-sort-indicator" aria-hidden="true">↕</span>
+                                                        </button>
+                                                    </th>
+                                                    <th class="inventory-number-column inventory-sortable-header" aria-sort="none">
+                                                        <button class="inventory-sort-button" type="button"
+                                                            data-inventory-sort-view="stock" data-inventory-sort-key="availableQuantity"
+                                                            data-inventory-sort-label="가용재고" title="현재고에서 입고대기를 포함한 전체 할당재고를 제외한 수량">
+                                                            가용재고 <span class="inventory-sort-indicator" aria-hidden="true">↕</span>
+                                                        </button>
+                                                    </th>
+                                                    <th class="inventory-sortable-header" aria-sort="none">
+                                                        <button class="inventory-sort-button" type="button"
+                                                            data-inventory-sort-view="stock" data-inventory-sort-key="latest"
+                                                            data-inventory-sort-label="최근 변동">
+                                                            최근 변동 <span class="inventory-sort-indicator" aria-hidden="true">↕</span>
+                                                        </button>
+                                                    </th>
+                                                    <th class="inventory-action-column">관리</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="inventory-stock-body">
+                                                <tr class="tracking-empty-row">
+                                                    <td colspan="8">등록된 SKU가 없습니다.</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </section>
+
+                            <section id="inventory-lot-panel" class="inventory-view-panel"
+                                data-inventory-view-panel="lot" role="tabpanel" hidden>
+                                <div class="inventory-filter-bar inventory-lot-filter-bar" role="search"
+                                    aria-label="LOT·로케이션 재고 검색">
+                                    <input id="inventory-lot-search" class="inventory-search-input" type="search"
+                                        placeholder="상품명, 상품코드, LOT, 로케이션, PLT 검색" autocomplete="off" />
+                                    <select id="inventory-lot-expiry-filter" class="inventory-filter-select"
+                                        aria-label="유통기한 상태">
+                                        <option value="all">전체 유통기한</option>
+                                        <option value="risk">임박·기한 경과</option>
+                                        <option value="expiring">90일 이내</option>
+                                        <option value="expired">기한 경과</option>
+                                        <option value="normal">90일 초과</option>
+                                        <option value="none">유통기한 미지정</option>
+                                    </select>
+                                    <select id="inventory-lot-stock-filter" class="inventory-filter-select"
+                                        aria-label="재고 상태">
+                                        <option value="available">가용재고 있음</option>
+                                        <option value="all">전체 보관단위</option>
+                                        <option value="zero">가용재고 없음</option>
+                                    </select>
+                                    <button id="inventory-lot-filter-reset" class="secondary-btn"
+                                        type="button">초기화</button>
+                                    <button id="inventory-lot-search-btn" class="primary-btn inventory-search-btn"
+                                        type="button">검색</button>
+                                </div>
+
+                                <div id="inventory-lot-alert" class="inventory-lot-alert" hidden></div>
+
+                                <div class="inventory-table-meta">
+                                    <strong>LOT·로케이션별 재고</strong>
+                                    <div class="inventory-table-meta-info">
+                                        <span class="inventory-column-resize-help">헤더 경계를 드래그 · 자동 저장</span>
+                                        <span id="inventory-lot-count">0개 보관단위 · 0개</span>
+                                    </div>
+                                </div>
+
+                                <div class="tracking-table-wrap inventory-table-wrap">
+                                    <div class="tracking-table-scroll inventory-table-scroll">
+                                        <table class="tracking-table inventory-table inventory-lot-table">
+                                            <thead>
+                                                <tr>
+                                                    <th class="inventory-sortable-header" aria-sort="none">
+                                                        <button class="inventory-sort-button" type="button"
+                                                            data-inventory-sort-view="lot" data-inventory-sort-key="product"
+                                                            data-inventory-sort-label="상품">
+                                                            상품 <span class="inventory-sort-indicator" aria-hidden="true">↕</span>
+                                                        </button>
+                                                    </th>
+                                                    <th class="inventory-sortable-header" aria-sort="none">
+                                                        <button class="inventory-sort-button" type="button"
+                                                            data-inventory-sort-view="lot" data-inventory-sort-key="lotNo"
+                                                            data-inventory-sort-label="LOT">
+                                                            LOT <span class="inventory-sort-indicator" aria-hidden="true">↕</span>
+                                                        </button>
+                                                    </th>
+                                                    <th class="inventory-sortable-header" aria-sort="none">
+                                                        <button class="inventory-sort-button" type="button"
+                                                            data-inventory-sort-view="lot" data-inventory-sort-key="expiryDate"
+                                                            data-inventory-sort-label="유통기한">
+                                                            유통기한 <span class="inventory-sort-indicator" aria-hidden="true">↕</span>
+                                                        </button>
+                                                    </th>
+                                                    <th class="inventory-sortable-header" aria-sort="none">
+                                                        <button class="inventory-sort-button" type="button"
+                                                            data-inventory-sort-view="lot" data-inventory-sort-key="expiryState"
+                                                            data-inventory-sort-label="기한 상태">
+                                                            기한 상태 <span class="inventory-sort-indicator" aria-hidden="true">↕</span>
+                                                        </button>
+                                                    </th>
+                                                    <th class="inventory-sortable-header" aria-sort="none">
+                                                        <button class="inventory-sort-button" type="button"
+                                                            data-inventory-sort-view="lot" data-inventory-sort-key="location"
+                                                            data-inventory-sort-label="로케이션">
+                                                            로케이션 <span class="inventory-sort-indicator" aria-hidden="true">↕</span>
+                                                        </button>
+                                                    </th>
+                                                    <th class="inventory-sortable-header" aria-sort="none">
+                                                        <button class="inventory-sort-button" type="button"
+                                                            data-inventory-sort-view="lot" data-inventory-sort-key="palletNo"
+                                                            data-inventory-sort-label="PLT">
+                                                            PLT <span class="inventory-sort-indicator" aria-hidden="true">↕</span>
+                                                        </button>
+                                                    </th>
+                                                    <th class="inventory-number-column inventory-sortable-header" aria-sort="none">
+                                                        <button class="inventory-sort-button" type="button"
+                                                            data-inventory-sort-view="lot" data-inventory-sort-key="quantity"
+                                                            data-inventory-sort-label="현재고">
+                                                            현재고 <span class="inventory-sort-indicator" aria-hidden="true">↕</span>
+                                                        </button>
+                                                    </th>
+                                                    <th class="inventory-number-column inventory-sortable-header" aria-sort="none">
+                                                        <button class="inventory-sort-button" type="button"
+                                                            data-inventory-sort-view="lot" data-inventory-sort-key="allocatedQuantity"
+                                                            data-inventory-sort-label="할당재고" title="이 보관재고에서 주문에 할당된 수량">
+                                                            할당재고 <span class="inventory-sort-indicator" aria-hidden="true">↕</span>
+                                                        </button>
+                                                    </th>
+                                                    <th class="inventory-number-column inventory-sortable-header" aria-sort="none">
+                                                        <button class="inventory-sort-button" type="button"
+                                                            data-inventory-sort-view="lot" data-inventory-sort-key="availableQuantity"
+                                                            data-inventory-sort-label="가용재고" title="현재고에서 할당재고를 제외한 수량">
+                                                            가용재고 <span class="inventory-sort-indicator" aria-hidden="true">↕</span>
+                                                        </button>
+                                                    </th>
+                                                    <th class="inventory-sortable-header" aria-sort="none">
+                                                        <button class="inventory-sort-button" type="button"
+                                                            data-inventory-sort-view="lot" data-inventory-sort-key="latest"
+                                                            data-inventory-sort-label="최근 변동">
+                                                            최근 변동 <span class="inventory-sort-indicator" aria-hidden="true">↕</span>
+                                                        </button>
+                                                    </th>
+                                                    <th class="inventory-action-column">관리</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="inventory-lot-body">
+                                                <tr class="tracking-empty-row">
+                                                    <td colspan="11">LOT·로케이션별 재고가 없습니다.</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </section>
+
+                            <section id="inventory-ledger-panel" class="inventory-view-panel"
+                                data-inventory-view-panel="ledger" role="tabpanel" hidden>
+                                <div class="inventory-filter-bar inventory-ledger-filter-bar" role="search"
+                                    aria-label="수불 내역 검색">
+                                    <input id="inventory-ledger-search" class="inventory-search-input" type="search"
+                                        placeholder="상품명, 상품코드, 수불번호 검색" autocomplete="off" />
+                                    <select id="inventory-ledger-type-filter" class="inventory-filter-select"
+                                        aria-label="수불 유형">
+                                        <option value="all">전체 수불유형</option>
+                                        <option value="opening">기초재고</option>
+                                        <option value="adjustment_in">재고조정 증가</option>
+                                        <option value="adjustment_out">재고조정 감소</option>
+                                        <option value="reclassification_in">보관정보 변경 후</option>
+                                        <option value="reclassification_out">보관정보 변경 전</option>
+                                        <option value="receipt">입고</option>
+                                        <option value="shipment">출고</option>
+                                        <option value="set_consumption">세트작업 투입</option>
+                                        <option value="set_production">세트작업 생산</option>
+                                        <option value="reversal">작업취소</option>
+                                    </select>
+                                    <select id="inventory-ledger-period-filter" class="inventory-filter-select"
+                                        aria-label="조회 기간">
+                                        <option value="30">최근 30일</option>
+                                        <option value="7">최근 7일</option>
+                                        <option value="all">전체 기간</option>
+                                    </select>
+                                    <button id="inventory-ledger-filter-reset" class="secondary-btn"
+                                        type="button">초기화</button>
+                                    <button id="inventory-ledger-search-btn" class="primary-btn inventory-search-btn"
+                                        type="button">검색</button>
+                                </div>
+
+                                <div class="inventory-table-meta">
+                                    <strong>수불 내역</strong>
+                                    <div class="inventory-table-meta-info">
+                                        <span class="inventory-column-resize-help">헤더 경계를 드래그 · 자동 저장</span>
+                                        <span id="inventory-ledger-count">0건</span>
+                                    </div>
+                                </div>
+
+                                <div class="tracking-table-wrap inventory-table-wrap">
+                                    <div class="tracking-table-scroll inventory-table-scroll">
+                                        <table class="tracking-table inventory-table inventory-ledger-table">
+                                            <thead>
+                                                <tr>
+                                                    <th class="inventory-sortable-header" aria-sort="none">
+                                                        <button class="inventory-sort-button" type="button"
+                                                            data-inventory-sort-view="ledger" data-inventory-sort-key="occurredAt"
+                                                            data-inventory-sort-label="일시">
+                                                            일시 <span class="inventory-sort-indicator" aria-hidden="true">↕</span>
+                                                        </button>
+                                                    </th>
+                                                    <th class="inventory-sortable-header" aria-sort="none">
+                                                        <button class="inventory-sort-button" type="button"
+                                                            data-inventory-sort-view="ledger" data-inventory-sort-key="transactionCode"
+                                                            data-inventory-sort-label="수불번호">
+                                                            수불번호 <span class="inventory-sort-indicator" aria-hidden="true">↕</span>
+                                                        </button>
+                                                    </th>
+                                                    <th class="inventory-sortable-header" aria-sort="none">
+                                                        <button class="inventory-sort-button" type="button"
+                                                            data-inventory-sort-view="ledger" data-inventory-sort-key="transactionType"
+                                                            data-inventory-sort-label="수불유형">
+                                                            수불유형 <span class="inventory-sort-indicator" aria-hidden="true">↕</span>
+                                                        </button>
+                                                    </th>
+                                                    <th class="inventory-sortable-header" aria-sort="none">
+                                                        <button class="inventory-sort-button" type="button"
+                                                            data-inventory-sort-view="ledger" data-inventory-sort-key="product"
+                                                            data-inventory-sort-label="상품">
+                                                            상품 <span class="inventory-sort-indicator" aria-hidden="true">↕</span>
+                                                        </button>
+                                                    </th>
+                                                    <th class="inventory-number-column inventory-sortable-header" aria-sort="none">
+                                                        <button class="inventory-sort-button" type="button"
+                                                            data-inventory-sort-view="ledger" data-inventory-sort-key="inQuantity"
+                                                            data-inventory-sort-label="입고">
+                                                            입고 <span class="inventory-sort-indicator" aria-hidden="true">↕</span>
+                                                        </button>
+                                                    </th>
+                                                    <th class="inventory-number-column inventory-sortable-header" aria-sort="none">
+                                                        <button class="inventory-sort-button" type="button"
+                                                            data-inventory-sort-view="ledger" data-inventory-sort-key="outQuantity"
+                                                            data-inventory-sort-label="출고">
+                                                            출고 <span class="inventory-sort-indicator" aria-hidden="true">↕</span>
+                                                        </button>
+                                                    </th>
+                                                    <th class="inventory-number-column inventory-sortable-header" aria-sort="none">
+                                                        <button class="inventory-sort-button" type="button"
+                                                            data-inventory-sort-view="ledger" data-inventory-sort-key="balanceAfter"
+                                                            data-inventory-sort-label="현재고">
+                                                            현재고 <span class="inventory-sort-indicator" aria-hidden="true">↕</span>
+                                                        </button>
+                                                    </th>
+                                                    <th class="inventory-sortable-header" aria-sort="none">
+                                                        <button class="inventory-sort-button" type="button"
+                                                            data-inventory-sort-view="ledger" data-inventory-sort-key="reason"
+                                                            data-inventory-sort-label="사유·변경내역">
+                                                            사유·변경내역 <span class="inventory-sort-indicator" aria-hidden="true">↕</span>
+                                                        </button>
+                                                    </th>
+                                                    <th class="inventory-sortable-header" aria-sort="none">
+                                                        <button class="inventory-sort-button" type="button"
+                                                            data-inventory-sort-view="ledger" data-inventory-sort-key="createdBy"
+                                                            data-inventory-sort-label="작업자">
+                                                            작업자 <span class="inventory-sort-indicator" aria-hidden="true">↕</span>
+                                                        </button>
+                                                    </th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="inventory-ledger-body">
+                                                <tr class="tracking-empty-row">
+                                                    <td colspan="9">아직 등록된 수불 내역이 없습니다.</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </section>
+
+                            <div id="inventory-entry-modal" class="sku-header-modal is-hidden" aria-hidden="true">
+                                <div class="sku-header-modal-card inventory-entry-modal-card" role="dialog"
+                                    aria-modal="true" aria-labelledby="inventory-entry-modal-title">
+                                    <div class="inventory-entry-modal-head">
+                                        <div>
+                                            <h3 id="inventory-entry-modal-title" class="subcard-title">기초재고 등록</h3>
+                                            <p id="inventory-entry-modal-desc" class="subcard-text">
+                                                재고 관리를 시작할 SKU의 보유 수량을 입력합니다.
+                                            </p>
+                                        </div>
+                                        <button id="inventory-entry-close-btn" class="inventory-modal-close-btn"
+                                            type="button" aria-label="닫기">×</button>
+                                    </div>
+
+                                    <div class="inventory-entry-modal-scroll">
+                                        <section class="inventory-entry-section">
+                                            <div class="inventory-entry-section-head">
+                                                <strong>1. SKU 선택</strong>
+                                                <span>상품명이나 코드로 빠르게 찾을 수 있어요.</span>
+                                            </div>
+                                            <input id="inventory-entry-sku-search" class="inventory-search-input"
+                                                type="search" placeholder="상품명 또는 상품코드 검색" autocomplete="off" />
+                                            <div id="inventory-entry-sku-results" class="inventory-sku-results"
+                                                role="listbox" aria-label="SKU 검색 결과"></div>
+                                            <div id="inventory-entry-selected-sku"
+                                                class="inventory-selected-sku is-empty">
+                                                SKU를 선택해주세요.
+                                            </div>
+                                        </section>
+
+                                        <section class="inventory-entry-section">
+                                            <div class="inventory-entry-section-head">
+                                                <strong>2. 수량 입력</strong>
+                                                <span id="inventory-entry-quantity-help">현재 보유한 기초재고를 입력합니다.</span>
+                                            </div>
+
+                                            <div id="inventory-adjustment-direction" class="inventory-direction-control"
+                                                hidden>
+                                                <label class="inventory-direction-option is-selected">
+                                                    <input type="radio" name="inventory-adjustment-direction"
+                                                        value="in" checked />
+                                                    <span>재고 증가</span>
+                                                </label>
+                                                <label class="inventory-direction-option">
+                                                    <input type="radio" name="inventory-adjustment-direction"
+                                                        value="out" />
+                                                    <span>재고 감소</span>
+                                                </label>
+                                            </div>
+
+                                            <div class="inventory-entry-field-grid">
+                                                <label class="inventory-entry-field">
+                                                    <span>수량 <b aria-hidden="true">*</b></span>
+                                                    <input id="inventory-entry-quantity" type="number" min="1"
+                                                        step="1" inputmode="numeric" placeholder="0" />
+                                                </label>
+                                                <label class="inventory-entry-field">
+                                                    <span>수불일자 <b aria-hidden="true">*</b></span>
+                                                    <input id="inventory-entry-date" type="date" />
+                                                </label>
+                                                <label id="inventory-entry-reason-field" class="inventory-entry-field"
+                                                    hidden>
+                                                    <span>조정 사유 <b aria-hidden="true">*</b></span>
+                                                    <select id="inventory-entry-reason"></select>
+                                                </label>
+                                            </div>
+
+                                            <label class="inventory-entry-field inventory-entry-memo-field">
+                                                <span>메모 <em>선택</em></span>
+                                                <textarea id="inventory-entry-memo" rows="3"
+                                                    placeholder="수량을 조정한 근거나 참고사항을 입력하세요."></textarea>
+                                            </label>
+
+                                            <div id="inventory-entry-preview" class="inventory-entry-preview">
+                                                <span>변경 후 재고</span>
+                                                <strong>SKU와 수량을 선택해주세요.</strong>
+                                            </div>
+                                            <div id="inventory-entry-status" class="inventory-entry-status"
+                                                role="alert" aria-live="assertive"></div>
+                                        </section>
+                                    </div>
+
+                                    <div class="inventory-entry-modal-actions">
+                                        <button id="inventory-entry-cancel-btn" class="secondary-btn"
+                                            type="button">취소</button>
+                                        <button id="inventory-entry-save-btn" class="primary-btn"
+                                            type="button">기초재고 저장</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="inventory-storage-modal" class="sku-header-modal is-hidden" aria-hidden="true">
+                                <div class="sku-header-modal-card inventory-storage-modal-card" role="dialog"
+                                    aria-modal="true" aria-labelledby="inventory-storage-modal-title">
+                                    <div class="inventory-entry-modal-head">
+                                        <div>
+                                            <h3 id="inventory-storage-modal-title" class="subcard-title">보관재고 상세 조정</h3>
+                                            <p class="subcard-text">
+                                                현재 재고를 행으로 편집하면 이동·정보 정정·수량 조정 수불이 자동으로 기록됩니다.
+                                            </p>
+                                        </div>
+                                        <button id="inventory-storage-close-btn" class="inventory-modal-close-btn"
+                                            type="button" aria-label="보관재고 상세 조정 닫기">×</button>
+                                    </div>
+
+                                    <div class="inventory-storage-modal-scroll">
+                                        <section class="inventory-storage-product-card" aria-label="조정 상품">
+                                            <div>
+                                                <span>조정 상품</span>
+                                                <strong id="inventory-storage-product-name">상품을 선택해주세요.</strong>
+                                                <small id="inventory-storage-product-meta">-</small>
+                                            </div>
+                                            <div>
+                                                <span>현재 총재고</span>
+                                                <strong id="inventory-storage-current-total">0개</strong>
+                                            </div>
+                                        </section>
+
+                                        <section class="inventory-storage-section">
+                                            <div class="inventory-entry-section-head">
+                                                <strong>1. 보관 구분 편집</strong>
+                                                <span>LOT·유통기한·로케이션·PLT가 같으면 하나의 행으로 관리됩니다.</span>
+                                            </div>
+                                            <div class="inventory-storage-guide">
+                                                <strong>일부 재고를 옮기려면</strong>
+                                                <span>기존 행의 수량을 줄이고 ‘복제’를 눌러 새 로케이션과 옮길 수량을 입력하세요.</span>
+                                            </div>
+                                            <div class="inventory-storage-table-wrap">
+                                                <table class="inventory-storage-table">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>LOT</th>
+                                                            <th>유통기한</th>
+                                                            <th>로케이션</th>
+                                                            <th>PLT</th>
+                                                            <th>수량</th>
+                                                            <th>작업</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody id="inventory-storage-rows"></tbody>
+                                                </table>
+                                            </div>
+                                            <button id="inventory-storage-add-row-btn"
+                                                class="secondary-btn inventory-storage-add-row-btn" type="button">
+                                                + 빈 보관행 추가
+                                            </button>
+                                        </section>
+
+                                        <section class="inventory-storage-section">
+                                            <div class="inventory-entry-section-head">
+                                                <strong>2. 변경내용 확인</strong>
+                                                <span>총수량이 같으면 보관정보만 이동하고, 차이가 있으면 현재고도 함께 조정됩니다.</span>
+                                            </div>
+                                            <div class="inventory-storage-summary" aria-label="조정 전후 수량">
+                                                <div>
+                                                    <span>조정 전</span>
+                                                    <strong id="inventory-storage-before-total">0</strong>
+                                                </div>
+                                                <span class="inventory-storage-summary-arrow" aria-hidden="true">→</span>
+                                                <div>
+                                                    <span>조정 후</span>
+                                                    <strong id="inventory-storage-after-total">0</strong>
+                                                </div>
+                                                <div id="inventory-storage-difference-card" class="inventory-storage-difference-card">
+                                                    <span>재고 차이</span>
+                                                    <strong id="inventory-storage-difference">0</strong>
+                                                </div>
+                                            </div>
+                                            <div id="inventory-storage-change-preview" class="inventory-storage-change-preview">
+                                                행을 수정하면 저장될 변경내용을 보여드립니다.
+                                            </div>
+
+                                            <div class="inventory-entry-field-grid inventory-storage-field-grid">
+                                                <label class="inventory-entry-field">
+                                                    <span>조정 사유 <b aria-hidden="true">*</b></span>
+                                                    <select id="inventory-storage-reason">
+                                                        <option value="">사유를 선택해주세요.</option>
+                                                        <option value="로케이션 지정·이동">로케이션 지정·이동</option>
+                                                        <option value="LOT 정보 정정">LOT 정보 정정</option>
+                                                        <option value="유통기한 정정">유통기한 정정</option>
+                                                        <option value="PLT 정보 정정">PLT 정보 정정</option>
+                                                        <option value="재고 실사">재고 실사</option>
+                                                        <option value="파손·분실·폐기">파손·분실·폐기</option>
+                                                        <option value="누락 재고 보정">누락 재고 보정</option>
+                                                        <option value="복합 정보 정정">복합 정보 정정</option>
+                                                        <option value="기타">기타</option>
+                                                    </select>
+                                                </label>
+                                                <label class="inventory-entry-field">
+                                                    <span>조정일자 <b aria-hidden="true">*</b></span>
+                                                    <input id="inventory-storage-date" type="date" />
+                                                </label>
+                                                <label class="inventory-entry-field inventory-entry-memo-field">
+                                                    <span>메모 <em>선택</em></span>
+                                                    <textarea id="inventory-storage-memo" rows="2"
+                                                        placeholder="이동 또는 정정 근거를 입력하면 나중에 확인하기 쉬워요."></textarea>
+                                                </label>
+                                            </div>
+                                            <div id="inventory-storage-status" class="inventory-entry-status"
+                                                role="alert" aria-live="assertive"></div>
+                                        </section>
+                                    </div>
+
+                                    <div class="inventory-entry-modal-actions inventory-storage-modal-actions">
+                                        <span>과거 수불은 변경되지 않고 새 조정 기록이 추가됩니다.</span>
+                                        <div>
+                                            <button id="inventory-storage-cancel-btn" class="secondary-btn"
+                                                type="button">취소</button>
+                                            <button id="inventory-storage-save-btn" class="primary-btn"
+                                                type="button" disabled>변경사항 저장</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+
+                    <div id="view-receiving" class="workspace-view">
+                        <section class="workspace-card receiving-page">
+                            <div class="section-head receiving-page-head">
+                                <div>
+                                    <h2 class="section-title">입고 관리</h2>
+                                    <p class="workspace-text">입고 예정 품목을 등록하고, 완료 처리와 동시에 현재고를 반영합니다.</p>
+                                </div>
+                                <div class="receiving-page-actions" aria-label="입고 예정 등록 작업">
+                                    <a class="secondary-btn receiving-head-action"
+                                        href="./assets/Inbound_Plan_Template.xlsx" download>
+                                        엑셀 양식 다운로드
+                                    </a>
+                                    <label class="secondary-btn receiving-head-action receiving-upload-trigger"
+                                        for="receiving-upload-file">엑셀 업로드</label>
+                                    <input id="receiving-upload-file" class="hidden-file-input" type="file"
+                                        accept=".xlsx,.xls" />
+                                    <button id="receiving-create-open-btn"
+                                        class="primary-btn receiving-create-open-btn" type="button">
+                                        직접 등록
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div id="receiving-page-status" class="receiving-page-status" role="status"
+                                aria-live="polite">
+                                입고 예정 건을 등록해 재고 반영 일정을 관리하세요.
+                            </div>
+
+                            <div class="receiving-summary-grid" aria-label="입고 요약">
+                                <article class="receiving-summary-card">
+                                    <span>전체 입고</span>
+                                    <strong id="receiving-summary-total">0</strong>
+                                    <small>등록된 입고 건</small>
+                                </article>
+                                <article class="receiving-summary-card">
+                                    <span>입고 예정</span>
+                                    <strong id="receiving-summary-planned">0</strong>
+                                    <small>완료 처리 대기</small>
+                                </article>
+                                <article class="receiving-summary-card">
+                                    <span>입고 완료</span>
+                                    <strong id="receiving-summary-completed">0</strong>
+                                    <small>재고 반영 완료</small>
+                                </article>
+                                <article class="receiving-summary-card">
+                                    <span>오늘 입고 수량</span>
+                                    <strong id="receiving-summary-today-quantity">0</strong>
+                                    <small>오늘 완료된 수량</small>
+                                </article>
+                            </div>
+
+                            <div class="receiving-filter-bar" role="search" aria-label="입고 검색">
+                                <input id="receiving-search-input" class="receiving-search-input" type="search"
+                                    placeholder="입고번호, 공급처, 상품명, 상품코드 검색" autocomplete="off" />
+                                <select id="receiving-status-filter" class="receiving-filter-select"
+                                    aria-label="입고 상태">
+                                    <option value="all">전체 상태</option>
+                                    <option value="planned">입고 예정</option>
+                                    <option value="partial">부분 입고</option>
+                                    <option value="reopened">재작업 중</option>
+                                    <option value="completed">입고 완료</option>
+                                    <option value="cancelled">취소</option>
+                                </select>
+                                <select id="receiving-period-filter" class="receiving-filter-select"
+                                    aria-label="등록 기간">
+                                    <option value="30">최근 30일</option>
+                                    <option value="7">최근 7일</option>
+                                    <option value="all">전체 기간</option>
+                                </select>
+                                <button id="receiving-filter-reset-btn" class="secondary-btn"
+                                    type="button">초기화</button>
+                            </div>
+
+                            <div class="receiving-table-meta">
+                                <strong>입고 목록</strong>
+                                <span id="receiving-list-count">0건</span>
+                            </div>
+
+                            <div class="tracking-table-wrap receiving-table-wrap">
+                                <div class="tracking-table-scroll receiving-table-scroll">
+                                    <table class="tracking-table receiving-table">
+                                        <thead>
+                                            <tr>
+                                                <th>상태</th>
+                                                <th>입고번호</th>
+                                                <th>입고예정일</th>
+                                                <th>공급처</th>
+                                                <th>품목</th>
+                                                <th class="receiving-number-column">예정수량</th>
+                                                <th>등록자</th>
+                                                <th class="receiving-action-column">관리</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="receiving-list-body">
+                                            <tr class="tracking-empty-row">
+                                                <td colspan="8">아직 등록된 입고 건이 없습니다.</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <div id="receiving-upload-modal" class="sku-header-modal is-hidden" aria-hidden="true">
+                                <div class="sku-header-modal-card receiving-upload-modal-card" role="dialog"
+                                    aria-modal="true" aria-labelledby="receiving-upload-title">
+                                    <div class="receiving-modal-head">
+                                        <div>
+                                            <h3 id="receiving-upload-title" class="subcard-title">입고 예정 엑셀 업로드</h3>
+                                            <p id="receiving-upload-file-name" class="subcard-text">선택된 파일 없음</p>
+                                        </div>
+                                    </div>
+                                    <div class="receiving-modal-scroll">
+                                        <div id="receiving-upload-summary" class="receiving-upload-summary"></div>
+                                        <section class="receiving-form-section">
+                                            <div class="receiving-form-section-head">
+                                                <strong>검증 결과</strong>
+                                                <span>오류가 있으면 엑셀을 수정한 뒤 다시 업로드해주세요.</span>
+                                            </div>
+                                            <div id="receiving-upload-issues" class="receiving-upload-issues"></div>
+                                        </section>
+                                        <section class="receiving-form-section">
+                                            <div class="receiving-form-section-head">
+                                                <strong>등록 예정 입고건</strong>
+                                                <span>입고번호 미입력 행은 한 건으로 묶이며, 상품코드·바코드는 둘 중 하나만 입력해도 됩니다.</span>
+                                            </div>
+                                            <div class="tracking-table-wrap receiving-upload-table-wrap">
+                                                <div class="tracking-table-scroll">
+                                                    <table class="tracking-table receiving-upload-table">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>입고번호</th>
+                                                                <th>공급처</th>
+                                                                <th>입고예정일</th>
+                                                                <th>SKU</th>
+                                                                <th>예정수량</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody id="receiving-upload-groups-body"></tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        </section>
+                                        <div id="receiving-upload-status" class="receiving-create-status"
+                                            role="alert" aria-live="assertive"></div>
+                                    </div>
+                                    <div class="receiving-modal-actions">
+                                        <button id="receiving-upload-cancel-btn" class="secondary-btn"
+                                            type="button">취소</button>
+                                        <button id="receiving-upload-save-btn" class="primary-btn"
+                                            type="button">검증된 입고 예정 등록</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="receiving-create-modal" class="sku-header-modal is-hidden" aria-hidden="true">
+                                <div class="sku-header-modal-card receiving-create-modal-card" role="dialog"
+                                    aria-modal="true" aria-labelledby="receiving-create-title">
+                                    <div class="receiving-modal-head">
+                                        <div>
+                                            <h3 id="receiving-create-title" class="subcard-title">입고 예정 등록</h3>
+                                            <p id="receiving-create-description" class="subcard-text">입고할 상품과 예정 수량을 등록합니다.</p>
+                                        </div>
+                                    </div>
+
+                                    <div class="receiving-modal-scroll">
+                                        <section class="receiving-form-section">
+                                            <div class="receiving-form-section-head">
+                                                <strong>1. 입고 정보</strong>
+                                                <span>공급처와 입고예정일을 입력해주세요.</span>
+                                            </div>
+                                            <div class="receiving-field-grid">
+                                                <label class="receiving-field">
+                                                    <span>공급처 <b aria-hidden="true">*</b></span>
+                                                    <input id="receiving-supplier-input" type="text"
+                                                        placeholder="공급처명 입력" maxlength="80" />
+                                                </label>
+                                                <label class="receiving-field">
+                                                    <span>입고예정일 <b aria-hidden="true">*</b></span>
+                                                    <input id="receiving-expected-date-input" type="date" />
+                                                </label>
+                                                <label class="receiving-field">
+                                                    <span>입고 창고</span>
+                                                    <input type="text" value="기본 창고" readonly />
+                                                </label>
+                                                <label class="receiving-field receiving-memo-field">
+                                                    <span>메모 <em>선택</em></span>
+                                                    <input id="receiving-memo-input" type="text"
+                                                        placeholder="발주번호 또는 참고사항" maxlength="200" />
+                                                </label>
+                                            </div>
+                                        </section>
+
+                                        <section class="receiving-form-section">
+                                            <div class="receiving-form-section-head">
+                                                <strong>2. 입고 품목</strong>
+                                                <span>여러 SKU를 한 입고 건에 추가할 수 있어요.</span>
+                                            </div>
+                                            <input id="receiving-sku-search-input" class="receiving-search-input"
+                                                type="search" placeholder="상품명, 상품코드, 바코드 등 검색"
+                                                autocomplete="off" />
+                                            <div class="receiving-sku-search-meta">
+                                                <span id="receiving-sku-search-count">전체 0개 SKU</span>
+                                                <span>단종 상품은 조회만 가능해요.</span>
+                                            </div>
+                                            <div id="receiving-sku-search-results" class="receiving-sku-results"
+                                                role="listbox" aria-label="입고 SKU 검색 결과"></div>
+
+                                            <div class="receiving-items-meta">
+                                                <strong>선택 품목</strong>
+                                                <span id="receiving-items-summary">0개 SKU · 총 0개</span>
+                                            </div>
+                                            <div class="receiving-items-table-wrap">
+                                                <table class="receiving-items-table">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>상품</th>
+                                                            <th>SKU 유형</th>
+                                                            <th>예정수량</th>
+                                                            <th aria-label="삭제"></th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody id="receiving-items-body">
+                                                        <tr class="receiving-items-empty">
+                                                            <td colspan="4">입고할 SKU를 검색해 추가해주세요.</td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                            <div id="receiving-create-status" class="receiving-create-status"
+                                                role="alert" aria-live="assertive"></div>
+                                        </section>
+                                    </div>
+
+                                    <div class="receiving-modal-actions">
+                                        <button id="receiving-create-cancel-btn" class="secondary-btn"
+                                            type="button">취소</button>
+                                        <button id="receiving-create-save-btn" class="primary-btn"
+                                            type="button">입고 예정 저장</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="receiving-detail-modal" class="sku-header-modal is-hidden" aria-hidden="true">
+                                <div class="sku-header-modal-card receiving-detail-modal-card" role="dialog"
+                                    aria-modal="true" aria-labelledby="receiving-detail-title">
+                                    <div class="receiving-modal-head">
+                                        <div>
+                                            <div class="receiving-detail-title-row">
+                                                <h3 id="receiving-detail-title" class="subcard-title">입고 상세</h3>
+                                                <span id="receiving-detail-status-badge"
+                                                    class="receiving-status-badge is-planned">입고 예정</span>
+                                            </div>
+                                            <p id="receiving-detail-code" class="subcard-text">-</p>
+                                        </div>
+                                        <button id="receiving-detail-close-btn" class="inventory-modal-close-btn"
+                                            type="button" aria-label="닫기">×</button>
+                                    </div>
+
+                                    <div class="receiving-modal-scroll">
+                                        <div id="receiving-rework-notice" class="receiving-rework-notice" hidden>
+                                            <strong>입고 재작업 중</strong>
+                                            <span>기존 입고 반영은 취소되었습니다. 내용을 수정한 뒤 입고를 다시 완료해주세요.</span>
+                                        </div>
+                                        <section id="receiving-completion-workspace"
+                                            class="receiving-completion-workspace"
+                                            aria-labelledby="receiving-completion-workspace-title">
+                                            <div>
+                                                <strong id="receiving-completion-workspace-title">빠른 일괄입고</strong>
+                                                <span>검수가 필요하지 않은 상품은 엑셀로 실입고수량을 한 번에 입력할 수 있습니다.</span>
+                                            </div>
+                                            <div class="receiving-completion-workspace-actions">
+                                                <button id="receiving-completion-template-btn" class="secondary-btn"
+                                                    type="button">입고 완료 양식 다운로드</button>
+                                                <label id="receiving-completion-upload-trigger"
+                                                    class="primary-btn receiving-completion-upload-trigger"
+                                                    for="receiving-completion-file">입고 완료 엑셀 업로드</label>
+                                                <input id="receiving-completion-file" class="hidden-file-input"
+                                                    type="file" accept=".xlsx,.xls" />
+                                            </div>
+                                        </section>
+                                        <section id="receiving-scan-workspace" class="receiving-scan-workspace"
+                                            aria-labelledby="receiving-scan-title">
+                                            <div class="receiving-scan-head">
+                                                <div>
+                                                    <strong id="receiving-scan-title">바코드 입고</strong>
+                                                    <span>상품 확인 후 LOT·유통기한·로케이션·수량을 입력합니다.</span>
+                                                </div>
+                                                <span id="receiving-scan-step" class="receiving-scan-step">
+                                                    1. 상품 스캔
+                                                </span>
+                                            </div>
+                                            <div class="receiving-scan-bar">
+                                                <label class="receiving-scan-input-wrap"
+                                                    for="receiving-detail-barcode-input">
+                                                    <span>상품 바코드</span>
+                                                    <input id="receiving-detail-barcode-input" type="text"
+                                                        inputmode="text" autocomplete="off"
+                                                        enterkeyhint="done"
+                                                        placeholder="바코드를 스캔하거나 입력 후 Enter" />
+                                                </label>
+                                                <button id="receiving-detail-barcode-submit-btn"
+                                                    class="primary-btn receiving-scan-submit-btn"
+                                                    type="button">상품 확인</button>
+                                            </div>
+                                            <div id="receiving-scan-feedback" class="receiving-scan-feedback is-info"
+                                                role="status" aria-live="polite">
+                                                상품 바코드를 스캔해주세요.
+                                            </div>
+                                            <div id="receiving-scan-product-panel"
+                                                class="receiving-scan-product-panel"></div>
+                                        </section>
+                                        <div id="receiving-detail-meta" class="receiving-detail-meta"></div>
+                                        <div id="receiving-detail-progress" class="receiving-detail-progress"></div>
+                                        <section class="receiving-form-section">
+                                            <div class="receiving-form-section-head">
+                                                <strong>SKU별 입고 처리</strong>
+                                                <span id="receiving-detail-items-summary"></span>
+                                            </div>
+                                            <div id="receiving-detail-items-body"
+                                                class="receiving-detail-sku-list"></div>
+                                        </section>
+                                        <div id="receiving-detail-status" class="receiving-create-status"
+                                            role="alert" aria-live="assertive"></div>
+                                    </div>
+
+                                    <div class="receiving-modal-actions receiving-detail-modal-actions">
+                                        <div class="receiving-action-group is-danger">
+                                            <button id="receiving-detail-cancel-receipt-btn"
+                                                class="secondary-btn danger-btn" type="button">입고 취소</button>
+                                        </div>
+                                        <div class="receiving-action-group is-workflow">
+                                            <button id="receiving-detail-close-action-btn" class="secondary-btn"
+                                                type="button">닫기</button>
+                                            <button id="receiving-detail-edit-planned-btn" class="secondary-btn"
+                                                type="button">입고 예정 수정</button>
+                                            <button id="receiving-detail-save-btn" class="secondary-btn"
+                                                type="button">임시 저장</button>
+                                            <button id="receiving-detail-partial-btn" class="secondary-btn"
+                                                type="button">현재 수량 입고 반영</button>
+                                            <button id="receiving-detail-complete-btn" class="primary-btn"
+                                                type="button">입고 완료</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="receiving-completion-modal" class="sku-header-modal is-hidden"
+                                aria-hidden="true">
+                                <div class="sku-header-modal-card receiving-completion-modal-card" role="dialog"
+                                    aria-modal="true" aria-labelledby="receiving-completion-title">
+                                    <div class="receiving-modal-head">
+                                        <div>
+                                            <h3 id="receiving-completion-title" class="subcard-title">입고 완료 엑셀 확인</h3>
+                                            <p id="receiving-completion-file-name" class="subcard-text">선택된 파일 없음</p>
+                                        </div>
+                                        <button id="receiving-completion-close-btn" class="inventory-modal-close-btn"
+                                            type="button" aria-label="닫기">×</button>
+                                    </div>
+                                    <div class="receiving-modal-scroll">
+                                        <div id="receiving-completion-summary" class="receiving-upload-summary"></div>
+                                        <section class="receiving-form-section">
+                                            <div class="receiving-form-section-head">
+                                                <strong>검증 결과</strong>
+                                                <span>오류를 모두 해결해야 현재 입고 내용에 적용할 수 있습니다.</span>
+                                            </div>
+                                            <div id="receiving-completion-issues" class="receiving-upload-issues"></div>
+                                        </section>
+                                        <section class="receiving-form-section">
+                                            <div class="receiving-form-section-head">
+                                                <strong>SKU별 적용 미리보기</strong>
+                                                <span>이미 재고에 반영된 수량은 보존됩니다.</span>
+                                            </div>
+                                            <div class="tracking-table-wrap receiving-completion-table-wrap">
+                                                <div class="tracking-table-scroll">
+                                                    <table class="tracking-table receiving-completion-table">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>상품</th>
+                                                                <th>예정</th>
+                                                                <th>기반영</th>
+                                                                <th>엑셀 입력</th>
+                                                                <th>완료 후</th>
+                                                                <th>차이</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody id="receiving-completion-items-body"></tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        </section>
+                                        <div id="receiving-completion-status" class="receiving-create-status"
+                                            role="alert" aria-live="assertive"></div>
+                                    </div>
+                                    <div class="receiving-modal-actions">
+                                        <button id="receiving-completion-cancel-btn" class="secondary-btn"
+                                            type="button">취소</button>
+                                        <button id="receiving-completion-apply-btn" class="primary-btn"
+                                            type="button">엑셀 내용 적용</button>
                                     </div>
                                 </div>
                             </div>
@@ -1036,13 +2562,15 @@
 
                     <div id="view-crm" class="workspace-view">
                         <section class="workspace-card crm-card">
-                            <div class="section-head">
+                            <div class="section-head crm-section-head">
                                 <div>
+                                    <span class="crm-eyebrow">고객 재구매</span>
                                     <h2 class="section-title">CRM</h2>
+                                    <p class="crm-section-copy">기간만 선택하면 채널과 SKU 분류별 재구매 흐름을 바로 확인할 수 있습니다.</p>
                                 </div>
                             </div>
 
-                            <div class="workspace-subcard crm-upload-card">
+                            <div class="workspace-subcard crm-control-card">
                                 <div class="tracking-toolbar crm-upload-toolbar">
                                     <div class="tracking-toolbar-left">
                                         <label for="crm-file" class="file-trigger-btn">과거 주문 엑셀 업로드</label>
@@ -1050,78 +2578,154 @@
                                             class="hidden-file-input" />
                                         <div id="crm-file-name" class="selected-file-name">선택된 파일 없음</div>
                                     </div>
+                                    <div class="tracking-toolbar-right">
+                                        <button class="secondary-btn" data-quick-view="order-upload" type="button">상품 매칭 확인</button>
+                                        <button id="crm-delete-btn" class="secondary-btn crm-delete-btn" type="button">과거 데이터 삭제</button>
+                                    </div>
                                 </div>
 
                                 <div id="crm-upload-status" class="info-block crm-upload-status" role="status"
                                     aria-live="polite">
                                     과거 주문 엑셀을 업로드하면 고객 재구매 요약이 표시됩니다.
                                 </div>
+
+                                <div class="crm-period-bar" aria-label="CRM 분석 기간">
+                                    <label class="crm-period-field" for="crm-period-preset">
+                                        <span>분석 기간</span>
+                                        <select id="crm-period-preset">
+                                            <option value="all">전체 기간</option>
+                                            <option value="latest-month">최근 데이터 월</option>
+                                            <option value="previous-month">이전 데이터 월</option>
+                                            <option value="90">최근 3개월</option>
+                                            <option value="180">최근 6개월</option>
+                                            <option value="365">최근 1년</option>
+                                            <option value="custom">직접 설정</option>
+                                        </select>
+                                    </label>
+                                    <div id="crm-period-custom" class="crm-period-custom" hidden>
+                                        <label class="crm-period-field" for="crm-period-start">
+                                            <span>시작일</span>
+                                            <input id="crm-period-start" type="date" />
+                                        </label>
+                                        <span class="crm-period-divider" aria-hidden="true">–</span>
+                                        <label class="crm-period-field" for="crm-period-end">
+                                            <span>종료일</span>
+                                            <input id="crm-period-end" type="date" />
+                                        </label>
+                                    </div>
+                                    <div id="crm-period-caption" class="crm-period-caption">분석할 주문을 불러오면 기간이 표시됩니다.</div>
+                                </div>
+                            </div>
+
+                            <div id="crm-quality-strip" class="crm-quality-strip" role="status" aria-live="polite">
+                                <span class="crm-quality-dot" aria-hidden="true"></span>
+                                <span>분석할 주문 데이터가 없습니다.</span>
                             </div>
 
                             <div class="summary-grid crm-summary-grid">
-                                <div class="summary-card">
-                                    <div class="summary-label">주문 행</div>
-                                    <div id="crm-summary-lines" class="summary-value">0</div>
-                                    <div id="crm-summary-lines-desc" class="summary-desc">정상 0건 · 오류 0건</div>
-                                </div>
-                                <div class="summary-card">
-                                    <div class="summary-label">주문번호</div>
-                                    <div id="crm-summary-orders" class="summary-value">0</div>
-                                    <div class="summary-desc">고유 주문번호 기준</div>
-                                </div>
-                                <div class="summary-card">
-                                    <div class="summary-label">고객</div>
+                                <div class="summary-card crm-summary-card">
+                                    <div class="summary-label">구매 고객</div>
                                     <div id="crm-summary-customers" class="summary-value">0</div>
-                                    <div class="summary-desc">수령자 키 기준</div>
+                                    <div class="summary-desc">고객키가 있는 고객</div>
                                 </div>
-                                <div class="summary-card">
+                                <div class="summary-card crm-summary-card">
+                                    <div class="summary-label">유효 주문</div>
+                                    <div id="crm-summary-orders" class="summary-value">0</div>
+                                    <div class="summary-desc">판매처 + 주문번호 기준</div>
+                                </div>
+                                <div class="summary-card crm-summary-card">
+                                    <div class="summary-label">재구매 고객</div>
+                                    <div id="crm-summary-repeat-customers" class="summary-value">0</div>
+                                    <div id="crm-summary-repeat-desc" class="summary-desc">다른 날짜에 2회 이상 구매</div>
+                                </div>
+                                <div class="summary-card crm-summary-card crm-summary-card-accent">
                                     <div class="summary-label">재구매율</div>
                                     <div id="crm-summary-repeat-rate" class="summary-value">0%</div>
-                                    <div id="crm-summary-repeat-desc" class="summary-desc">2회 이상 구매 0명</div>
-                                </div>
-                                <div class="summary-card">
-                                    <div class="summary-label">재구매 주기</div>
-                                    <div id="crm-summary-gap" class="summary-value">0일</div>
-                                    <div id="crm-summary-gap-desc" class="summary-desc">첫 재구매 중앙값</div>
-                                </div>
-                                <div class="summary-card">
-                                    <div class="summary-label">기간</div>
-                                    <div id="crm-summary-period" class="summary-value">-</div>
-                                    <div id="crm-summary-period-desc" class="summary-desc">주문일 범위</div>
+                                    <div class="summary-desc">구매 고객 중 재구매 고객</div>
                                 </div>
                             </div>
 
-                            <div class="workspace-subcard crm-preview-card">
-                                <div class="crm-preview-head">
+                            <div class="crm-analysis-grid">
+                                <section class="workspace-subcard crm-insight-card" aria-labelledby="crm-channel-title">
+                                    <div class="crm-insight-head">
+                                        <div>
+                                            <span class="crm-insight-kicker">CHANNEL</span>
+                                            <h3 id="crm-channel-title" class="subcard-title">채널별 재구매율</h3>
+                                            <p class="subcard-text">첫 구매 채널로 다시 돌아온 고객을 비교합니다.</p>
+                                        </div>
+                                        <span class="crm-definition-chip">첫 구매 → 이후 동일 채널</span>
+                                    </div>
+                                    <div id="crm-channel-retention-list" class="crm-retention-list">
+                                        <div class="crm-empty-state">분석할 채널 데이터가 없습니다.</div>
+                                    </div>
+                                </section>
+
+                                <section class="workspace-subcard crm-insight-card" aria-labelledby="crm-category-title">
+                                    <div class="crm-insight-head crm-category-head">
+                                        <div>
+                                            <span class="crm-insight-kicker">SKU CATEGORY</span>
+                                            <h3 id="crm-category-title" class="subcard-title">분류별 재구매율</h3>
+                                            <p class="subcard-text">첫 구매 분류를 이후에도 다시 선택했는지 확인합니다.</p>
+                                        </div>
+                                    </div>
+                                    <div id="crm-category-tabs" class="crm-category-tabs" role="tablist" aria-label="SKU 분류 선택"></div>
+                                    <div id="crm-category-retention-list" class="crm-retention-list">
+                                        <div class="crm-empty-state">SKU 분류 데이터를 연결하면 표시됩니다.</div>
+                                    </div>
+                                </section>
+                            </div>
+
+                            <section class="workspace-subcard crm-insight-card crm-time-card" aria-labelledby="crm-time-title">
+                                <div class="crm-insight-head">
                                     <div>
-                                        <h3 class="subcard-title">업로드 주문 미리보기</h3>
+                                        <span class="crm-insight-kicker">ORDER TIME</span>
+                                        <h3 id="crm-time-title" class="subcard-title">월별 주문 시간 분포</h3>
+                                        <p class="subcard-text">각 월 주문에서 시간대가 차지하는 비중입니다.</p>
                                     </div>
-                                    <div id="crm-preview-meta" class="subcard-text">0건</div>
+                                    <div class="crm-heatmap-legend" aria-label="히트맵 범례">
+                                        <span>낮음</span>
+                                        <i></i><i></i><i></i><i></i>
+                                        <span>높음</span>
+                                    </div>
                                 </div>
+                                <div id="crm-time-heatmap" class="crm-time-heatmap">
+                                    <div class="crm-empty-state">주문시간 데이터가 없습니다.</div>
+                                </div>
+                            </section>
 
-                                <div class="tracking-table-wrap crm-table-wrap">
-                                    <div class="tracking-table-scroll crm-table-scroll">
-                                        <table class="tracking-table crm-table">
-                                            <thead>
-                                                <tr>
-                                                    <th>주문일</th>
-                                                    <th>판매처</th>
-                                                    <th>주문번호</th>
-                                                    <th>상품명</th>
-                                                    <th>수량</th>
-                                                    <th>결제금액</th>
-                                                    <th>수령자 키</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody id="crm-preview-body">
-                                                <tr class="tracking-empty-row">
-                                                    <td colspan="7">업로드된 주문 데이터가 없습니다.</td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
+                            <details class="workspace-subcard crm-preview-card">
+                                <summary class="crm-preview-summary">
+                                    <span>
+                                        <strong>업로드 주문 미리보기</strong>
+                                        <small>필요할 때만 원본 주문을 확인하세요.</small>
+                                    </span>
+                                    <span id="crm-preview-meta" class="crm-preview-count">0건</span>
+                                </summary>
+                                <div class="crm-preview-content">
+                                    <div class="tracking-table-wrap crm-table-wrap">
+                                        <div class="tracking-table-scroll crm-table-scroll">
+                                            <table class="tracking-table crm-table">
+                                                <thead>
+                                                    <tr>
+                                                        <th>주문일</th>
+                                                        <th>판매처</th>
+                                                        <th>주문번호</th>
+                                                        <th>상품명</th>
+                                                        <th>수량</th>
+                                                        <th>결제금액</th>
+                                                        <th>고객 키</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="crm-preview-body">
+                                                    <tr class="tracking-empty-row">
+                                                        <td colspan="7">업로드된 주문 데이터가 없습니다.</td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
+                            </details>
                         </section>
                     </div>
 
@@ -1209,7 +2813,7 @@
                         <section class="workspace-card">
                             <h2 class="section-title">설정</h2>
                             <p class="workspace-text">
-                                계정 상태, 플랜, 권한, 향후 서비스 환경설정을 관리하는 영역입니다.
+                                계정 상태와 업무에 공통으로 적용할 재고 운영 기본값을 관리합니다.
                             </p>
 
                             <div class="settings-grid">
@@ -1229,8 +2833,194 @@
                                 </div>
                             </div>
 
+                            <section class="settings-secure-card" aria-label="고객 식별키 설정">
+                                <div class="settings-secure-head">
+                                    <div>
+                                        <h3 class="subcard-title">고객 식별키 설정</h3>
+                                    </div>
+                                    <div id="customer-key-state" class="customer-key-state">확인 중</div>
+                                </div>
+
+                                <div id="customer-key-saved-field" class="customer-key-saved-field">
+                                    <span>등록된 고객키</span>
+                                    <div class="customer-key-mask-control">
+                                        <input id="customer-key-saved-mask" type="text" readonly aria-label="마스킹된 고객키" />
+                                        <button id="customer-key-reveal-btn" class="customer-key-reveal-btn" type="button" aria-label="고객키 앞 두 글자 확인" title="계정 비밀번호 확인 후 앞 두 글자 표시">&#128065;</button>
+                                    </div>
+                                </div>
+
+                                <div id="customer-key-reveal-auth" class="customer-key-reveal-auth" hidden>
+                                    <label class="customer-key-field">
+                                        <span>계정 비밀번호</span>
+                                        <input id="customer-key-account-password" type="password" autocomplete="current-password" />
+                                    </label>
+                                    <button id="customer-key-reveal-confirm-btn" class="secondary-btn" type="button">확인</button>
+                                </div>
+
+                                <div id="customer-key-readiness" class="customer-key-readiness" role="status" aria-live="polite">
+                                    <strong id="customer-key-readiness-title">고객키 상태를 확인하는 중입니다.</strong>
+                                    <span id="customer-key-readiness-detail"></span>
+                                </div>
+
+                                <div id="customer-key-form" class="customer-key-form-grid">
+                                    <label class="customer-key-field">
+                                        <span id="customer-key-secret-label">새 고객키</span>
+                                        <input id="customer-key-secret" type="password" autocomplete="new-password" />
+                                    </label>
+                                    <label id="customer-key-confirm-field" class="customer-key-field">
+                                        <span id="customer-key-confirm-label">고객키 다시 입력</span>
+                                        <input id="customer-key-secret-confirm" type="password" autocomplete="new-password" />
+                                    </label>
+                                </div>
+
+                                <div class="label-tool-actions customer-key-actions">
+                                    <button id="customer-key-save-btn" class="primary-btn" type="button">고객키 등록</button>
+                                    <button id="customer-key-unlock-btn" class="secondary-btn" type="button">확인하고 사용</button>
+                                    <button id="customer-key-lock-btn" class="ghost-btn" type="button">사용 중지</button>
+                                </div>
+
+                                <div id="customer-key-status" class="customer-key-status" role="status" aria-live="polite"></div>
+                            </section>
+
+                            <section id="inventory-allocation-settings-card"
+                                class="settings-secure-card inventory-allocation-settings-card"
+                                aria-labelledby="inventory-allocation-settings-title">
+                                <div class="settings-secure-head">
+                                    <div>
+                                        <h3 id="inventory-allocation-settings-title" class="subcard-title">재고 운영 설정</h3>
+                                        <p class="subcard-text">
+                                            주문에 별도 지정이 없을 때 적용할 기본 출고 재고 할당 순서입니다.
+                                        </p>
+                                    </div>
+                                    <div id="inventory-allocation-settings-state" class="customer-key-state">불러오는 중</div>
+                                </div>
+
+                                <div class="inventory-allocation-priority-list" aria-label="재고 할당 우선순위">
+                                    <label class="inventory-allocation-priority-row">
+                                        <span class="inventory-allocation-rank">1순위</span>
+                                        <span class="inventory-allocation-priority-copy">
+                                            <strong>첫 번째 할당 기준</strong>
+                                            <small>가장 먼저 비교할 기준입니다.</small>
+                                        </span>
+                                        <select id="inventory-allocation-priority-1"
+                                            class="inventory-allocation-select" data-inventory-allocation-priority
+                                            aria-label="재고 할당 1순위">
+                                            <option value="expiry_asc">유통기한 빠른 순</option>
+                                            <option value="received_asc">입고일 빠른 순</option>
+                                            <option value="unit_quantity_asc">잔량 적은 보관단위 순</option>
+                                            <option value="location_asc">로케이션 코드 빠른 순</option>
+                                        </select>
+                                    </label>
+                                    <label class="inventory-allocation-priority-row">
+                                        <span class="inventory-allocation-rank">2순위</span>
+                                        <span class="inventory-allocation-priority-copy">
+                                            <strong>두 번째 할당 기준</strong>
+                                            <small>1순위가 같은 재고를 다시 비교합니다.</small>
+                                        </span>
+                                        <select id="inventory-allocation-priority-2"
+                                            class="inventory-allocation-select" data-inventory-allocation-priority
+                                            aria-label="재고 할당 2순위">
+                                            <option value="expiry_asc">유통기한 빠른 순</option>
+                                            <option value="received_asc" selected>입고일 빠른 순</option>
+                                            <option value="unit_quantity_asc">잔량 적은 보관단위 순</option>
+                                            <option value="location_asc">로케이션 코드 빠른 순</option>
+                                        </select>
+                                    </label>
+                                    <label class="inventory-allocation-priority-row">
+                                        <span class="inventory-allocation-rank">3순위</span>
+                                        <span class="inventory-allocation-priority-copy">
+                                            <strong>세 번째 할당 기준</strong>
+                                            <small>마지막 동률을 정리하는 기준입니다.</small>
+                                        </span>
+                                        <select id="inventory-allocation-priority-3"
+                                            class="inventory-allocation-select" data-inventory-allocation-priority
+                                            aria-label="재고 할당 3순위">
+                                            <option value="expiry_asc">유통기한 빠른 순</option>
+                                            <option value="received_asc">입고일 빠른 순</option>
+                                            <option value="unit_quantity_asc" selected>잔량 적은 보관단위 순</option>
+                                            <option value="location_asc">로케이션 코드 빠른 순</option>
+                                        </select>
+                                    </label>
+                                </div>
+
+                                <div class="inventory-allocation-option-grid">
+                                    <label class="inventory-allocation-field">
+                                        <span>유통기한 미입력 재고</span>
+                                        <select id="inventory-allocation-undated-policy" class="inventory-allocation-select">
+                                            <option value="first">우선 출고</option>
+                                            <option value="last">유통기한 입력 재고 뒤에 할당</option>
+                                            <option value="exclude">재고 할당에서 제외</option>
+                                        </select>
+                                        <small>수동 지정 출고는 나중에 주문 상세에서 별도로 선택할 수 있습니다.</small>
+                                    </label>
+
+                                    <label class="inventory-allocation-toggle">
+                                        <input id="inventory-allocation-lot-split" type="checkbox" checked />
+                                        <span>
+                                            <strong>여러 LOT 분할 할당 허용</strong>
+                                            <small>한 LOT의 가용재고가 부족하면 다음 우선순위 LOT에서 이어서 할당합니다.</small>
+                                        </span>
+                                    </label>
+
+                                    <label class="inventory-allocation-toggle is-locked">
+                                        <input id="inventory-allocation-expired-exclusion" type="checkbox" checked disabled />
+                                        <span>
+                                            <strong>유통기한 경과 재고 자동 제외</strong>
+                                            <small>안전 규칙으로 항상 적용되며 주문별 수동 할당에서도 선택할 수 없습니다.</small>
+                                        </span>
+                                        <em>안전 고정</em>
+                                    </label>
+                                </div>
+
+                                <div class="inventory-allocation-preview" aria-live="polite">
+                                    <span>기본 할당 흐름</span>
+                                    <div id="inventory-allocation-preview-steps"
+                                        class="inventory-allocation-preview-steps"></div>
+                                    <p id="inventory-allocation-preview-summary"></p>
+                                </div>
+
+                                <div class="label-tool-actions customer-key-actions inventory-allocation-actions">
+                                    <button id="inventory-allocation-save-btn" class="primary-btn" type="button">설정 저장</button>
+                                    <button id="inventory-allocation-reset-btn" class="secondary-btn"
+                                        type="button">추천 기본값</button>
+                                </div>
+
+                                <div id="inventory-allocation-status" class="customer-key-status"
+                                    role="status" aria-live="polite"></div>
+                            </section>
+
+                            <section class="settings-secure-card" aria-label="SKU 분류명 설정">
+                                <div class="settings-secure-head">
+                                    <div>
+                                        <h3 class="subcard-title">SKU 분류명</h3>
+                                    </div>
+                                </div>
+
+                                <div class="sku-category-label-grid">
+                                    <label class="customer-key-field">
+                                        <span>분류 1</span>
+                                        <input id="sku-category-label-1" type="text" maxlength="20" />
+                                    </label>
+                                    <label class="customer-key-field">
+                                        <span>분류 2</span>
+                                        <input id="sku-category-label-2" type="text" maxlength="20" />
+                                    </label>
+                                    <label class="customer-key-field">
+                                        <span>분류 3</span>
+                                        <input id="sku-category-label-3" type="text" maxlength="20" />
+                                    </label>
+                                </div>
+
+                                <div class="label-tool-actions customer-key-actions">
+                                    <button id="sku-category-label-save-btn" class="primary-btn" type="button">저장</button>
+                                    <button id="sku-category-label-reset-btn" class="secondary-btn" type="button">기본값</button>
+                                </div>
+
+                                <div id="sku-category-label-status" class="customer-key-status" role="status" aria-live="polite"></div>
+                            </section>
+
                             <div class="info-block">
-                                다음 단계에서는 비밀번호 변경, 알림 설정, 관리자 메뉴 진입 같은 기능을 여기에 연결할 수 있어요.
+                                이 정책은 향후 주문관리의 자동 재고 할당에 기본값으로 사용되며, 특정 주문 상품은 주문 상세에서 별도 재고로 변경할 수 있습니다.
                             </div>
                         </section>
                     </div>
@@ -1244,27 +3034,72 @@
     <script>
         window.__flowbutlerDashboardModuleReady = false;
         (function () {
-            const toolViews = new Set(["tracking", "label", "sku", "order-upload", "crm", "kurly-label", "coupang-milkrun"]);
+            const sidebarNavGroupStorageKey = 'flowbutler:sidebar-nav-groups';
             const fallbackMeta = {
                 home: ["대시보드", "자주 쓰는 작업을 빠르게 실행합니다."],
                 tracking: ["송장 조회", ""],
                 label: ["라벨 양식", ""],
                 sku: ["SKU 관리", ""],
                 "order-upload": ["발주서 업로드", "쿠팡(밀크런)과 컬리 발주서를 판매처별 양식으로 업로드합니다."],
+                "upload-history": ["업로드 이력", "발주서 처리 결과와 오류 원인을 확인합니다."],
+                "order-management": ["주문관리", "수집된 주문을 확인하고 처리 상태를 관리합니다."],
                 crm: ["CRM", "고객 재구매 흐름을 확인합니다."],
                 "kurly-label": ["컬리 라벨 생성", ""],
                 "coupang-milkrun": ["쿠팡 밀크런", "발주번호 단위 센터 변경과 센터별 PLT 요약을 확인합니다."],
-                settings: ["설정", "계정, 플랜, 권한과 같은 기본 정보를 확인할 수 있습니다."],
+                settings: ["설정", "계정 정보와 재고 운영 기본 정책을 관리합니다."],
             };
 
-            function setToolGroupOpen(isOpen) {
-                const group = document.querySelector('[data-nav-group="tools"]');
-                const toggle = document.querySelector('.sidebar-nav-group-toggle');
-                const menu = document.getElementById('sidebar-tools-menu');
-                if (!group || !toggle || !menu) return;
+            function getFallbackNavGroupState() {
+                try {
+                    const rawState = window.localStorage.getItem(sidebarNavGroupStorageKey);
+                    const parsedState = rawState ? JSON.parse(rawState) : {};
+                    return parsedState && typeof parsedState === 'object' && !Array.isArray(parsedState)
+                        ? parsedState
+                        : {};
+                } catch (error) {
+                    return {};
+                }
+            }
+
+            function persistFallbackNavGroupState() {
+                try {
+                    const nextState = {};
+                    document.querySelectorAll('.sidebar-nav-group[data-nav-group]').forEach((group) => {
+                        nextState[group.dataset.navGroup] = group.classList.contains('is-open');
+                    });
+                    window.localStorage.setItem(sidebarNavGroupStorageKey, JSON.stringify(nextState));
+                } catch (error) {
+                    console.warn('사이드 메뉴 상태 fallback 저장에 실패했습니다.', error);
+                }
+            }
+
+            function setFallbackNavGroupOpen(group, isOpen, persist = true) {
+                if (!group) return;
+                const toggle = group.querySelector('.sidebar-nav-group-toggle');
+                const menuId = toggle?.getAttribute('aria-controls') || '';
+                const menu = menuId ? document.getElementById(menuId) : null;
+                if (!toggle || !menu) return;
                 group.classList.toggle('is-open', isOpen);
                 toggle.setAttribute('aria-expanded', String(isOpen));
                 menu.hidden = !isOpen;
+                if (persist) persistFallbackNavGroupState();
+            }
+
+            function initializeFallbackNavGroups() {
+                const storedState = getFallbackNavGroupState();
+                document.querySelectorAll('.sidebar-nav-group[data-nav-group]').forEach((group) => {
+                    const groupKey = group.dataset.navGroup || '';
+                    const hasStoredState = Object.prototype.hasOwnProperty.call(storedState, groupKey);
+                    const isOpen = hasStoredState ? storedState[groupKey] === true : groupKey === 'orders';
+                    setFallbackNavGroupOpen(group, isOpen, false);
+                });
+            }
+
+            function openFallbackNavGroupForView(viewName) {
+                const activeButton = [...document.querySelectorAll('.sidebar-subnav-item')]
+                    .find((button) => button.dataset.view === viewName);
+                const group = activeButton?.closest('.sidebar-nav-group');
+                if (group) setFallbackNavGroupOpen(group, true);
             }
 
             function showFallbackView(viewName) {
@@ -1278,11 +3113,14 @@
                 document.querySelectorAll('.sidebar-subnav-item').forEach((button) => {
                     button.classList.toggle('is-active', button.dataset.view === viewName);
                 });
+                document.querySelectorAll('.sidebar-nav-group[data-nav-group]').forEach((group) => {
+                    group.classList.toggle('has-active', Boolean(group.querySelector('.sidebar-subnav-item.is-active')));
+                });
                 document.querySelectorAll('.workspace-view').forEach((view) => {
                     view.classList.toggle('is-visible', view.id === `view-${viewName}`);
                 });
 
-                if (toolViews.has(viewName)) setToolGroupOpen(true);
+                openFallbackNavGroupForView(viewName);
 
                 const meta = fallbackMeta[viewName];
                 const title = document.getElementById('view-title');
@@ -1292,6 +3130,8 @@
                 if (meta && subtitle) subtitle.textContent = meta[1];
                 if (actions) actions.hidden = viewName !== 'home';
             }
+
+            initializeFallbackNavGroups();
 
             const milkrunFallbackStorageKey = 'flowbutler:coupang-center-options';
             const milkrunFallbackDefaultVersionKey = `${milkrunFallbackStorageKey}:default-version`;
@@ -1498,8 +3338,8 @@
 
                 const groupToggle = event.target.closest('.sidebar-nav-group-toggle');
                 if (groupToggle) {
-                    const group = document.querySelector('[data-nav-group="tools"]');
-                    setToolGroupOpen(!group?.classList.contains('is-open'));
+                    const group = groupToggle.closest('.sidebar-nav-group');
+                    setFallbackNavGroupOpen(group, !group?.classList.contains('is-open'));
                     return;
                 }
 
@@ -1518,7 +3358,7 @@
     <script src="./vendor/html2canvas.min.js?v=20260625-local"></script>
     <script src="./vendor/jszip.min.js?v=20260625-local"></script>
     <script src="https://js.tosspayments.com/v1/payment"></script>
-    <script type="module" src="./js/dashboard.js?v=20260707-crm2"></script>
+    <script type="module" src="./js/dashboard.js?v=20260813-order-ui1"></script>
 </body>
 
 </html>

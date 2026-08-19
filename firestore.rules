@@ -1,0 +1,74 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    match /users/{userId} {
+      // Approval, plan, and role changes are handled by trusted Functions.
+      allow create: if isOwner(userId)
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.approved == false
+        && request.resource.data.status == 'pending'
+        && request.resource.data.plan == 'free'
+        && request.resource.data.role == 'user'
+        && request.resource.data.keys().hasOnly([
+          'email',
+          'approved',
+          'status',
+          'plan',
+          'role',
+          'createdAt',
+          'updatedAt'
+        ]);
+
+      allow read: if isOwner(userId);
+      allow update, delete: if false;
+
+      match /preferences/{preferenceId} {
+        allow read, write: if isOwner(userId)
+          && preferenceId in [
+            'skuWorkspace',
+            'orderProductMatches',
+            'labelTemplates',
+            'inventoryOperations'
+          ];
+      }
+
+      match /orderManagement/{orderId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      match /crmOrders/{orderId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      match /uploadHistory/{historyId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      match /inventoryBalances/{skuId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      match /inventoryTransactions/{transactionId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      match /inventoryAllocations/{allocationId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      match /inventoryReceipts/{receiptId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      // Account-specific HMAC material is managed only by Cloud Functions.
+      match /private/{privateId} {
+        allow read, write: if false;
+      }
+    }
+  }
+}
